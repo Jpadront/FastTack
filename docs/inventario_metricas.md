@@ -1,7 +1,7 @@
 # Inventario de métricas
 
-> Estado: **Fase 2 — BORRADOR** (25-09-2026). La comparación con Track to Tactics está **pendiente**.
-> Su panel y su API (`/dashboard`, `/api/catalog`) exigen sesión (`401 «Log in to access this private area»`), y el entorno de desarrollo no tiene la sesión de Chrome del usuario. Por ahora el inventario sale de la especificación del proyecto y se contrasta con lo que dan los datos de RaceSense (`docs/fuente_datos.md`). Lo que falta confirmar en el informe de ejemplo está en la última sección.
+> Estado: **Fase 2 — CERRADA** (25-09-2026). Revisado con el informe de ejemplo de Track to Tactics («Cascais Vela · Race 9», J/70, ESP 1170), con la cuenta del usuario.
+> El resultado de la revisión está en la sección «Confirmación con Track to Tactics». Los datos del informe de ejemplo **no se guardan en el repositorio**.
 
 ## Leyenda
 
@@ -64,7 +64,7 @@ Hay cuatro limitaciones de los datos que condicionan muchas métricas:
 |---|---|---|---|
 | Hora y tiempo desde la señal | Directo | Señal = `floor(startTime, min)` | |
 | TWD y Δ con la media del tramo | Estimado | Viento reconstruido | |
-| TWS y Δ con la media | Estimado | Inversión de la polar J/70 con el SOG de la flota, contrastada con ERA5 | La incertidumbre más alta de todas; se indica el rango |
+| TWS y Δ con la media | Estimado | Inversión de la polar J/70 con el SOG de la flota, calibrada con el «viento de referencia» de la prueba | Sin referencia: solo relativa y marcada «sin calibrar» (ver «Consecuencias para el diseño») |
 | Tramo actual y % de progreso | Calculado | Proyección sobre el eje del tramo | Con balizas estimadas → estimado |
 | Presión izquierda/derecha y Δ L-R en nudos | Estimado | TWS estimada de los barcos cercanos a cada lado | |
 | Tabla: posición, barco, Δm | Calculado | Distancia al líder proyectada en el eje del tramo | |
@@ -154,11 +154,54 @@ Hay cuatro limitaciones de los datos que condicionan muchas métricas:
 - **Trimado, velas y reglajes**: no hay sensores.
 - **Tramos con huecos de telemetría**: lo que ocurre dentro de un hueco (p. ej. la pérdida de una virada hecha durante un corte) no se puede recuperar.
 
-## Pendiente de confirmar en el informe de ejemplo de Track to Tactics
+## Confirmación con Track to Tactics
 
-Sin acceso a la sesión, falta confirmar lo siguiente en el informe «Cascais Vela · Race 9» (J/70, ESP 1170):
+Revisión del informe de ejemplo «Cascais Vela · Race 9» (J/70, 34 barcos, barco ESP 1170): pestañas, tablas, capas del mapa, debrief y estructura de los datos que carga la página. Se replica la **funcionalidad y las métricas**, no sus textos, su código ni su identidad visual.
 
-1. Que la lista de pestañas y de columnas de las tablas coincide con este inventario, y si hay métricas que no están aquí.
-2. Las definiciones que muestre la herramienta (tooltips o notas de metodología): VMG, pérdida en maniobra, modo, barco fantasma, fases de rolada.
-3. Las unidades y el redondeo de cada columna.
-4. **Qué prueba es «Race 9».** Probablemente sea este mismo Mundial: ESP 1170 «YUPI» está en nuestra flota. Pero «Race 9» puede ser la prueba 9 oficial (API 8, 12-09 12:15 UTC) o la regata 9 de la API (prueba 10 oficial, 12-09 14:05 UTC). El puesto y el tiempo de ESP 1170 en su informe lo aclaran: en la prueba 9 oficial (API 8) fue 18.º de 91 (1:27:11), y en la API 9 fue 7.º de 91 (1:20:15).
+### Qué es «Race 9»
+
+- **Cascais Vela** (28–30 ago 2026) es **otro evento**, no el Mundial. En RaceSense es `NxFrzPhBiHHrg9C0XHHz`, y nuestra ingesta lo carga sin cambios: 9 pruebas y 34 llegadas en la 9. Sirve para validar la Fase 5 y como «otra URL de campeonato».
+- «Race 9» es el `raceNumber` 9 del documento del comité (señal 30-08, 14:00 UTC). El contador de los dispositivos la llama 10: el mismo desfase que en el Mundial.
+- En este evento **M1 y M2 sí transmiten**. TtT las toma de la posición del Atlas en cada rodeo, y los offsets de los rodeos de la flota.
+
+### Coincide con el inventario
+
+- **Cabecera**: evento, fecha, regata, clase, nº de barcos y versión. Barco de referencia. Selector «barcos en mapa y tabla».
+- **Pestañas**: Salida, Ceñida 1, Baliza 1, Popa 1, Puerta, Ceñida 2, Baliza 2, Popa 2, Llegada y Rendimiento.
+- **Capas del mapa**: presión instantánea, TWD instantánea, rol y SOG. Reproductor con ×4.
+- **Panel instantáneo**: hora y +mm:ss desde la señal; TWD y TWS con su Δ respecto a la media; tramo y % de progreso; presión izquierda/derecha con Δ L-R. Tabla con #, barco, Δm, SOG, VMG, TWA, COG y HDG.
+- **Salida**: tabla con las 12 columnas del inventario. Resumen con comité, pin, sesgo (° y m), viento en el disparo y corriente.
+- **Ceñidas y popas**: tabla con posición, barco, parcial, gap, VMG, SOG, TWA, distancia, maniobras, pérdida (m), layline, escora, cabeceo y modo. Viento en 10 cortes, fases de rolada, fases de presión y eficiencia frente al barco fantasma.
+- **Balizas, puerta y llegada**: posición, barco, tiempo, gap y elección de puerta. En la puerta, además, el lado favorecido y la ventaja en m.
+- **Rendimiento**: 12 métricas seleccionables (VMG, SOG, TWA, escora y cabeceo en ceñida y en popa, más pérdida por virada y por trasluchada) y la tabla de medias.
+- **Debrief IA** en cada pestaña, con los cuatro apartados y la categoría del diagnóstico.
+
+### Añadidos al inventario
+
+| Elemento | Estado | Notas |
+|---|---|---|
+| Descarga del debrief de equipo en PDF | Calculado | Existe en la referencia. **Propuesta: fuera de la v1** (decidir en la Fase 3) |
+| Gráfico de la salida: TWD en el disparo, de −3 a +3 min | Estimado | |
+| Offsets como balizas propias (Offset 1, Offset 2) con su tiempo de paso | Estimado | Rodeo de la flota tras la baliza de barlovento |
+| Zona de baliza: entrada y salida por barco y baliza | Calculado | Base del «tiempo de maniobra» en balizas y puerta |
+| Por cada corte de viento: confianza y origen (bisectriz de COG de la flota o arrastre del corte anterior) | Estimado | Útil para marcar los cortes poco fiables |
+| Layline indicada como «lado + metros» (p. ej. «Derecha +72 m») y segundos navegados fuera de la layline | Estimado | |
+| Dispersión (IQR) de la escora y del cabeceo | Directo | |
+| Lado del campo por tramo (mediana de la distancia lateral al eje) | Estimado | Lo usa el debrief |
+
+### Métodos de la referencia (según los nombres que aparecen en sus datos)
+
+- **TWD**: bisectriz de los COG de la flota. Es el mismo método que ya usamos.
+- **TWA**: |COG − TWD|, un «ángulo táctico GPS».
+- **TWS**: ajuste a la polar de J/70 con SOG y TWA, **más una calibración manual**. Un administrador introduce el viento del comité (16 kn en el disparo). La estimación sin calibrar era **7,25 kn**, con un offset de +8,75 kn.
+- **Corriente**: también la fija un administrador (0 kn en el ejemplo).
+- **Laylines**: polar J/70 con TWD, TWS y corriente.
+- **Presión local**: barcos a menos de 120 m, con una captura cada 15 s.
+- **Barco fantasma**: una distancia de referencia por tramo. La eficiencia es (fantasma − navegada) / fantasma. Comprobado con el ejemplo: 3633 m frente a 3606 m → +0,8 %.
+- **Hora de la señal**: `startTime` sin redondear, es decir, 1 s después del minuto. Nosotros truncamos al minuto, así que nuestros «+mm:ss» irán 1 s por delante de los suyos.
+
+### Consecuencias para el diseño
+
+1. **La TWS absoluta no se puede estimar bien sin una referencia.** Ni la polar sin calibrar (7,25 kn) ni el modelo ERA5 de Open-Meteo (8,3 kn a las 14:00 UTC, con 323° que sí cuadran en dirección) se acercan a los 16 kn del comité. Propuesta: un campo **«viento de referencia»** por prueba (TWS en el disparo, del comité o del propio equipo). Sin él, la TWS se muestra **relativa** (Δ respecto a la media) y marcada «sin calibrar». Esto afecta a las laylines, a la presión y a las tendencias por intensidad de viento.
+2. **La IA de la referencia comete errores de unidades.** Llama «segundos» a pérdidas que en la tabla están en metros (p. ej. 17,8 m → «17.84s»). En nuestra app, el texto de la IA se **valida automáticamente**: cada número que cite tiene que existir en las métricas, con su unidad. Si no, se regenera o se avisa.
+3. **Numeración de pruebas**: la referencia usa el `raceNumber` del documento del comité, no la numeración cronológica. En la validación de la Fase 5 hay que emparejar por la hora de la señal.

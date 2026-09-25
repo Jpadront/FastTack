@@ -208,6 +208,8 @@ Reconstrucción con `fase1_reconstruir.py` (resultados en `data/sample/reconstru
 
 `GET /telemetry/racing-summary/5JsqWPmBU6P7G5rk15ic` (Mundial de ILCA 7 2026, Elimination Series) devuelve 3 divisiones (Bronze, Silver y Gold) con 6 regatas cada una, en el mismo formato. ✔ El mismo flujo sirve para otros campeonatos. ✔ Telemetría de Gold R1 descargada y analizada: mismo formato, 47 barcos y 16 dispositivos baliza (10 de ellos en el recorrido).
 
+**Segundo campeonato de J/70**: Cascais Vela (28–30 ago 2026, `NxFrzPhBiHHrg9C0XHHz`). ✔ Carga con el mismo flujo: 9 pruebas y 34–42 barcos. A diferencia del Mundial, aquí **M1 y M2 sí transmiten**. Es la regata de referencia para la validación de la Fase 5.
+
 Nota (**corregido**): en `racing-summary`, `begin` y `end` **no son la duración de la regata**, sino la ventana en la que los dispositivos están en esa regata (llega hasta el comienzo de la siguiente, a veces al día siguiente). Además, `start` no es la señal. En J/70, la «regata 1» del resumen (07-09, 13:09–13:57 UTC) es la salida anulada, y la ventana de la regata 2 empieza el día anterior. **Las ventanas de descarga se calculan con `/api/regatta`**: desde `floor(startTime, minuto)` − 10 min hasta la última `finishingTime` + 5 min.
 
 ## Uso responsable y condiciones
