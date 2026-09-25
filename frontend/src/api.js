@@ -24,6 +24,8 @@ export const api = {
   campeonato: (c) => pedir('GET', `/api/campeonatos/${id(c)}`),
   estado: (c) => pedir('GET', `/api/campeonatos/${id(c)}/estado`),
   ajustar: (c, clave, cambios) => pedir('PATCH', `/api/campeonatos/${id(c)}/pruebas/${clave}`, cambios),
+  analisis: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/analisis`),
+  pistas: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/pistas`),
   preferencias: () => pedir('GET', '/api/preferencias'),
   fijarBarco: (barco) => pedir('PUT', '/api/preferencias', { barco }),
 };

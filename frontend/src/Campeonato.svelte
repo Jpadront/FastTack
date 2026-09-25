@@ -124,14 +124,15 @@
         {#each camp.pruebas as p (p.clave)}
           {@const r = resultado(p)}
           <tr class:excluida={p.excluida}>
-            <td class="n num grande">{p.numero ?? '—'}</td>
+            <td class="n num grande">{#if p.n_llegadas}<a class="abrir" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`} aria-label={`Analizar la prueba ${p.numero ?? ''}`}>{p.numero ?? '—'}</a>{:else}{p.numero ?? '—'}{/if}</td>
             <td>
               {horaLocal(p.senal, camp.tz_offset_ms)}
               {#if p.nota}<div class="nota">{p.nota}</div>{/if}
             </td>
             <td><span class="chip {p.estado.replace(' ', '-')}">{estadoTexto[p.estado]}</span></td>
             <td class="n num mio">{r.mio}{#if r.de}<span class="tenue de">/{r.de}</span>{/if}</td>
-            <td>{r.ganador}{#if r.tiempo}<span class="tenue num tiempo">{r.tiempo}</span>{/if}</td>
+            <td>{r.ganador}{#if r.tiempo}<span class="tenue num tiempo">{r.tiempo}</span>{/if}
+              {#if p.n_llegadas}<a class="analizar" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`}>Analizar →</a>{/if}</td>
             <td class="n">
               <input class="campo viento num" inputmode="decimal" aria-label={`Viento de referencia de la prueba ${p.numero ?? ''}`}
                      value={p.viento_kn ?? ''} placeholder="sin calibrar" onchange={(e) => viento(p, e.currentTarget.value)}>
@@ -145,7 +146,7 @@
       </tbody>
     </table>
   </section>
-  <p class="tenue pie">«Reconstruida»: prueba o llegadas obtenidas de la telemetría porque RaceSense no las tiene (puesto provisional). «Cuenta»: desmárcala para dejar fuera una prueba (entrenamiento, anulada); la numeración se ajusta sola. El análisis de cada prueba llega en el siguiente hito.</p>
+  <p class="tenue pie">«Reconstruida»: prueba o llegadas obtenidas de la telemetría porque RaceSense no las tiene (puesto provisional). «Cuenta»: desmárcala para dejar fuera una prueba (entrenamiento, anulada); la numeración se ajusta sola. Pulsa «Analizar» para abrir el análisis de una prueba.</p>
 {/if}
 
 <style>
@@ -175,6 +176,8 @@
   .tiempo { margin-left: 8px; }
   .cuenta { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
   .pie { font-size: 14px; max-width: 90ch; margin-top: 10px; }
+  .abrir { color: inherit; text-decoration: none; }
+  .analizar { display: inline-block; margin-left: 10px; font: 600 14px var(--display); color: var(--foco); text-decoration: none; white-space: nowrap; }
 
   /* Móvil: cada prueba es una ficha */
   @media (max-width: 700px) {

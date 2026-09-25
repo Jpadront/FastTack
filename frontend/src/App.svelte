@@ -3,8 +3,10 @@
   import { api, velaBonita } from './api.js';
   import Inicio from './Inicio.svelte';
   import Campeonato from './Campeonato.svelte';
+  // El análisis (con el mapa) se carga solo al abrir una prueba: la portada queda ligera
+  const cargarPrueba = () => import('./prueba/Prueba.svelte');
 
-  // Rutas por hash: #/  y  #/c/<id del campeonato>
+  // Rutas por hash: #/ · #/c/<campeonato> · #/c/<campeonato>/p/<clave de la prueba>
   let ruta = $state(location.hash);
   let barco = $state('ESP1214');
 
@@ -13,7 +15,9 @@
     try { barco = (await api.preferencias()).barco; } catch {}
   });
 
-  const campId = $derived(ruta.startsWith('#/c/') ? decodeURIComponent(ruta.slice(4)) : null);
+  const partes = $derived(ruta.startsWith('#/c/') ? ruta.slice(4).split('/p/') : []);
+  const campId = $derived(partes[0] ? decodeURIComponent(partes[0]) : null);
+  const pruebaClave = $derived(partes[1] || null);
 
   async function cambiarBarco(v) {
     barco = v;
@@ -27,7 +31,15 @@
 </header>
 
 <main>
-  {#if campId}
+  {#if campId && pruebaClave}
+    {#key ruta}
+      {#await cargarPrueba()}
+        <p class="tenue">Cargando…</p>
+      {:then m}
+        <m.default {campId} clave={pruebaClave} {barco} />
+      {/await}
+    {/key}
+  {:else if campId}
     {#key campId}
       <Campeonato id={campId} {barco} onBarco={cambiarBarco} />
     {/key}

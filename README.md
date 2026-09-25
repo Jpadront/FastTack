@@ -2,7 +2,7 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 2** — carga de campeonatos y lista de pruebas (hito 1) y motor de análisis por prueba (hito 2, API `/api/campeonatos/{id}/pruebas/{clave}/analisis`; fórmulas y validación en [`docs/metricas.md`](docs/metricas.md)). Las pantallas de análisis llegan en el hito 3; el plan completo está en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **Fase 4 · hito 3** — primera versión de principio a fin: cargar un campeonato, ver sus pruebas y abrir el análisis de cada una (mapa con reproductor, valores instantáneos, pestañas por fase con sus tablas). Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
 ## Instalación (una vez)
 
@@ -47,6 +47,16 @@ En la lista de pruebas:
 - **sin llegadas**: no se detecta una llegada de la flota (entrenamiento, anulada o sin datos). No cuenta.
 - **Viento ref. (kn)**: la intensidad del viento en el disparo, si la sabéis. Sin ella, la intensidad del viento del análisis se mostrará relativa y «sin calibrar».
 - **Cuenta**: desmárcala para dejar fuera una prueba; la numeración se ajusta sola.
+
+## Analizar una prueba
+
+Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y se descargan las trazas (unos segundos); después queda guardado.
+
+- **Barcos en mapa y tabla**: solo el tuyo, top 5/10/15 de la prueba, toda la flota o *Elegir…* uno a uno. Cada barco tiene un color fijo; el tuyo, naranja.
+- **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Baliza 1, Popa 1, Puerta…, Llegada, Rendimiento). Cada una lleva el reproductor a su momento.
+- **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
+- **Reproductor**: ▶, barra de tiempo, ×1/×4/×10/×30; hora local y tiempo desde la señal.
+- Lo marcado con **\*** o «est.» es estimado con el viento reconstruido. «Datos» indica la calidad de la telemetría de cada barco en el tramo.
 
 Enlace de ejemplo (Mundial de J/70 2026, Cascais): `https://player.vakaros.com/watch/oRkxbTpSZPbSkrmKrbj2/J%2F70`
 

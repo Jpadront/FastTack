@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -40,6 +41,7 @@ class Preferencias(BaseModel):
 def crear_app(alm: Almacen | None = None) -> FastAPI:
     alm = alm or Almacen()
     app = FastAPI(title="FastTack", docs_url="/api/docs", openapi_url="/api/openapi.json")
+    app.add_middleware(GZipMiddleware, minimum_size=2000)
     tareas: dict[str, dict] = {}  # carga en curso por campeonato
 
     def _cargar(camp_id: str, url: str, division: str):
@@ -103,6 +105,17 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
                 f"on conflict(campeonato, clave) do update set " + ", ".join(f"{c}=excluded.{c}" for c in cambios),
                 (camp_id, clave, *[int(v) if isinstance(v, bool) else v for v in cambios.values()]))
         return detalle(camp_id)
+
+    @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/pistas")
+    def pistas_(camp_id: str, clave: str):
+        try:
+            return servicio.pistas_prueba(alm, camp_id, clave)
+        except KeyError as e:
+            raise HTTPException(404, "Prueba no encontrada") from e
+        except servicio.PruebaNoAnalizable as e:
+            raise HTTPException(422, str(e)) from e
+        except ErrorRaceSense as e:
+            raise HTTPException(502, str(e)) from e
 
     @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/analisis")
     def analisis(camp_id: str, clave: str, recalcular: bool = False):
