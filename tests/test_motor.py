@@ -112,3 +112,12 @@ def test_calibrar_tws_con_referencia():
     c2 = viento_fijo()
     calibrar_tws([c2], None)
     assert c2.cortes[0].tws is None
+
+
+def test_recorrido_dudoso():
+    from fasttack.motor.analisis import recorrido_dudoso
+    def tramo(parcial):
+        return {"barcos": {"A": {"parcial_s": parcial}, "B": {"parcial_s": parcial + 10}}}
+    llegadas = {"A": 4000_000, "B": 4020_000}   # 4000 s tras la señal (0), 4 tramos -> ~1000 s por tramo
+    assert not recorrido_dudoso([tramo(1200), tramo(900), tramo(1100), tramo(800)], llegadas, 0)
+    assert recorrido_dudoso([tramo(500), tramo(200), tramo(200), tramo(3100)], llegadas, 0)

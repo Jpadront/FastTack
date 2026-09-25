@@ -5,7 +5,7 @@ export const HUECO_S = 15; // más de esto sin datos: el barco se muestra como �
 
 // Colores fijos por barco (el naranja queda reservado al barco de referencia).
 // Validada con la guía de visualización (daltonismo y separación); cada traza lleva además su etiqueta.
-const PALETA = ['#2a78d6', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+export const PALETA = ['#2a78d6', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 export const COLOR_YO = '#e0622e';
 export function colorBarco(vela, ref) {
   if (vela === ref) return COLOR_YO;
@@ -107,7 +107,8 @@ export function pestanas(an) {
     if (!fin || fin.tipo === 'llegada') continue;
     if (fin.tipo === 'barlovento') {
       const off = an.controles.find((c) => c.id === `o${fin.id.slice(1)}`);
-      out.push({ id: fin.id, nombre: fin.nombre, tipo: 'baliza', controles: off ? [fin, off] : [fin] });
+      // La pestaña del rodeo de barlovento se llama por el offset, que es donde acaba el rodeo
+      out.push({ id: fin.id, nombre: off ? off.nombre : fin.nombre, tipo: 'baliza', controles: off ? [fin, off] : [fin] });
     } else {
       out.push({ id: fin.id, nombre: fin.nombre, tipo: 'baliza', controles: [fin] });
     }

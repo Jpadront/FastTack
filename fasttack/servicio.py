@@ -7,7 +7,7 @@ import numpy as np
 
 from .ingesta import campeonato as camp_mod
 from .ingesta.almacen import Almacen
-from .motor import analisis
+from .motor import analisis, resumen
 from .motor.pistas import Proyeccion, pistas
 from .motor.trazas import construir
 
@@ -21,9 +21,7 @@ class PruebaNoAnalizable(ValueError):
 
 def analisis_prueba(alm: Almacen, camp_id: str, clave: str, recalcular: bool = False) -> dict:
     camp, prueba = _cargar(alm, camp_id, clave)
-    # La caché depende de la versión del motor y del viento de referencia.
-    nombre = f"analisis_{clave}_v{analisis.VERSION}_{prueba.get('viento_kn') or 'sin'}.json"
-    ruta = alm._dir(camp["event_id"], camp["division"]) / nombre
+    ruta = _ruta_analisis(alm, camp, prueba)
     if ruta.exists() and not recalcular:
         return json.loads(ruta.read_text())
     desde = prueba["senal"] - MARGEN_ANTES_MS
@@ -35,6 +33,31 @@ def analisis_prueba(alm: Almacen, camp_id: str, clave: str, recalcular: bool = F
     res["prueba"] = {"clave": clave, "numero": prueba["numero"], "estado": prueba["estado"],
                      "viento_kn": prueba.get("viento_kn"), "nota": prueba.get("nota")}
     ruta.write_text(json.dumps(res, ensure_ascii=False, default=float))
+    return res
+
+
+def _ruta_analisis(alm: Almacen, camp: dict, prueba: dict):
+    # La caché depende de la versión del motor y del viento de referencia.
+    nombre = f"analisis_{prueba['clave']}_v{analisis.VERSION}_{prueba.get('viento_kn') or 'sin'}.json"
+    return alm._dir(camp["event_id"], camp["division"]) / nombre
+
+
+def resumen_campeonato(alm: Almacen, camp_id: str, descartes: int | None = None) -> dict:
+    """General calculada y agregados de las pruebas que cuentan. Solo usa los análisis ya guardados;
+    las pruebas sin analizar salen en 'pendientes' (la web las pide una a una y vuelve a llamar)."""
+    camp = camp_mod.leer(alm, camp_id)
+    if camp is None:
+        raise KeyError(camp_id)
+    pruebas = sorted((p for p in camp["pruebas"] if p["numero"] is not None and p["llegadas"]), key=lambda p: p["numero"])
+    hechos = {}
+    for p in pruebas:
+        ruta = _ruta_analisis(alm, camp, p)
+        if ruta.exists():
+            hechos[p["clave"]] = json.loads(ruta.read_text())
+    # Inscritos: barcos con alguna llegada (RaceSense lista también dispositivos de prueba que no regatean)
+    inscritos = [b["clave"] for b in camp["barcos"] if any(b["clave"] in p["llegadas"] for p in pruebas)]
+    res = resumen.resumen(pruebas, inscritos, hechos, descartes)
+    res["version"] = analisis.VERSION
     return res
 
 

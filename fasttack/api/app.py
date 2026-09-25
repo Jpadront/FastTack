@@ -128,6 +128,13 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         except ErrorRaceSense as e:
             raise HTTPException(502, str(e)) from e
 
+    @app.get("/api/campeonatos/{camp_id:path}/resumen")
+    def resumen_(camp_id: str, descartes: int | None = None):
+        try:
+            return servicio.resumen_campeonato(alm, camp_id, descartes)
+        except KeyError as e:
+            raise HTTPException(404, "Campeonato no encontrado") from e
+
     @app.get("/api/campeonatos/{camp_id:path}")
     def detalle(camp_id: str):
         c = camp_mod.leer(alm, camp_id)

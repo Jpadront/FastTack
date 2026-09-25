@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.4.0** (Fase 4 · hito 4). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.4.1** (Fase 4 · hito 5). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -123,4 +123,31 @@ Datos: 34 barcos, M1 y puerta con Atlas. Comparación de todos los barcos y todo
 
 ## Pruebas del Mundial de J/70 2026
 
-Las 10 pruebas se analizan (2–8 s cada una): 2 vueltas, puerta con Atlas, balizas de barlovento y offsets estimados (en las pruebas 7 y 8 M1 sí transmite). La telemetría del Mundial es mucho más pobre: en algunos tramos más del 60 % del tiempo está en huecos de más de 30 s, y muchos barcos quedan con calidad «baja». La prueba 4 (reconstruida) es la peor: pocos barcos con pasos fiables y viento sin datos en dos tramos.
+Las 10 pruebas se analizan (2–8 s cada una): 2 vueltas, puerta con Atlas, balizas de barlovento y offsets estimados (en las pruebas 7 y 8 M1 sí transmite). La telemetría del Mundial es mucho más pobre: en algunos tramos más del 60 % del tiempo está en huecos de más de 30 s, y muchos barcos quedan con calidad «baja». La prueba 4 (reconstruida) es la peor: pocos barcos con pasos fiables y viento sin datos en dos tramos. El motor la marca como **recorrido dudoso** (ver abajo): sus llegadas cuentan en la general, sus métricas por tramo no entran en el resumen.
+
+### Recorrido dudoso
+
+Si el parcial mediano de algún tramo queda fuera de 0,4–2,5 veces la duración mediana de la prueba repartida entre sus tramos, las balizas estimadas están mal situadas: el análisis lo avisa y el resumen del campeonato deja fuera sus métricas. En el Mundial solo lo activa la prueba 4 (parciales de 0,59 / 0,18 / 0,19 / 3,39 veces lo esperado; en las demás, entre 0,54 y 1,59).
+
+## Resumen del campeonato
+
+- **General calculada** (puntuación baja, RRS apéndice A), sin penalizaciones ni decisiones del jurado. Puesto en la prueba = orden entre los que llegan, quitando los OCS del comité si su lista es fiable (en las pruebas reconstruidas no lo es). OCS y sin llegada (DNF/DNC, no se distinguen) = inscritos + 1; **inscritos** = barcos con alguna llegada (RaceSense lista también dispositivos de prueba). Descartes configurables: por defecto 1 a partir de 4 pruebas. Empates: A8.1 y A8.2.
+- **Medias del campeonato**: medias de las pruebas con métricas, ponderadas por la cobertura de cada barco en cada prueba. **Mediana de la flota** por prueba y **top 15**: solo barcos con cobertura ≥ 50 %.
+- **Salidas acumuladas**: solo salidas con datos del barco en el disparo. **Layline OK** = tramos que llegan a la baliza sin sobrepasar. **Puerta favorecida**: solo puertas con ventaja ≥ 5 m.
+- **Según la intensidad del viento**: agrupa por el viento de referencia que introduce el equipo (< 10, 10–15, > 15 kn).
+
+### Validación de la general con la clasificación oficial del Mundial
+
+Comparada con los resultados oficiales publicados por el club organizador (100 barcos, 10 pruebas, 1 descarte):
+
+| Prueba | Origen de las llegadas | Error medio de puesto (barcos que terminan en ambas) | Terminan y no detectamos |
+|---|---|---|---|
+| 1, 2, 5, 6, 9, 10 | RaceSense (oficial) | 0,3–1,8 | 0–2 |
+| 3 | reconstruida | 1,4 | 3 |
+| 4 | reconstruida | 0,6 | 1 |
+| 7 | reconstruida | 0,4 | 1 |
+| 8 | reconstruida | 0,9 | 1 |
+
+- **General**: 32 barcos en el puesto exacto, 83 de 100 a ±3 puestos, error medio 2,1. ESP 1214: 25.º con 264 puntos (oficial: 23.º con 259); puestos por prueba 40, 59, 16, 34, 37, 8, (61), 38, 14, 18 frente a 40, 56, 16, 34, 37, 8, (62), 37, 14, 17.
+- Las diferencias que quedan son casi todas decisiones del jurado (DSQ, DNS, PRP, RDG…), que no están en los datos y desplazan un puesto al resto de la flota.
+- **Mejora de la detección de llegadas** (ingesta versión 2): un cruce de la línea se acepta aunque haya un hueco de datos de hasta 90 s sobre ella, con la hora interpolada en el segmento. Antes se exigían muestras a ≤ 10 s y, con la cobertura de RaceSense, muchos barcos que terminaron quedaban sin llegada: en la prueba 4 el error medio pasó de 7,8 a 0,6 puestos (de 12 barcos sin detectar a 1) y la general de 75 a 83 barcos a ±3.

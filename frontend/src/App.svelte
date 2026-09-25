@@ -5,8 +5,9 @@
   import Campeonato from './Campeonato.svelte';
   // El análisis (con el mapa) se carga solo al abrir una prueba: la portada queda ligera
   const cargarPrueba = () => import('./prueba/Prueba.svelte');
+  const cargarResumen = () => import('./resumen/Resumen.svelte');
 
-  // Rutas por hash: #/ · #/c/<campeonato> · #/c/<campeonato>/p/<clave de la prueba>
+  // Rutas por hash: #/ · #/c/<campeonato> · #/c/<campeonato>/p/<clave de la prueba> · #/c/<campeonato>/resumen
   let ruta = $state(location.hash);
   let barco = $state('ESP1214');
   let version = $state('');
@@ -17,7 +18,8 @@
     try { version = (await (await fetch('/api/version')).json()).version; } catch {}
   });
 
-  const partes = $derived(ruta.startsWith('#/c/') ? ruta.slice(4).split('/p/') : []);
+  const esResumen = $derived(ruta.startsWith('#/c/') && ruta.endsWith('/resumen'));
+  const partes = $derived(ruta.startsWith('#/c/') ? ruta.slice(4).replace(/\/resumen$/, '').split('/p/') : []);
   const campId = $derived(partes[0] ? decodeURIComponent(partes[0]) : null);
   const pruebaClave = $derived(partes[1] || null);
 
@@ -39,6 +41,14 @@
         <p class="tenue">Cargando…</p>
       {:then m}
         <m.default {campId} clave={pruebaClave} {barco} />
+      {/await}
+    {/key}
+  {:else if campId && esResumen}
+    {#key ruta}
+      {#await cargarResumen()}
+        <p class="tenue">Cargando…</p>
+      {:then m}
+        <m.default {campId} {barco} />
       {/await}
     {/key}
   {:else if campId}

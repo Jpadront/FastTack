@@ -2,7 +2,7 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 4** — cargar un campeonato, ver sus pruebas y abrir el análisis de cada una: mapa con reproductor y capas (presión, TWD, rol, SOG, laylines), valores instantáneos, pestañas por fase con sus tablas y gráficos de viento y de rendimiento. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **Fase 4 · hito 5** — cargar un campeonato, ver sus pruebas, abrir el análisis de cada una (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos) y el **resumen del campeonato** (general calculada, evolución por prueba, salidas, maniobras, laylines, puertas y viento). Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
 ## Instalación (una vez)
 
@@ -53,7 +53,7 @@ En la lista de pruebas:
 Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y se descargan las trazas (unos segundos); después queda guardado.
 
 - **Barcos en mapa y tabla**: solo el tuyo, top 5/10/15 de la prueba, toda la flota o *Elegir…* uno a uno. Cada barco tiene un color fijo; el tuyo, naranja.
-- **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Baliza 1, Popa 1, Puerta…, Llegada, Rendimiento). Cada una lleva el reproductor a su momento.
+- **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Offset 1, Popa 1, Puerta…, Llegada, Rendimiento; la pestaña del offset incluye también el paso por la baliza de barlovento). Cada una lleva el reproductor a su momento.
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
 - **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
@@ -61,6 +61,17 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - Lo marcado con **\*** o «est.» es estimado con el viento reconstruido. «Datos» indica la calidad de la telemetría de cada barco en el tramo.
 
 Enlace de ejemplo (Mundial de J/70 2026, Cascais): `https://player.vakaros.com/watch/oRkxbTpSZPbSkrmKrbj2/J%2F70`
+
+## Resumen del campeonato
+
+En la página del campeonato, **Resumen del campeonato →**. La primera vez analiza las pruebas que falten, una a una (unos segundos cada una; más si hay que descargar telemetría).
+
+- **General calculada**: puntuación baja con los descartes que elijas (por defecto 1 a partir de 4 pruebas). No incluye decisiones del jurado, así que puede diferir algo de la oficial. «rec.» = llegadas reconstruidas.
+- **Comparar con**: tu barco solo, o frente al top 3/5/10 de la general.
+- **Gráficos por prueba**: puesto y la métrica que elijas (VMG, SOG, TWA, escora, cabeceo, pérdidas), con la mediana de la flota.
+- **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
+
+Si al abrir un campeonato ya guardado aparece «Hay una versión mejor de la detección…», pulsa **Actualizar**: vuelve a calcular pruebas y llegadas con la telemetría ya descargada y conserva tus ajustes.
 
 ## Desarrollo
 

@@ -79,6 +79,11 @@ def roles_recorrido(division: dict) -> dict[str, int]:
     return roles
 
 
+# Sube cuando cambia cómo se obtienen las pruebas o las llegadas: la web propone volver a cargar
+# los campeonatos guardados con una versión anterior (la telemetría ya descargada se reutiliza).
+VERSION_INGESTA = 2
+
+
 def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None = None,
            progreso=lambda texto: None) -> dict:
     ref = leer_url(url) if isinstance(url, str) else url
@@ -161,7 +166,7 @@ def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None 
         "revision": len(reg["revisions"]), "tz_offset_ms": tz // 1000,
         "roles_recorrido": roles, "barcos": barcos,
         "pruebas": [asdict(p) | {"n_llegadas": p.n_llegadas} for p in pruebas],
-        "cargado_en": int(time.time() * 1000),
+        "cargado_en": int(time.time() * 1000), "version_ingesta": VERSION_INGESTA,
     }
     (alm._dir(ev, nombre_div) / "campeonato.json").write_text(json.dumps(camp, ensure_ascii=False))
     return con_ajustes(alm, camp)
@@ -170,7 +175,11 @@ def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None 
 def leer(alm: Almacen, camp_id: str) -> dict | None:
     ev, _, division = camp_id.partition("~")
     p = alm.raiz / "racesense" / ev / division.replace("/", "_") / "campeonato.json"
-    return con_ajustes(alm, json.loads(p.read_text())) if p.exists() else None
+    if not p.exists():
+        return None
+    camp = json.loads(p.read_text())
+    camp["desactualizado"] = camp.get("version_ingesta", 1) < VERSION_INGESTA
+    return con_ajustes(alm, camp)
 
 
 def con_ajustes(alm: Almacen, camp: dict) -> dict:

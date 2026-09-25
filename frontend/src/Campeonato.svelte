@@ -17,6 +17,15 @@
       error = e.message;
     }
   }
+  async function actualizar() {
+    try {
+      await api.cargar(camp.url, camp.division);
+      camp = { ...camp, estado: 'cargando', progreso: 'Empezando' };
+      temporizador = setTimeout(sondear, 1500);
+    } catch (e) {
+      error = e.message;
+    }
+  }
   async function sondear() {
     try {
       const e = await api.estado(id);
@@ -99,6 +108,7 @@
       <div class="etiqueta">{camp.clase} · {camp.division} · {horaLocal(camp.inicio, camp.tz_offset_ms).split(' · ')[0]} – {horaLocal(camp.fin, camp.tz_offset_ms).split(' · ')[0]}</div>
       <h1>{camp.nombre}</h1>
       <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} barcos · datos de RaceSense (revisión {camp.revision})</p>
+      <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen del campeonato →</a>
     </div>
     <form class="selector" onsubmit={elegirBarco}>
       <label class="etiqueta" for="barco">Barco de referencia</label>
@@ -112,6 +122,12 @@
     </form>
   </header>
 
+  {#if camp.desactualizado}
+    <section class="tarjeta aviso-act" role="status">
+      <p><b>Hay una versión mejor de la detección de pruebas y llegadas.</b> Vuelve a cargar el campeonato para aplicarla: la telemetría ya descargada se reutiliza y tus ajustes (viento, numeración, «Cuenta») se mantienen.</p>
+      <button class="boton" onclick={actualizar}>Actualizar</button>
+    </section>
+  {/if}
   <section class="tarjeta lista">
     <table>
       <thead>
@@ -195,4 +211,7 @@
     td:nth-child(7)::before { content: 'Cuenta'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     .n { text-align: left; }
   }
+  .resumen { display: inline-block; margin-top: 6px; text-decoration: none; font-size: 15px; padding: 7px 14px; }
+  .aviso-act { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 10px; border-left: 4px solid var(--estimado); }
+  .aviso-act p { margin: 0; font-size: 14px; flex: 1 1 320px; }
 </style>

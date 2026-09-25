@@ -18,7 +18,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -56,6 +56,22 @@ def _linea_de(balizas, roles, izq, der, proy, linea_doc=None):
 
 def _r(v, n=2):
     return None if v is None or (isinstance(v, float) and math.isnan(v)) else round(float(v), n)
+
+
+def recorrido_dudoso(tramos: list[dict], llegadas: dict, senal: int) -> bool:
+    """El recorrido reconstruido no cuadra si el parcial mediano de algún tramo se aleja mucho del
+    reparto de la duración de la prueba entre sus tramos (fuera de 0,4–2,5 veces)."""
+    if not tramos or not llegadas:
+        return False
+    esperado = (float(np.median(list(llegadas.values()))) - senal) / 1000 / len(tramos)
+    for t in tramos:
+        parciales = [f["parcial_s"] for f in t["barcos"].values() if f.get("parcial_s")]
+        if not parciales:
+            return True
+        r = float(np.median(parciales)) / esperado
+        if not 0.4 <= r <= 2.5:
+            return True
+    return False
 
 
 def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
@@ -277,7 +293,12 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                          "twd": round(twd, 1)}
 
     orden = sorted(llegadas, key=llegadas.get)
+    dudoso = recorrido_dudoso(salida_tramos, llegadas, senal)
+    if dudoso:
+        avisos.insert(0, "Recorrido dudoso: los parciales de los tramos no cuadran con la duración de la prueba "
+                         "(balizas estimadas mal situadas). Las llegadas valen; las métricas por tramo, no.")
     return {
+        "recorrido_dudoso": dudoso,
         "version": VERSION,
         "senal": senal,
         "proyeccion": {"lat0": proy.lat0, "lon0": proy.lon0},

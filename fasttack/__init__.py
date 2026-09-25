@@ -1,1 +1,1 @@
-__version__ = "0.4.0"  # hito 4 de la Fase 4
+__version__ = "0.5.0"  # hito 5 de la Fase 4

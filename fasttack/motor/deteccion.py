@@ -20,6 +20,9 @@ class Cruce:
     sentido: bool   # True = de izquierda a derecha de la línea A→B
 
 
+LLEGADA_DT_MAX_MS = 90_000
+
+
 def cruces(barcos: dict[str, Pista], a: Pista, b: Pista, desde: int, hasta: int,
            dt_max_ms: int = 10_000) -> list[Cruce]:
     """Cruces de cada traza con el segmento A–B (posición de A y B en el instante de cada muestra)."""
@@ -38,7 +41,9 @@ def cruces(barcos: dict[str, Pista], a: Pista, b: Pista, desde: int, hasta: int,
         s4 = (qx - px) * (by - py) - (qy - py) * (bx - px)
         ok = (np.diff(ts) <= dt_max_ms) & (s1 * s2 < 0) & (s3 * s4 < 0)
         for i in np.nonzero(ok)[0]:
-            out.append(Cruce(int(ts[i]), v, bool(s1[i] > 0)))
+            # instante del cruce: interpolado en el segmento entre las dos muestras
+            t = ts[i] + (ts[i + 1] - ts[i]) * s1[i] / (s1[i] - s2[i])
+            out.append(Cruce(int(t), v, bool(s1[i] > 0)))
     out.sort(key=lambda c: c.t)
     return out
 
@@ -79,10 +84,12 @@ class Llegadas:
 
 
 def detectar_llegadas(barcos, a: Pista, b: Pista, desde: int, hasta: int,
-                      hueco_ms: int = 8 * 60_000) -> Llegadas:
+                      hueco_ms: int = 8 * 60_000, dt_max_ms: int = LLEGADA_DT_MAX_MS) -> Llegadas:
     """Los cruces de la línea de llegada se agrupan en olas (separadas > 8 min). La última ola es
-    la llegada; por barco cuenta su primer cruce en el sentido mayoritario de esa ola."""
-    c = cruces(barcos, a, b, desde, hasta)
+    la llegada; por barco cuenta su primer cruce en el sentido mayoritario de esa ola.
+    Se admite un hueco de datos de hasta `dt_max_ms` sobre la línea (la hora se interpola): con la
+    cobertura de RaceSense, exigir muestras seguidas deja sin llegada a barcos que sí terminaron."""
+    c = cruces(barcos, a, b, desde, hasta, dt_max_ms)
     if not c:
         return Llegadas({}, 0.0, 0)
     olas = [[c[0]]]
