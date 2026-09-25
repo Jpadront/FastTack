@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.4.2** (Fase 4 · hito 7). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.5.1** (corriente estimada). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -46,6 +46,15 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 - **Fases de rolada**: los cortes se agrupan por tendencia; una fase con cambio total < 3° es ESTABLE; si no, PROGRESIVA DERECHA (TWD aumenta) o IZQUIERDA. **Fases de presión**: igual con el umbral de 0,5 kn (TWS calibrada) o 0,2 kn de SOG mediano. **Quién la recibió primero**: en cada corte se parten las muestras por la mediana de su posición lateral respecto al eje del tramo (mirando a barlovento) y, en cada mitad con ≥ 10 muestras, se calculan el SOG mediano y la TWD por bisectriz (≥ 5 muestras por grupo). En el primer corte de una fase no estable se compara cuánto se ha movido cada lado en el sentido de la fase: el que más se ha movido la recibió primero; si la diferencia es < 30 % o faltan datos, «toda la flota».
 - **Puerta favorecida**: con la TWD del último corte de la popa que acaba en la puerta y la posición de las dos balizas en el rodeo mediano, la favorecida es la que queda más a barlovento (se navega menos en la popa y menos en la ceñida siguiente); **ventaja** = diferencia a lo largo del viento, en metros. Nombre izquierda/derecha mirando a sotavento, como RaceSense.
 
+## Corriente (estimada)
+
+Sin corredera, la corriente se estima con toda la flota (`fasttack/motor/corriente.py`), una por prueba y otra por vuelta (la marea cambia durante la prueba):
+
+- **Método principal (brújula).** Para cada barco, tramo y amura, COG − HDG = δ + abatimiento + (c · n)/SOG, donde δ es el desvío fijo de la brújula de ese barco (montaje, magnético o verdadero), el abatimiento solo existe en ceñida (con signo opuesto en cada amura) y n es el vector unitario 90° a la derecha del rumbo. Con la flota navegando en cuatro rumbos (dos amuras en ceñida y dos en popa) se resuelven por mínimos cuadrados la corriente c, el abatimiento y un δ por barco (suma cero). Se descartan las brújulas con desvío > 15° y las observaciones anómalas (> 3 desviaciones robustas) y se vuelve a resolver. Mínimo 8 barcos con ceñida y popa.
+- **Comprobación independiente (velocidades).** En ceñida un barco va igual de rápido por el agua en las dos amuras: la media de las velocidades sobre el fondo de las dos amuras, fuera del eje, es la corriente transversal. **Confianza**: alta si las dos componentes transversales difieren ≤ 0,15 kn; media si ≤ 0,3 kn con el mismo signo; baja en otro caso.
+- **Uso.** Las **laylines sobre el fondo** salen de los rumbos reales de la flota en cada amura (centros de los dos grupos de COG del corte), que ya incluyen la corriente; antes eran simétricas (TWD ± TWA). TWD y TWA siguen siendo **sobre el fondo** (la bisectriz de los COG): con la corriente transversal típica (0,1–0,3 kn) el sesgo es de 1–3°.
+- **Validación.** Flota sintética con corriente, abatimiento y desvíos conocidos (tests): se recupera con ±0,12 kn y se descarta la brújula estropeada. Mundial (8 pruebas analizadas): 0,09–0,35 kn con confianza alta en 6; 0,66 kn (media) y 0,84 kn (baja) en las pruebas 6 y 5. En las 7 pruebas comparadas, los dos métodos dan el mismo signo de corriente transversal. Cascais Vela P9: 0,26 kn hacia 79° (0,15 kn hacia sotavento y 0,21 kn hacia la derecha, confianza alta); Track to Tactics da 0,88 kn hacia 117° (0,73 y 0,48 kn): mismo sentido en las dos componentes, pero el triple de intensidad. Su método se llama «admin-reference», lo que sugiere una referencia externa (modelo de marea) y no la telemetría; nuestros dos métodos independientes coinciden en valores menores.
+
 ## Métricas por barco y tramo
 
 | Métrica | Naturaleza | Fórmula |
@@ -58,7 +67,7 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 | Distancia navegada | calculada | suma de los segmentos entre muestras (cobertura ≥ 50 %) |
 | Maniobras | estimada | cambios del lado del viento (COG respecto a TWD) mantenidos ≥ 15 s; las pegadas (< 20 s) a un rodeo no cuentan, salvo al inicio de la ceñida desde la salida |
 | Pérdida en maniobra (m) | estimada | VMG de referencia = media de −30…−10 s y de +20…+30 s; pérdida = referencia × 30 s − avance real entre −10 y +20 s (≥ 0) |
-| Layline | estimada | desde la última maniobra antes de la baliza (o el inicio del tramo), exceso lateral más allá de la recta que sale de la baliza con el TWA de la flota, medido en perpendicular a esa recta. Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento, como Track to Tactics y las puertas) y segundos navegados fuera de la layline. No se calcula hacia la línea de llegada |
+| Layline | estimada | desde la última maniobra antes de la baliza (o el inicio del tramo): el barco está fuera si la demora a la baliza queda fuera del cono entre los rumbos sobre el fondo de las dos amuras de la flota (con la corriente incluida; si no hay, TWD ± TWA de la flota); exceso = distancia en perpendicular a la layline de esa amura. Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento, como Track to Tactics y las puertas) y segundos navegados fuera de la layline. No se calcula hacia la línea de llegada |
 | Escora, cabeceo | directa | mediana de \|roll − desviación del sensor\| y de pitch; IQR. **Desviación del sensor** = media de la escora mediana en amura babor y en amura estribor (en ceñida); 0 si faltan datos de alguna |
 | Modo | estimada | frente a la mediana de la flota en el tramo. Ceñida: TWA < med − 1,5° y SOG < med → ALTURA; TWA > med + 1,5° y SOG > med → VELOCIDAD; si no, VMG. Popa: TWA > med + 3° y SOG < med → PROFUNDO; TWA < med − 3° y SOG > med → VELOCIDAD |
 | Barco fantasma | estimada | recorre el tramo con el TWA de la flota y siempre en la amura favorecida: en cada corte avanza largo/10 a lo largo del eje y navega (largo/10) / cos(α − \|δ\|), con δ = TWD del corte − rumbo del eje (en popa, con TWD + 180°) |
@@ -89,7 +98,7 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 - **TWD instantánea**: tinte del campo según la TWD del instante frente a la media del tramo (azul = rolada a la izquierda, rojo = a la derecha; saturado a ±10°).
 - **Laylines** (siempre, en el tramo en curso): rectas desde la baliza final del tramo con el TWA de la flota y la TWD del instante.
 - **Rol**: colorea la traza según la rolada del momento a favor (azul) o en contra (rojo) de la amura en que navega el barco. **SOG**: colorea la traza con una rampa azul entre el p5 y el p95 de la ventana visible.
-- **Corriente**: no disponible (se estimará más adelante).
+- **Corriente**: estimada por prueba y por vuelta (ver «Corriente»); flecha y valor en la esquina del mapa, y detalle en las pestañas de tramo.
 
 ## Gráficos
 
@@ -122,7 +131,7 @@ Motor **0.4.2** (hito 7). 34 barcos, M1 y puerta con Atlas. Comparación de todo
 | Salida (ESP 1170) | línea −1,4 % frente a −1,1 %; margen −6,0 m frente a −5,2 m; SOG 3,8 frente a 4,1 kn; cruce +6,0 s frente a +5,7 s; B1 4.º +9 s igual |
 | +60/+180 s | definiciones distintas: la suya parece la distancia a la baliza 1; la nuestra, la distancia al primero a lo largo del eje |
 
-**Conclusión**: pasos, puertas, velocidades, distancias, escora, salida y lado de las laylines coinciden con Track to Tactics. Las diferencias vienen de la **corriente** (ellos la estiman, nosotros no): afecta a TWD, TWA, VMG absoluta, fases de rolada y metros de layline. Estimar la corriente es la siguiente mejora del motor.
+**Conclusión**: pasos, puertas, velocidades, distancias, escora, salida y lado de las laylines coinciden con Track to Tactics. Las diferencias vienen sobre todo de la TWD: ellos la corrigen con una corriente de 0,88 kn tomada de una referencia externa; nuestra estimación desde la telemetría (motor 0.5, ver «Corriente») da 0,26 kn en el mismo sentido. Afecta a TWD, TWA, VMG absoluta, fases de rolada y metros de layline.
 
 ## Pruebas del Mundial de J/70 2026
 

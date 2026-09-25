@@ -3,12 +3,13 @@
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { estado, puntosControl, colorBarco, indice, HUECO_S, velaCorta, derivados, presionEn, laylines, twdEn, dif,
-           DIVERGENTE, RAMPA_SOG } from './datos.js';
+           DIVERGENTE, RAMPA_SOG, corrienteEn, num } from './datos.js';
 
   // pistas: decodificadas; an: análisis; sel: Set de velas; ref: vela de referencia
   // T: tiempo actual (s desde la señal); ventana: [t0, t1] de la pestaña; nombres: vela → texto
   // capa: 'presion' | 'twd' | 'rol' | 'sog' | null; tramo: el tramo en curso (para capas y laylines)
   let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null } = $props();
+  const corr = $derived(corrienteEn(an, T));
 
   let cont, lienzo, mapa, ctx;
   let listo = $state(false);
@@ -180,6 +181,14 @@
 
 <div class="mapa" bind:this={cont}>
   <canvas bind:this={lienzo} aria-hidden="true"></canvas>
+  {#if corr}
+    <div class="corr" title={`Corriente estimada (${corr.ambito}), confianza ${corr.confianza}: ${num(corr.velocidad_kn, 2)} kn hacia ${num(corr.hacia_grados, 0)}°`}>
+      <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true" style:transform={`rotate(${corr.hacia_grados}deg)`}>
+        <path d="M0 10 V-8 M-5 -3 L0 -9 L5 -3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span><b class="num">{num(corr.velocidad_kn, 1)} kn</b> corriente <span class="est">est.</span></span>
+    </div>
+  {/if}
   {#if capa === 'sog'}
     <div class="leyenda"><span class="num">{rangoSog[0].toFixed(1)}</span>{#each RAMPA_SOG as c}<i style:background={c}></i>{/each}<span class="num">{rangoSog[1].toFixed(1)} kn</span></div>
   {:else if capa === 'rol'}
@@ -195,6 +204,10 @@
   .mapa { position: relative; width: 100%; height: 100%; background: var(--agua); border-radius: 6px; overflow: hidden; }
   canvas { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
   :global(.maplibregl-ctrl-top-right) { z-index: 3; }
+  .corr { position: absolute; left: 8px; top: 8px; z-index: 3; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.9);
+    color: #10222b; border-radius: 4px; padding: 2px 8px 2px 4px; font: 500 12px var(--display); }
+  .corr svg { color: #2a78d6; }
+  .corr .est { color: #6a5acd; }
   .leyenda { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
     background: rgba(255,255,255,.9); color: #10222b; border-radius: 4px; padding: 3px 8px; font: 500 12px var(--display); max-width: calc(100% - 120px); }
   .leyenda i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; }

@@ -165,6 +165,8 @@ def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict]
         "pruebas": [{"clave": p["clave"], "numero": p["numero"], "estado": p["estado"], "viento_kn": p.get("viento_kn"),
                      "ocs_aplicados": bool(p.get("ocs_fiable") and p.get("ocs")), "analizada": p["clave"] in analisis,
                      "recorrido_dudoso": bool(analisis.get(p["clave"], {}).get("recorrido_dudoso")),
+                     "corriente": {k: (analisis[p["clave"]].get("corriente") or {}).get(k) for k in ("velocidad_kn", "hacia_grados", "confianza")}
+                     if (analisis.get(p["clave"]) or {}).get("corriente") else None,
                      "flota": x["flota"] if x else None} for p, x in zip(pruebas, pp)],
         "general": gen,
         "barcos": barcos,

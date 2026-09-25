@@ -14,11 +14,12 @@ from .geo import a_ejes, dif, distancia, rumbo
 from .pistas import Pista, Proyeccion, pistas
 from . import recorrido as rec
 from . import salida as sal
+from . import corriente as corr
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.4.2"
+VERSION = "0.5.1"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -220,7 +221,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         quien_primero(fp, vt.cortes, "sog", False)
         cortes = [{"pct": 5 + 10 * k, "t": c.t, "twd": round(c.twd, 1), "twa_flota": _r(c.twa_flota, 1),
                    "sog_mediana": _r(c.sog_mediana), "tws": c.tws, "confianza": c.confianza, "fuente": c.fuente,
-                   "sog_izq": _r(c.sog_izq), "sog_der": _r(c.sog_der)}
+                   "sog_izq": _r(c.sog_izq), "sog_der": _r(c.sog_der),
+                   "rumbos": [round(c.rumbos[0], 1), round(c.rumbos[1], 1)] if c.rumbos else None}
                   for k, c in enumerate(vt.cortes)]
         salida_tramos.append({
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
@@ -292,6 +294,20 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         puertas[c.id] = {"favorecida": lado_1 if mejor_1 else lado_2, "ventaja_m": _r(abs(float(barl_1 - barl_2)), 1),
                          "twd": round(twd, 1)}
 
+    # Corriente de la prueba (constante): brújula + comprobación con las velocidades de las amuras
+    entrada_corr = [{"ceñida": t["tipo"] == "ceñida", "t0": t["t0"], "t1": t["t1"],
+                     "avance": t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360,
+                     "barcos": {v: (f["t_entrada"], f["t_salida"]) for v, f in t["barcos"].items()}}
+                    for t in salida_tramos]
+    c = corr.estimar(trazas, entrada_corr)
+    # por vuelta (ceñida + popa siguiente): la marea cambia durante la prueba
+    vueltas_corr = []
+    for k in range(0, len(entrada_corr) - 1):
+        a, b = entrada_corr[k], entrada_corr[k + 1]
+        if a["ceñida"] and not b["ceñida"]:
+            cv = corr.estimar(trazas, [a, b])
+            vueltas_corr.append({"vuelta": len(vueltas_corr) + 1, "desde_s": round((a["t0"] - senal) / 1000),
+                                 "hasta_s": round((b["t1"] - senal) / 1000), **(cv.a_dict() if cv else {"confianza": None})})
     orden = sorted(llegadas, key=llegadas.get)
     dudoso = recorrido_dudoso(salida_tramos, llegadas, senal)
     if dudoso:
@@ -299,6 +315,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                          "(balizas estimadas mal situadas). Las llegadas valen; las métricas por tramo, no.")
     return {
         "recorrido_dudoso": dudoso,
+        "corriente": (c.a_dict() | {"por_vuelta": vueltas_corr}) if c else None,
         "version": VERSION,
         "senal": senal,
         "proyeccion": {"lat0": proy.lat0, "lon0": proy.lon0},

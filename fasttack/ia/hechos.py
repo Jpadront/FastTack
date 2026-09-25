@@ -61,6 +61,17 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             "top5_de_la_prueba": [_vela(x, nombres) for x in top5],
         },
     }
+    c = an.get("corriente")
+    if c:
+        h["corriente_estimada"] = {
+            "velocidad_kn": c["velocidad_kn"], "hacia_grados": c["hacia_grados"],
+            "a_lo_largo_del_recorrido_kn": c["a_favor_kn"], "a_lo_largo_significa": "positivo = hacia barlovento, negativo = hacia sotavento",
+            "transversal_kn": c["derecha_kn"], "transversal_significa": "positivo = hacia la derecha mirando a barlovento",
+            "confianza": c["confianza"],
+            "por_vuelta": [{"vuelta": v["vuelta"], "velocidad_kn": v["velocidad_kn"], "hacia_grados": v["hacia_grados"],
+                            "confianza": v["confianza"]} for v in c.get("por_vuelta", []) if v.get("confianza")],
+            "nota": "estimada desde GPS y brújulas de la flota; las laylines ya la incluyen; TWD y TWA son sobre el fondo",
+        }
     # Salida
     s = an.get("salida")
     if s:
@@ -225,6 +236,8 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
         pruebas.append({
             "prueba": p["numero"], "puntos": pt["pts"], "codigo": pt["cod"], "descartada": pt["desc"],
             "llegadas": "reconstruidas" if p["estado"] == "reconstruida" else "oficiales",
+            "corriente_kn": (p.get("corriente") or {}).get("velocidad_kn"),
+            "corriente_confianza": (p.get("corriente") or {}).get("confianza"),
             "viento_referencia_kn": p.get("viento_kn"),
             "metricas": ("sí" if f is not None else "no: recorrido reconstruido dudoso (balizas estimadas mal situadas)"
                          if p.get("recorrido_dudoso") else "no: prueba sin analizar"),

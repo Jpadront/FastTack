@@ -64,6 +64,7 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - **Barcos en mapa y tabla**: solo el tuyo, top 5/10/15 de la prueba, toda la flota o *Elegir…* uno a uno. Cada barco tiene un color fijo; el tuyo, naranja.
 - **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Offset 1, Popa 1, Puerta…, Llegada, Rendimiento, Debrief IA; la pestaña del offset incluye también el paso por la baliza de barlovento). Cada una lleva el reproductor a su momento.
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
+- **Corriente estimada**: flecha y valor en la esquina del mapa (la de la vuelta en curso) y detalle con su confianza en las pestañas de ceñida y popa.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
 - **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
 - **Reproductor**: ▶, barra de tiempo, ×1/×4/×10/×30; hora local y tiempo desde la señal.
@@ -110,7 +111,7 @@ Después, recarga el navegador con Cmd+Shift+R y comprueba la versión al pie de
 
 ## Validación
 
-- **Frente a Track to Tactics** (Cascais Vela, prueba 9, 34 barcos): pasos por baliza a ±2 s (offset estimado ±8 s), elección de puerta 34/34, puerta favorecida la misma, SOG, distancia y escora con correlaciones de 0,83–0,97, salida y lado de las laylines iguales (28/28). Nuestra VMG explica el resultado del tramo mucho mejor (correlación con el parcial −0,68 a −0,92 frente a −0,14 a −0,52). La diferencia principal es la **corriente**: ellos la estiman (0,9 kn en esa prueba) y nosotros no, lo que desplaza nuestra TWD 4–6°.
+- **Frente a Track to Tactics** (Cascais Vela, prueba 9, 34 barcos): pasos por baliza a ±2 s (offset estimado ±8 s), elección de puerta 34/34, puerta favorecida la misma, SOG, distancia y escora con correlaciones de 0,83–0,97, salida y lado de las laylines iguales (28/28). Nuestra VMG explica el resultado del tramo mucho mejor (correlación con el parcial −0,68 a −0,92 frente a −0,14 a −0,52). La diferencia principal es la TWD (4–6°). **Corriente**: ellos dan 0,9 kn en esa prueba, con una referencia externa; nosotros estimamos 0,26 kn en el mismo sentido, con dos métodos independientes que coinciden.
 - **Frente a la clasificación oficial** (Mundial 2026, 100 barcos, 10 pruebas): 83 de 100 barcos a ±3 puestos en la general calculada, incluidas 4 pruebas reconstruidas desde la telemetría; las diferencias son decisiones del jurado.
 - **Flujo completo** desde una instalación vacía (Cascais Vela, vista de móvil): carga en 7 s, resumen con las 9 pruebas analizadas en ~2 min, debrief en ~35 s, sin errores.
 
@@ -118,7 +119,7 @@ Detalles en [`docs/metricas.md`](docs/metricas.md).
 
 ## Limitaciones conocidas
 
-- **Corriente**: no se estima todavía. Afecta a TWD, TWA, VMG absoluta, roladas y metros de layline (no a pasos, velocidades ni distancias). Es la siguiente mejora prevista.
+- **Corriente**: estimada (sin corredera) a partir de las brújulas y el GPS de la flota, con un nivel de confianza; es una por prueba y por vuelta, no un mapa por zonas. Las laylines ya la incluyen; TWD y TWA siguen siendo sobre el fondo.
 - **Sin anemómetro ni corredera**: todo el viento es reconstruido desde la flota; la intensidad solo se calibra con el viento de referencia que introduzcáis.
 - **Huecos de telemetría** (RaceSense guarda ~50 % de las muestras): lo que pasa dentro de un hueco no se ve (maniobras, pérdidas); cada métrica lleva su calidad de datos.
 - **General calculada** sin decisiones del jurado (DSQ, redress…). Las llegadas reconstruidas son provisionales.

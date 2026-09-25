@@ -126,15 +126,24 @@ def offset_escora(tr: Traza, periodos: list[tuple[int, int, VientoTramo]]) -> fl
 def layline(tr: Traza, t0: int, t1: int, marca_xy, viento: VientoTramo, twa_flota: float,
             ultima_maniobra: Maniobra | None) -> dict:
     """Sobrepaso de la layline en la aproximación final a la baliza.
-    Desde la última maniobra antes de la baliza, el barco navega en una amura hasta ella. Si ese
-    punto está más allá de la layline (la recta desde la baliza con el ángulo de la flota), el
-    exceso, medido en perpendicular a la layline, son los metros sobrepasados."""
+    Las laylines sobre el fondo son las rectas que llegan a la baliza con los rumbos que la flota
+    navega en cada amura en ese momento (incluyen la corriente, que las hace asimétricas); si no
+    hay rumbos por amura, TWD ± TWA de la flota. Desde la última maniobra antes de la baliza (o el
+    inicio del tramo), el barco está fuera si la demora a la baliza queda fuera del cono entre las
+    dos amuras: para llegar tendría que abrir (ceñida) o subir (popa) respecto a su amura. El exceso
+    es la distancia en perpendicular a la layline de esa amura."""
     if marca_xy is None or twa_flota is None:
         return {"estado": None, "lado": None, "metros": None, "segundos": None}
     mx, my = marca_xy
-    twd = float(viento.twd_en(t1 - 60_000))
-    eje = twd if viento.ceñida else (twd + 180) % 360      # hacia donde se avanza
-    alpha = math.radians(twa_flota if viento.ceñida else 180 - twa_flota)
+    rumbos = viento.rumbos_en(t1 - 60_000)
+    if rumbos is None:
+        twd = float(viento.twd_en(t1 - 60_000))
+        eje = twd if viento.ceñida else (twd + 180) % 360
+        a = twa_flota if viento.ceñida else 180 - twa_flota
+        rumbos = ((eje - a) % 360, (eje + a) % 360)
+    k1, k2 = rumbos
+    centro = (k1 + ((k2 - k1 + 540) % 360 - 180) / 2) % 360        # dirección del avance (bisectriz)
+    semi = abs((k2 - k1 + 540) % 360 - 180) / 2
     if ultima_maniobra is not None:
         px, py, tp = ultima_maniobra.x, ultima_maniobra.y, ultima_maniobra.t
     else:
@@ -142,26 +151,27 @@ def layline(tr: Traza, t0: int, t1: int, marca_xy, viento: VientoTramo, twa_flot
         if xy is None:
             return {"estado": None, "lado": None, "metros": None, "segundos": None}
         (px, py), tp = xy, t0
-    along, lat = a_ejes(mx - px, my - py, eje)  # posición de la baliza respecto al barco
-    along, lat = float(along), float(lat)
-    if along <= 0:
+
+    def fuera(dx, dy):
+        """Grados fuera del cono (+ = por la derecha de la amura derecha, − = por la izquierda) y distancia."""
+        dem = np.degrees(np.arctan2(dx, dy)) % 360
+        rel = (dem - centro + 540) % 360 - 180
+        return np.where(rel > semi, rel - semi, np.where(rel < -semi, rel + semi, 0.0)), np.hypot(dx, dy)
+
+    exceso, dist = fuera(np.array([mx - px]), np.array([my - py]))
+    exceso, dist = float(exceso[0]), float(dist[0])
+    if exceso == 0.0 or dist == 0.0:
         return {"estado": "OK", "lado": None, "metros": 0.0, "segundos": 0}
-    exceso_lat = abs(lat) - along * math.tan(alpha)
-    # Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento,
-    # como Track to Tactics y como se nombran las puertas): si la baliza queda a la derecha del
-    # barco, el barco está a la izquierda.
-    a_la_izquierda = lat > 0
-    lado_campo = "IZQUIERDA" if a_la_izquierda else "DERECHA"
-    if exceso_lat <= 0:
-        return {"estado": "OK", "lado": None, "metros": 0.0, "segundos": 0}
-    metros = exceso_lat * math.cos(alpha)
-    # segundos navegados más allá de la layline entre la maniobra y la baliza
+    # Lado del campo mirando hacia donde se navega: si la baliza queda a la derecha de la amura
+    # derecha, el barco está a la izquierda (como Track to Tactics y como se nombran las puertas).
+    lado_campo = "IZQUIERDA" if exceso > 0 else "DERECHA"
+    metros = dist * math.sin(math.radians(abs(exceso)))
+    # segundos navegados fuera del cono entre la maniobra y la baliza
     i = tr.tramo(tp, t1)
     seg = 0
     if len(i) > 1:
-        al, la = a_ejes(mx - tr.x[i], my - tr.y[i], eje)
-        fuera = (np.abs(la) - np.maximum(al, 0) * math.tan(alpha)) > 0
-        seg = int(np.sum(np.minimum(np.diff(tr.ts[i]), HUECO_MS)[fuera[:-1]]) / 1000)
+        e, _ = fuera(mx - tr.x[i], my - tr.y[i])
+        seg = int(np.sum(np.minimum(np.diff(tr.ts[i]), HUECO_MS)[(e != 0)[:-1]]) / 1000)
     return {"estado": "SOBREPASADA", "lado": lado_campo, "metros": round(metros, 1), "segundos": seg}
 
 

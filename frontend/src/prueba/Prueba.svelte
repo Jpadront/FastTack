@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import { api, horaLocal, clave as claveVela } from '../api.js';
-  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta, tramoEn, twdEn, faseEn } from './datos.js';
+  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta, tramoEn, twdEn, faseEn, corrienteEn } from './datos.js';
   import Mapa from './Mapa.svelte';
   import Reproductor from './Reproductor.svelte';
   import Panel from './Panel.svelte';
@@ -63,6 +63,7 @@
   const trMapa = $derived(an ? (tab?.tipo === 'tramo' ? tab.tramo : tramoEn(an, T)) : null);
   const twdAhora = $derived(trMapa ? twdEn(trMapa, T, an.senal) : null);
   const faseAhora = $derived(trMapa ? faseEn(trMapa, T, an.senal) : null);
+  const corrAhora = $derived(an ? corrienteEn(an, T) : null);
   const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Rol'], ['sog', 'SOG']];
   const lado = (v) => ({ IZQUIERDA: 'izquierda', DERECHA: 'derecha', flota: 'toda la flota' })[v] || '—';
   const desfase = $derived(camp?.tz_offset_ms || 0);
@@ -160,7 +161,7 @@
         <div class="indic num">
           <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
           {#if faseAhora}<span>· {faseAhora.tipo.toLowerCase()}{faseAhora.primero && faseAhora.primero !== 'flota' ? ' (primero ' + lado(faseAhora.primero) + ')' : ''}</span>{/if}
-          <span class="tenue">· corriente no disponible</span>
+          {#if corrAhora}<span>· corriente {num(corrAhora.velocidad_kn, 1)} kn hacia {num(corrAhora.hacia_grados, 0)}° <span class="est">est.</span></span>{:else}<span class="tenue">· corriente sin estimar</span>{/if}
         </div>
       </div>
       <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} /></div>
@@ -179,7 +180,7 @@
         <div><i>Sesgo de la línea <span class="est">est.</span></i><b>{num(s.sesgo.grados, 1)}° {s.sesgo.extremo === 'PIN' ? 'pin' : 'comité'} · {num(s.sesgo.metros, 0)} m</b></div>
         <div><i>Viento en el disparo <span class="est">est.</span></i><b>{num(s.twd_disparo, 0)}° · {s.tws_disparo ? num(s.tws_disparo, 1) + ' kn' : 'sin calibrar'}</b></div>
         <div><i>Línea</i><b>{num(s.sesgo.largo_linea_m, 0)} m</b></div>
-        <div><i>Corriente</i><b class="tenue">no disponible</b></div>
+        <div><i>Corriente <span class="est">est.</span></i>{#if an.corriente}<b>{num(an.corriente.velocidad_kn, 2)} kn hacia {num(an.corriente.hacia_grados, 0)}°</b><small class="tenue">confianza {an.corriente.confianza}</small>{:else}<b class="tenue">sin estimar</b>{/if}</div>
       </section>
       <Tabla titulo="Comparativa de apertura" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
         nota="Margen negativo = por detrás de la línea en el disparo. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
@@ -250,6 +251,21 @@
           <p class="nota">Primero: el lado del campo (mirando a barlovento) que recibió antes la rolada o el cambio de presión. «Toda la flota» si llegó a la vez. Estimado.</p>
         </section>
       </div>
+      {#if an.corriente}
+        {@const c = an.corriente}
+        {@const comp = (x, pos, neg) => `${num(Math.abs(x), 2)} kn ${x >= 0 ? pos : neg}`}
+        <section class="tarjeta bloque">
+          <h3>Corriente <span class="est">estimada</span></h3>
+          <div class="rodillo"><table class="mini"><thead><tr><th>Periodo</th><th class="n">Corriente</th><th class="n">A lo largo del recorrido</th><th class="n">Transversal</th><th>Confianza</th></tr></thead>
+            <tbody>
+              <tr><td>Toda la prueba</td><td class="n num">{num(c.velocidad_kn, 2)} kn → {num(c.hacia_grados, 0)}°</td><td class="n num">{comp(c.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(c.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{c.confianza}</td></tr>
+              {#each c.por_vuelta || [] as v}{#if v.confianza}
+                <tr><td>Vuelta {v.vuelta}</td><td class="n num">{num(v.velocidad_kn, 2)} kn → {num(v.hacia_grados, 0)}°</td><td class="n num">{comp(v.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(v.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{v.confianza}</td></tr>
+              {/if}{/each}
+            </tbody></table></div>
+          <p class="nota">Sin corredera: sale de comparar el rumbo de proa (brújula del Atlas) con el rumbo sobre el fondo de toda la flota, descontando el desvío de cada brújula y el abatimiento ({num(c.abatimiento_grados, 1)}°). Se comprueba con la diferencia de velocidad entre amuras en ceñida (transversal {c.transversal_velocidades_kn == null ? 'sin dato' : num(c.transversal_velocidades_kn, 2) + ' kn'}): confianza alta si coinciden (±0,15 kn). {c.barcos} barcos{c.brujulas_descartadas.length ? `; ${c.brujulas_descartadas.length} brújula(s) descartada(s) por desvío > 15°` : ''}. Derecha/izquierda mirando a barlovento. Las laylines sobre el fondo ya la incluyen; TWD y TWA son sobre el fondo.</p>
+        </section>
+      {/if}
     {:else if tab.tipo === 'baliza'}
       {#each tab.controles as c}
         {#if c.puerta}
@@ -341,6 +357,7 @@
   .resumen div { display: grid; gap: 2px; }
   .resumen i { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); font-style: normal; }
   .resumen b { font-size: 16px; font-weight: 600; }
+  .resumen small { font-size: 12px; }
   .est { color: var(--estimado); font-size: 11px; font-weight: 600; }
   .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
   .bloque { padding: 10px 12px; }

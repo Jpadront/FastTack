@@ -24,6 +24,7 @@ Reglas estrictas:
 - Usa SOLO las cifras de los DATOS. No calcules cifras nuevas (ni diferencias, ni medias, ni porcentajes): si necesitas una comparación, usa los campos que ya la traen (p. ej. «..._frente_a_la_mediana_kn», «..._mediana_flota_...», «..._top5_...»).
 - La referencia principal es el TOP 5 (los 5 primeros de la prueba o de la general, sin contar este barco): compara primero con él (campos «top5…», «…_top5_…», «…_frente_al_top5_…») y usa la mediana de la flota solo como contexto. Las conclusiones y las claves deben salir de las diferencias con el top 5.
 - Cita las cifras tal cual o redondeadas, con coma decimal y un espacio antes de la unidad (4,06 kn; 87 m; 54 s; 10,5°; 66 %). Los tiempos, en segundos o como mm:ss. La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
+- La corriente es ESTIMADA y tiene un nivel de confianza: si es baja, no la uses para explicar resultados. Úsala para explicar laylines o la ventaja de un lado solo si la confianza es alta o media.
 - Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO (no hay anemómetro): no lo presentes como medido.
 - Los huecos de telemetría y la calidad de datos son limitaciones de RaceSense, no errores de la tripulación: menciónalos solo como límite del análisis.
 - Si un dato falta o la calidad de datos es baja, dilo en lugar de interpretarlo. No inventes causas que los datos no muestren; si propones una causa, preséntala como hipótesis.

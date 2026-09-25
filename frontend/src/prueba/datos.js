@@ -294,9 +294,19 @@ export function mediana(a) {
 export function laylines(an, pistas, tr, T) {
   const fin = an.controles.find((c) => c.id === tr.hasta);
   if (!fin || !tr.viento.twa_flota) return [];
-  const twd = twdEn(tr, T, an.senal), ceñida = tr.tipo === 'ceñida';
-  const a = ceñida ? tr.viento.twa_flota : 180 - tr.viento.twa_flota;
-  const rumbos = ceñida ? [(twd + 180 - a + 360) % 360, (twd + 180 + a) % 360] : [(twd - a + 360) % 360, (twd + a) % 360];
+  // Rumbos sobre el fondo de cada amura en el corte más cercano (incluyen la corriente); si no hay,
+  // TWD ± TWA de la flota. Las rectas salen de la baliza en sentido contrario al de la navegación.
+  const pctT = ((T * 1000 + an.senal - tr.t0) / (tr.t1 - tr.t0)) * 100;
+  const conRumbos = tr.viento.cortes.filter((c) => c.rumbos);
+  let rumbos;
+  if (conRumbos.length) {
+    const c = conRumbos.reduce((m, x) => (Math.abs(x.pct - pctT) < Math.abs(m.pct - pctT) ? x : m));
+    rumbos = c.rumbos.map((k) => (k + 180) % 360);
+  } else {
+    const twd = twdEn(tr, T, an.senal), ceñida = tr.tipo === 'ceñida';
+    const a = ceñida ? tr.viento.twa_flota : 180 - tr.viento.twa_flota;
+    rumbos = ceñida ? [(twd + 180 - a + 360) % 360, (twd + 180 + a) % 360] : [(twd - a + 360) % 360, (twd + a) % 360];
+  }
   const out = [];
   for (const p of puntosControl(fin, pistas, T)) {
     for (const r of rumbos) {
@@ -305,4 +315,12 @@ export function laylines(an, pistas, tr, T) {
     }
   }
   return out;
+}
+
+// Corriente estimada en T: la de la vuelta en curso si se pudo estimar, si no la de toda la prueba.
+export function corrienteEn(an, T) {
+  const c = an.corriente;
+  if (!c) return null;
+  const v = (c.por_vuelta || []).find((x) => x.confianza && T >= x.desde_s && T <= x.hasta_s);
+  return v ? { ...v, ambito: `vuelta ${v.vuelta}` } : { ...c, ambito: 'toda la prueba' };
 }

@@ -36,6 +36,9 @@ class Corte:
     sog_der: float | None = None
     twd_izq: float | None = None
     twd_der: float | None = None
+    # Rumbos sobre el fondo de las dos amuras de la flota (centros de los grupos): incluyen la
+    # corriente, así que las laylines sobre el fondo salen de ellos
+    rumbos: tuple[float, float] | None = None
 
 
 @dataclass
@@ -50,6 +53,13 @@ class VientoTramo:
         tc = np.array([c.t for c in self.cortes], dtype=float)
         d = np.unwrap(np.radians([c.twd for c in self.cortes]))
         return np.degrees(np.interp(np.asarray(t, dtype=float), tc, d)) % 360.0
+
+    def rumbos_en(self, t: float) -> tuple[float, float] | None:
+        """Rumbos de las dos amuras en el corte válido más cercano a t."""
+        validos = [c for c in self.cortes if c.rumbos is not None]
+        if not validos:
+            return None
+        return min(validos, key=lambda c: abs(c.t - t)).rumbos
 
     @property
     def twd_media(self) -> float:
@@ -130,7 +140,8 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
             twa = sep / 2 if ceñida else 180 - sep / 2
             equilibrio = min(n1, n2) / max(n1, n2)          # las dos amuras bien representadas
             cantidad = min(1.0, len(barcos) / 10)
-            vt.cortes.append(Corte(tc, twd, twa, sog_med, len(cog), round(0.5 * equilibrio + 0.5 * cantidad, 2), "bisectriz", **lados))
+            vt.cortes.append(Corte(tc, twd, twa, sog_med, len(cog), round(0.5 * equilibrio + 0.5 * cantidad, 2), "bisectriz",
+                                   rumbos=(float(c1) % 360, float(c2) % 360), **lados))
             previo = twd
         else:
             vt.cortes.append(Corte(tc, previo, None, sog_med, len(cog), 0.2, "arrastre", **lados))
