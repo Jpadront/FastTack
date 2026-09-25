@@ -63,7 +63,8 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
         "barco": _vela(v, nombres),
         "prueba": {
             "numero": p.get("numero"),
-            "llegadas": "reconstruidas desde la telemetría (puesto provisional)" if p.get("estado") == "reconstruida" else "oficiales de RaceSense",
+            "llegadas": {"reconstruida": "reconstruidas desde la telemetría (puesto provisional)",
+                         "estimada": "estimadas: final del último tramo (sesión con archivos .vkx)"}.get(p.get("estado"), "oficiales de RaceSense"),
             "viento_referencia_kn": p.get("viento_kn"),
             "intensidad_viento": "calibrada con el viento de referencia" if p.get("viento_kn") else "sin calibrar (solo relativa)",
             "barcos_llegados": len(clas),
@@ -281,7 +282,7 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
         }
         pruebas.append({
             "prueba": p["numero"], "puntos": pt["pts"], "codigo": pt["cod"], "descartada": pt["desc"],
-            "llegadas": "reconstruidas" if p["estado"] == "reconstruida" else "oficiales",
+            "llegadas": {"reconstruida": "reconstruidas", "estimada": "estimadas"}.get(p["estado"], "oficiales"),
             "corriente_kn": (p.get("corriente") or {}).get("velocidad_kn"),
             "corriente_confianza": (p.get("corriente") or {}).get("confianza"),
             "viento_referencia_kn": p.get("viento_kn"),

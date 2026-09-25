@@ -103,3 +103,77 @@ def detectar_llegadas(barcos, a: Pista, b: Pista, desde: int, hasta: int,
             tiempos[x.barco] = x.t
     n_barcos = len({x.barco for x in ultima})
     return Llegadas(tiempos, len(ultima) / n_barcos, ultima[-1].t - ultima[0].t)
+
+
+# ---------------------------------------------------------------- sesiones propias (.vkx, sin línea de llegada)
+
+VENTANA_REF_MS = 10 * 60_000     # velocidad de referencia: los 10 primeros minutos de la prueba
+FRACCION_PARADA = 0.55           # tras la llegada, la SOG (mediana móvil de 90 s) baja de esto
+PARADA_LIMPIA_MS = 5 * 60_000    # llegada «limpia»: el barco para en los 5 min siguientes
+PASADO_M = 250.0                 # la llegada no está más allá de esto de la última baliza
+
+
+@dataclass
+class LlegadaPropia:
+    t: int
+    x: float
+    y: float
+    limpia: bool                 # el barco se paró enseguida (llegada fiable)
+    tramo_final: str             # 'popa' (llegada a sotavento) o 'ceñida'
+    ventana: tuple[int, int]     # desde el último rodeo hasta el final de la búsqueda
+    rodeos: int
+
+
+def llegada_sin_linea(tr, eje: float, ox: float, oy: float, senal: int, fin: int) -> LlegadaPropia | None:
+    """Llegada de un barco sin línea de llegada conocida: final del último tramo del recorrido.
+
+    1. Fin de la regata del barco: la SOG (mediana móvil de 90 s) cae por debajo del 55 % de la de
+       los 10 primeros minutos, o el final de la ventana (señal siguiente).
+    2. Rodeos: extremos alternos del avance a lo largo del eje (como en recorrido.extremos).
+    3. Llegada: punto más avanzado del último tramo (más a sotavento si es una popa), sin pasar
+       más de 250 m de la baliza anterior en ese sentido."""
+    from .geo import a_ejes
+    from .recorrido import HISTERESIS_MIN_M, extremos
+    tg = np.arange(senal, fin, 5_000)
+    if len(tg) < 30:
+        return None
+    sg = np.interp(tg, tr.ts, tr.sog)
+    ref = float(np.median(sg[tg < senal + VENTANA_REF_MS]))
+    med = np.array([np.median(sg[max(0, j - 17):j + 1]) for j in range(len(sg))])
+    baja = np.nonzero((tg > senal + VENTANA_REF_MS) & (med < FRACCION_PARADA * ref))[0]
+    parada = int(tg[baja[0]]) if len(baja) else fin
+    i = tr.tramo(senal, parada)
+    if len(i) < 10:
+        return None
+    a, _ = a_ejes(tr.x[i] - ox, tr.y[i] - oy, eje)
+    ext = extremos(tr, eje, senal, parada, max(HISTERESIS_MIN_M, 0.2 * float(np.max(a))))
+    if not ext:
+        return None
+    tipo, t_ext = ext[-1][0], ext[-1][1]
+    previos = [e for e in ext if e[0] != tipo]
+    a_prev = float(a_ejes(previos[-1][2] - ox, previos[-1][3] - oy, eje)[0]) if previos else 0.0
+    j = tr.tramo(t_ext, parada)
+    if len(j) < 2:
+        return None
+    aj, _ = a_ejes(tr.x[j] - ox, tr.y[j] - oy, eje)
+    sentido = 1 if tipo == "max" else -1          # tras barlovento se baja
+    pasado = np.nonzero(sentido * (a_prev - aj) > PASADO_M)[0]
+    if len(pasado) > 1:
+        j, aj = j[:pasado[0]], aj[:pasado[0]]
+    k = j[int(np.argmin(sentido * aj))]
+    return LlegadaPropia(int(tr.ts[k]), float(tr.x[k]), float(tr.y[k]), parada - int(tr.ts[k]) <= PARADA_LIMPIA_MS,
+                         "popa" if tipo == "max" else "ceñida", (t_ext, int(tr.ts[j[-1]])), len(ext))
+
+
+def ajustar_a_referencia(tr, ll: LlegadaPropia, rx: float, ry: float, radio_m: float = 300.0) -> LlegadaPropia | None:
+    """Llegada no limpia (el barco siguió navegando): máxima aproximación, en el último tramo, al
+    punto de llegada de las pruebas limpias del mismo día. None si no pasa a menos de radio_m."""
+    i = tr.tramo(*ll.ventana)
+    if not len(i):
+        return None
+    d = np.hypot(tr.x[i] - rx, tr.y[i] - ry)
+    k = int(np.argmin(d))
+    if d[k] > radio_m:
+        return None
+    j = i[k]
+    return LlegadaPropia(int(tr.ts[j]), float(tr.x[j]), float(tr.y[j]), False, ll.tramo_final, ll.ventana, ll.rodeos)

@@ -25,6 +25,9 @@ class Proyeccion:
         return ((np.asarray(lon) - self.lon0) * self.k * M_POR_GRADO,
                 (np.asarray(lat) - self.lat0) * M_POR_GRADO)
 
+    def latlon(self, x: float, y: float) -> tuple[float, float]:
+        return (self.lat0 + y / M_POR_GRADO, self.lon0 + x / (self.k * M_POR_GRADO))
+
 
 @dataclass
 class Pista:

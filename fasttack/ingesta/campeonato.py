@@ -44,6 +44,7 @@ class Prueba:
     ocs: list[str] = field(default_factory=list)
     ocs_fiable: bool = True
     linea_salida: dict | None = None
+    linea_llegada: dict | None = None     # solo en sesiones propias (estimada)
     numero: int | None = None
     excluida: bool = False
     viento_kn: float | None = None
@@ -174,7 +175,9 @@ def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None 
 
 def leer(alm: Almacen, camp_id: str) -> dict | None:
     ev, _, division = camp_id.partition("~")
-    p = alm.raiz / "racesense" / ev / division.replace("/", "_") / "campeonato.json"
+    if ev.startswith("vkx-"):   # sesión propia (ver sesion.py)
+        ev, division = camp_id, "Sesión"
+    p = alm.ruta(ev, division) / "campeonato.json"
     if not p.exists():
         return None
     camp = json.loads(p.read_text())

@@ -52,6 +52,26 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 - **Fases de rolada**: los cortes se agrupan por tendencia; una fase con cambio total < 3° es ESTABLE; si no, PROGRESIVA DERECHA (TWD aumenta) o IZQUIERDA. **Fases de presión**: igual con el umbral de 0,5 kn (TWS calibrada) o 0,2 kn de SOG mediano. **Quién la recibió primero**: en cada corte se parten las muestras por la mediana de su posición lateral respecto al eje del tramo (mirando a barlovento) y, en cada mitad con ≥ 10 muestras, se calculan el SOG mediano y la TWD por bisectriz (≥ 5 muestras por grupo). En el primer corte de una fase no estable se compara cuánto se ha movido cada lado en el sentido de la fase: el que más se ha movido la recibió primero; si la diferencia es < 30 % o faltan datos, «toda la flota».
 - **Puerta favorecida**: con la TWD del último corte de la popa que acaba en la puerta y la posición de las dos balizas en el rodeo mediano, la favorecida es la que queda más a barlovento (se navega menos en la popa y menos en la ceñida siguiente); **ventaja** = diferencia a lo largo del viento, en metros. Nombre izquierda/derecha mirando a sotavento, como RaceSense.
 
+### Viento con pocos barcos (método de «amuras»)
+
+Con menos de 3 barcos en un tramo (sesiones con archivos .vkx), un corte casi nunca tiene las dos amuras a la vez y la bisectriz no sale. Entonces:
+1. Con todas las muestras estables del tramo se separan los dos rumbos de las amuras (c1, c2) y su medio ángulo (TWA del barco en el tramo, que se supone constante).
+2. En cada corte, cada muestra da una bisectriz: COG + medio ángulo en una amura, COG − medio ángulo en la otra (se descartan las que están a más de 25° de su amura: maniobras). La TWD del corte es su mediana circular (+180° en popa).
+3. Rumbos de las amuras en el corte (para laylines): c1 y c2 girados lo que haya rolado la TWD.
+
+Una rolada se ve en la amura en la que se navega; si el barco cambia de modo (orzar para ganar altura, arribar para velocidad) se confunde con una rolada. Confianza: la mitad del equilibrio entre amuras (≤ 0,5). Con un barco sintético a TWD fija, el error es < 3°.
+
+## Sesiones con archivos .vkx: llegada estimada
+
+Sin línea de llegada, la de cada barco se estima con su propia traza:
+1. **Fin de la regata del barco**: la SOG (mediana móvil de 90 s, rejilla de 5 s) cae por debajo del 55 % de la mediana de los 10 primeros minutos; si no, la ventana acaba 6 min antes de la señal siguiente.
+2. **Último tramo**: desde el último extremo del avance a lo largo del eje (rodeo de barlovento o sotavento, como en el recorrido).
+3. **Llegada**: el punto más avanzado de ese tramo (el más a sotavento si es una popa), sin pasar más de 250 m del nivel de la baliza anterior en ese sentido.
+4. **Llegada «limpia»**: el barco se para en los 5 min siguientes. Si no (vuelve a puerto navegando), la llegada es el paso más cercano, en el último tramo, al punto mediano de las llegadas limpias del mismo día (a menos de 300 m); si no lo hay, se marca como poco fiable.
+5. La línea de llegada de la prueba es el punto mediano de las llegadas de sus barcos (para saber si se llega a barlovento o a sotavento).
+
+Con los archivos de ESP 1214 del 9 y el 10 de mayo de 2025 (Barcelona, 8 pruebas barlovento-sotavento a 2 vueltas): 5 llegadas limpias y 3 por referencia (a 66–122 m del punto del día); pruebas de 34–42 min.
+
 ## Corriente (estimada)
 
 Sin corredera, la corriente se estima con toda la flota (`fasttack/motor/corriente.py`), una por prueba y otra por vuelta (la marea cambia durante la prueba):

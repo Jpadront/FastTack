@@ -1,1 +1,1 @@
-__version__ = "0.14.0"  # laylines: tráfico o cálculo
+__version__ = "0.15.0"  # sesiones propias con archivos .vkx

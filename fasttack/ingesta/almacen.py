@@ -83,10 +83,13 @@ class Almacen:
                  (clave, valor))
 
     # ------------------------------------------------------------------ JSON de RaceSense
+    def ruta(self, event_id: str, division: str | None = None) -> Path:
+        """Carpeta de un evento de RaceSense, o de una sesión propia de archivos .vkx («vkx-…»)."""
+        d = self.raiz / ("sesiones" if es_local(event_id) else "racesense") / event_id
+        return d / division.replace("/", "_") if division else d
+
     def _dir(self, event_id: str, division: str | None = None) -> Path:
-        d = self.raiz / "racesense" / event_id
-        if division:
-            d = d / division.replace("/", "_")
+        d = self.ruta(event_id, division)
         d.mkdir(parents=True, exist_ok=True)
         return d
 
@@ -104,6 +107,8 @@ class Almacen:
                    progreso=None) -> dict[str, np.ndarray]:
         """Telemetría de [desde, hasta]. Descarga solo los trozos que falten."""
         d = self._dir(event_id, division)
+        if es_local(event_id):   # sesión propia: solo los archivos .vkx importados
+            return _leer_parquets(sorted(d.glob("tel_vkx_*.parquet")), desde, hasta)
         idx_p = d / "tramos.json"
         tramos = json.loads(idx_p.read_text()) if idx_p.exists() else []
         for a, b in _huecos(desde, hasta, [(t["desde"], t["hasta"]) for t in tramos if t["definitivo"]]):
@@ -115,22 +120,25 @@ class Almacen:
                            # un trozo vacío no se da por definitivo: se vuelve a pedir la próxima vez
                            "definitivo": bool(len(cols["ts"])) and b < time.time() * 1000 - config.MARGEN_DIRECTO_MS})
             idx_p.write_text(json.dumps(tramos))
-        partes = []
-        for t in tramos:
-            if t["hasta"] >= desde and t["desde"] <= hasta:
-                tab = pq.read_table(d / t["archivo"],
-                                    filters=[("ts", ">=", desde), ("ts", "<=", hasta)])
-                partes.append(tab)
-        if not partes:
-            return {c: np.array([], dtype=tp) for c, tp in COLUMNAS.items()}
-        tab = pa.concat_tables(partes)
-        cols = {c: tab.column(c).to_numpy(zero_copy_only=False) for c in COLUMNAS}
-        # Trozos contiguos comparten bordes: quitar duplicados (ts, sn) y ordenar.
-        clave = cols["ts"].astype(np.int64) * 65536 + cols["sn"].astype(np.int64)
-        _, unicos = np.unique(clave, return_index=True)
-        orden = unicos[np.argsort(cols["ts"][unicos], kind="stable")]
-        cols = {c: v[orden] for c, v in cols.items()}
-        return quitar_congeladas(cols)
+        archivos = [d / t["archivo"] for t in tramos if t["hasta"] >= desde and t["desde"] <= hasta]
+        return quitar_congeladas(_leer_parquets(archivos, desde, hasta))
+
+
+def es_local(event_id: str) -> bool:
+    return event_id.startswith("vkx-")
+
+
+def _leer_parquets(archivos, desde: int, hasta: int) -> dict[str, np.ndarray]:
+    partes = [pq.read_table(f, filters=[("ts", ">=", desde), ("ts", "<=", hasta)]) for f in archivos]
+    if not partes:
+        return {c: np.array([], dtype=tp) for c, tp in COLUMNAS.items()}
+    tab = pa.concat_tables(partes)
+    cols = {c: tab.column(c).to_numpy(zero_copy_only=False) for c in COLUMNAS}
+    # Trozos contiguos comparten bordes: quitar duplicados (ts, sn) y ordenar.
+    clave = cols["ts"].astype(np.int64) * 65536 + cols["sn"].astype(np.int64)
+    _, unicos = np.unique(clave, return_index=True)
+    orden = unicos[np.argsort(cols["ts"][unicos], kind="stable")]
+    return {c: v[orden] for c, v in cols.items()}
 
 
 CONGELADA_MS = 5_000

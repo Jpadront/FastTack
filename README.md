@@ -10,6 +10,7 @@ Lo que hace, de un vistazo:
 2. **Analizar una prueba** → recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), métricas por tramo y barco, salida, maniobras, laylines, puertas, barco fantasma.
 3. **Resumen del campeonato** → general calculada, evolución por prueba frente a la flota y al top 5, salidas, maniobras, laylines, puertas y viento.
 4. **Debrief con IA** → texto para la tripulación a partir de esas cifras; cada cifra se comprueba.
+5. **Sesión con archivos .vkx** → regatas o entrenamientos que no están en RaceSense, con el registro del propio Atlas 2 (ver abajo).
 
 Todo es cálculo determinista con los datos de RaceSense; lo que depende del viento reconstruido va marcado como **estimado**. La IA solo redacta.
 
@@ -65,6 +66,19 @@ En la lista de pruebas:
 - **Recorridos**: barlovento-sotavento con offset y puerta, a una o varias vueltas. Un recorrido con tramos de través (triángulo, trapecio) no se reconstruye bien: el análisis lo marcará como «recorrido dudoso» y sus métricas no entrarán en el resumen.
 - **Campeonatos en curso**: las pruebas que terminan después de cargarlo aparecen al pulsar **↻ Actualizar pruebas** en la página del campeonato (la telemetría ya descargada se reutiliza). Una prueba que aún se está navegando sale como «sin llegadas» hasta que termine.
 - **Divisiones**: el enlace puede llevar cualquier sufijo (`#day=…&race=…`); si el campeonato tiene varias divisiones, se pide cuál.
+
+## Sesiones con archivos .vkx (sin RaceSense)
+
+Para regatas o entrenamientos que no se retransmitieron en RaceSense. En la página inicial, **Sesión con archivos .vkx**: nombre, clase, vela del barco y sus archivos `.vkx` (el registro interno del Atlas 2, uno por día). Se pueden añadir después más días u otros barcos del mismo día (página de la sesión → «Añadir archivos»). Los archivos se guardan en `datos/sesiones/` y no salen del ordenador.
+
+- **Pruebas**: una por cada salida marcada con el cronómetro del Atlas (evento «salida»; si varios barcos la marcan, se agrupan).
+- **Línea de salida**: los últimos pings de pin y comité anteriores a la señal (de cualquier barco). Sin pings, la prueba no se puede analizar.
+- **Llegada (estimada)**: los archivos no traen la línea de llegada. Es el final del último tramo de cada barco: el punto más avanzado de ese tramo antes de que el barco se pare (su SOG cae por debajo del 55 % de la de la salida). Si el barco siguió navegando (p. ej. de vuelta a puerto), se toma el paso más cercano al punto de llegada de las demás pruebas del día.
+- **Balizas**: estimadas con los rodeos de los barcos que haya.
+- **Viento con pocos barcos**: con menos de 3 barcos, la TWD de cada momento sale del rumbo que se lleva y del ángulo entre amuras del tramo (método de «amuras», ver `docs/metricas.md`).
+- **Un solo barco**: no hay general, puestos, top 5 ni escora óptima o corriente (necesitan flota). El resumen y el debrief comparan entre pruebas y tramos del propio barco. Con archivos de más barcos del mismo día vuelven las comparaciones.
+
+Formato `.vkx` comprobado con archivos reales de un Atlas 2 (mayo de 2025): posición, SOG y COG a 2 Hz, orientación (rumbo, escora y cabeceo con decimales), eventos del cronómetro y pings de línea. Un tipo de registro desconocido detiene la lectura con un aviso.
 
 ## Analizar una prueba
 
@@ -138,6 +152,7 @@ Detalles en [`docs/metricas.md`](docs/metricas.md).
 - **Huecos de telemetría** (RaceSense guarda ~50 % de las muestras): lo que pasa dentro de un hueco no se ve (maniobras, pérdidas); cada métrica lleva su calidad de datos.
 - **General calculada** sin decisiones del jurado (DSQ, redress…). Las llegadas reconstruidas son provisionales.
 - **Recorrido dudoso**: si las balizas estimadas no cuadran con la duración de la prueba, la prueba cuenta en la general pero sus métricas no entran en el resumen (en el Mundial, la prueba 4).
+- **Sesiones .vkx**: la llegada y las balizas son estimadas; con un solo barco no hay comparación con la flota. Solo se aceptan los tipos de registro vistos en archivos reales (sin sensores externos de viento, corredera o carga).
 - No se calcula la layline hacia la línea de llegada. Sin PDF (fuera de v1).
 
 ## Desarrollo

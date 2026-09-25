@@ -5,6 +5,12 @@ que navegan ese tramo se separan en dos grupos (una amura y la otra, o una banda
 popa) y la TWD es su bisectriz. Si un corte no tiene datos suficientes, hereda la TWD del anterior
 («arrastre») con confianza baja.
 
+Con menos de 3 barcos (sesiones propias con archivos .vkx) la bisectriz de un corte casi nunca
+tiene las dos amuras. Entonces se usan los rumbos de todo el tramo: el ángulo entre amuras del
+barco (o barcos) en el tramo se supone constante, y en cada corte la TWD es la bisectriz que
+corresponde al rumbo que llevan (COG ± medio ángulo). Así una rolada se ve en la amura en la que
+se esté navegando («amuras», confianza media).
+
 Presión: mediana del SOG de la flota en cada corte. Sin viento de referencia es solo un índice
 relativo; con él se convierte en nudos (ver `calibrar_tws`). Todo es estimado.
 """
@@ -19,6 +25,8 @@ from .trazas import Traza
 
 N_CORTES = 10
 MARGEN_RODEO_MS = 20_000
+MIN_BARCOS_BISECTRIZ = 3      # por debajo: método de «amuras» (rumbos del tramo)
+AMURA_MAX_DEG = 25            # una muestra a más de esto del rumbo de su amura es una maniobra
 
 
 @dataclass
@@ -29,7 +37,7 @@ class Corte:
     sog_mediana: float | None
     n: int
     confianza: float         # 0–1
-    fuente: str              # 'bisectriz' | 'arrastre'
+    fuente: str              # 'bisectriz' | 'amuras' | 'arrastre'
     tws: float | None = None  # nudos, solo si hay viento de referencia
     # Por lado del campo (mirando a barlovento), para saber quién recibe antes una rolada o racha
     sog_izq: float | None = None
@@ -106,6 +114,8 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
     vt.sog_min = sog_minima(trazas, en_tramo)
     d = (t1 - t0) / N_CORTES
     previo = ref
+    amuras = _amuras_del_tramo(trazas, en_tramo, vt.sog_min, ref, ceñida, limite_deg) \
+        if len(en_tramo) < MIN_BARCOS_BISECTRIZ else None
     for k in range(N_CORTES):
         a, b = t0 + k * d, t0 + (k + 1) * d
         cogs, sogs, lats, barcos = [], [], [], set()
@@ -141,6 +151,13 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
             bis = (c1 + dif(c2 - c1) / 2) % 360
             twd = float(bis if ceñida else (bis + 180) % 360)
             valido = limite_deg is None or abs(float(dif(twd - ref))) <= limite_deg
+        if amuras is not None:
+            corte = _corte_por_amuras(tc, cog, sog_med, amuras, ceñida, limite_deg, ref)
+            if corte is not None:
+                vt.cortes.append(corte)
+                previo = corte.twd
+                continue
+            valido = False
         lados = {}
         if lats:
             lat = np.concatenate(lats)
@@ -164,13 +181,59 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
         else:
             vt.cortes.append(Corte(tc, previo, None, sog_med, len(cog), 0.2, "arrastre", **lados))
     # Cortes iniciales sin datos: toman la primera TWD válida
-    primera = next((c.twd for c in vt.cortes if c.fuente == "bisectriz"), None)
+    primera = next((c.twd for c in vt.cortes if c.fuente != "arrastre"), None)
     if primera is not None:
         for c in vt.cortes:
-            if c.fuente == "bisectriz":
+            if c.fuente != "arrastre":
                 break
             c.twd = primera
     return vt
+
+
+def _amuras_del_tramo(trazas, en_tramo, sog_min, ref, ceñida, limite_deg):
+    """Rumbos de las dos amuras en todo el tramo (pocos barcos): (c1, c2) o None."""
+    cogs = []
+    for v, (e, s) in en_tramo.items():
+        tr = trazas.get(v)
+        if tr is None:
+            continue
+        i = tr.tramo(e + MARGEN_RODEO_MS, s - MARGEN_RODEO_MS)
+        if len(i) < 2:
+            continue
+        c = tr.cog[i]
+        ok = ~np.isnan(c) & np.r_[False, np.abs(dif(np.diff(c))) < 8] & (tr.sog[i] > sog_min)
+        cogs.append(c[ok])
+    if not cogs:
+        return None
+    c1, c2, n1, n2 = _dos_grupos(np.concatenate(cogs), ref, ceñida)
+    sep = abs(float(dif(c2 - c1)))
+    if min(n1, n2) < 20 or not (50 <= sep <= 130 if ceñida else 25 <= sep <= 150):
+        return None
+    bis = (c1 + dif(c2 - c1) / 2) % 360
+    twd = float(bis if ceñida else (bis + 180) % 360)
+    if limite_deg is not None and abs(float(dif(twd - ref))) > limite_deg:
+        return None
+    return float(c1), float(c2), twd, min(n1, n2) / max(n1, n2)
+
+
+def _corte_por_amuras(tc, cog, sog_med, amuras, ceñida, limite_deg, ref) -> Corte | None:
+    c1, c2, twd_tramo, equilibrio = amuras
+    medio = float(dif(c2 - c1)) / 2
+    d1, d2 = np.abs(dif(cog - c1)), np.abs(dif(cog - c2))
+    g1 = d1 < d2
+    cerca = np.minimum(d1, d2) <= AMURA_MAX_DEG
+    if cerca.sum() < 10:
+        return None
+    est = np.where(g1, cog + medio, cog - medio)[cerca] % 360   # bisectriz según el rumbo de cada muestra
+    bis_tramo = twd_tramo if ceñida else (twd_tramo + 180) % 360
+    bis = mediana_circular(est, bis_tramo)
+    twd = float(bis if ceñida else (bis + 180) % 360)
+    if limite_deg is not None and abs(float(dif(twd - ref))) > limite_deg:
+        return None
+    giro = float(dif(twd - twd_tramo))
+    twa = abs(medio) if ceñida else 180 - abs(medio)
+    return Corte(tc, twd, twa, sog_med, int(cerca.sum()), round(0.5 * equilibrio, 2), "amuras",
+                 rumbos=((c1 + giro) % 360, (c2 + giro) % 360))
 
 
 def calibrar_tws(tramos: list[VientoTramo], tws_disparo: float | None):

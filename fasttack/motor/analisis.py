@@ -21,7 +21,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.8.1"
+VERSION = "0.9.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -89,16 +89,22 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
     pin, comite = _linea_de(balizas, roles, "startLeft", "startRight", proy, prueba.get("linea_salida"))
     if pin is None:
         return {"version": VERSION, "error": "No hay línea de salida: ni balizas con Atlas ni extremos en el documento."}
-    lleg_a, lleg_b = _linea_de(balizas, roles, "finishLeft", "finishRight", proy)
-    if comite.fija:
+    lleg_a, lleg_b = _linea_de(balizas, roles, "finishLeft", "finishRight", proy, prueba.get("linea_llegada"))
+    propia = (prueba.get("linea_llegada") or {}).get("fuente") == "estimada"   # sesión con archivos .vkx
+    if propia:
+        avisos.append("Sesión propia (archivos .vkx): línea de salida de los pings del Atlas; llegada y balizas "
+                      "estimadas con las trazas de los barcos que hay.")
+    elif comite.fija:
         avisos.append("La línea de salida se toma del documento del comité (sus balizas no transmiten).")
 
     zona = rec.zona_de(clase)
     controles, pasos, eje, vueltas, av = rec.reconstruir(trazas, balizas, roles, senal, llegadas,
                                                           pin, comite, lleg_a, lleg_b, rec.zona_de(clase))
     avisos += av
+    if propia:
+        controles[-1].fuente = "estimada"
     for c in controles:
-        if c.fuente == "estimada":
+        if c.fuente == "estimada" and not propia:
             avisos.append(f"{c.nombre}: sin Atlas; posición estimada con los rodeos de la flota.")
 
     # ---------------------------------------------------------------- tramos y viento

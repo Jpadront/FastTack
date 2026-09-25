@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { api, horaLocal } from './api.js';
+  import SubirVkx from './SubirVkx.svelte';
 
   let url = $state('');
   let divisiones = $state(null);   // si el campeonato tiene varias, hay que elegir
@@ -48,7 +49,7 @@
           <div class="tarjeta ficha">
             <a class="nombre" href={`#/c/${encodeURIComponent(c.id)}`}>
               <b>{c.nombre || c.id}</b>
-              <span class="tenue">{c.clase || c.division} · {#if c.estado === 'cargando'}cargando…{:else if c.estado === 'error'}<span class="error">error al cargar</span>{:else}{fecha(c.inicio)}{/if}</span>
+              <span class="tenue">{c.clase || c.division}{#if c.id.startsWith('vkx-')} · archivos .vkx{/if} · {#if c.estado === 'cargando'}cargando…{:else if c.estado === 'error'}<span class="error">error al cargar</span>{:else}{fecha(c.inicio)}{/if}</span>
             </a>
             <div class="accesos">
               <a class="acceso" href={`#/c/${encodeURIComponent(c.id)}`}>Pruebas</a>
@@ -80,6 +81,11 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </form>
 </section>
+<section class="tarjeta cargar vkx">
+  <h2>Sesión con archivos .vkx</h2>
+  <p class="tenue">Para regatas o entrenamientos que no están en RaceSense: sube el registro de tu Atlas 2 (y, si los tienes, los de otros barcos). Las pruebas salen de las salidas marcadas con el crono del Atlas y la línea, de sus pings; llegadas y balizas se estiman con las trazas. Los archivos se quedan en tu ordenador.</p>
+  <SubirVkx onHecho={(id) => (location.hash = `#/c/${encodeURIComponent(id)}`)} />
+</section>
 </div>
 
 <style>
@@ -89,6 +95,9 @@
   .columnas { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 800px) { .columnas { grid-template-columns: minmax(0, 1fr); } }
   .cargar { padding: 16px; display: grid; gap: 8px; }
+  .guardados { grid-row: span 2; }
+  .vkx { grid-column: 2; }
+  @media (max-width: 800px) { .vkx { grid-column: auto; } .guardados { grid-row: auto; } }
   h2 { font-size: 22px; margin: 0 0 10px; }
   .cargar h2 { margin: 0; }
   p { margin: 0; max-width: 65ch; }

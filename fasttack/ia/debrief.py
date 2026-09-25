@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -31,6 +32,7 @@ Reglas estrictas:
 - Los huecos de telemetría y la calidad de datos son limitaciones de RaceSense, no errores de la tripulación: menciónalos solo como límite del análisis.
 - Si un dato falta o la calidad de datos es baja, dilo en lugar de interpretarlo. No inventes causas que los datos no muestren; si propones una causa, preséntala como hipótesis.
 - Izquierda/derecha son lados del campo, mirando a barlovento (en las puertas, mirando a sotavento, como indica el dato). No los traduzcas a babor/estribor ni a amuras.
+- Si los DATOS traen «sesion_propia» con un solo barco, no hay flota ni top 5: no hables de puestos ni de la flota; compara entre pruebas y entre tramos del propio barco (evolución, regularidad, ceñida frente a popa) y recuerda que llegadas y balizas son estimadas.
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
 
@@ -136,8 +138,36 @@ def guardar(alm: Almacen, camp_id: str, ambito: str, barco: str, datos: dict, te
     return leer(alm, camp_id, ambito, barco)
 
 
+# Con un solo barco (sesión con archivos .vkx) las comparaciones con la flota son consigo mismo
+_DE_FLOTA = re.compile(r"mediana_flota|frente_a_la_mediana|top5|top_1[05]|puesto|detras_del|distancia_al_primero|"
+                       r"general|puntos|descart|barcos_llegados|barcos_ya_en_la_layline|de_la_flota|eligieron|"
+                       r"resultado_del_dia|veces_en_el_top|salidas_con_puesto|comparacion|recibio_primero")
+
+
+def _sin_flota(o):
+    if isinstance(o, dict):
+        return {k: _sin_flota(v) for k, v in o.items() if not _DE_FLOTA.search(k)}
+    if isinstance(o, list):
+        return [_sin_flota(v) for v in o]
+    return o
+
+
 def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
-    """Cifras para el debrief de una prueba (ámbito = su clave) o del campeonato."""
+    """Cifras para el debrief de una prueba (ámbito = su clave), de un día o del campeonato."""
+    from ..ingesta import campeonato as camp_mod
+    h = _datos_de(alm, camp_id, ambito, barco)
+    camp = camp_mod.leer(alm, camp_id)
+    if camp.get("fuente") == "vkx":
+        n = len(camp["barcos"])
+        if n <= 1:
+            h = _sin_flota(h)
+        h["sesion_propia"] = {"fuente": "archivos .vkx del Atlas 2 (sin RaceSense)", "barcos_con_archivo": n,
+                              "llegadas_y_balizas": "estimadas con las trazas de los barcos",
+                              "comparacion_con_la_flota": "no hay (un solo barco)" if n <= 1 else f"solo entre {n} barcos"}
+    return h
+
+
+def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     from .. import servicio
     from ..ingesta import campeonato as camp_mod
     camp = camp_mod.leer(alm, camp_id)

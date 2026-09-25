@@ -29,6 +29,15 @@ export const api = {
   resumen: (c, descartes) => pedir('GET', `/api/campeonatos/${id(c)}/resumen${descartes != null ? '?descartes=' + descartes : ''}`),
   debrief: (c, ambito, barco) => pedir('GET', `/api/campeonatos/${id(c)}/debrief?ambito=${encodeURIComponent(ambito)}&barco=${encodeURIComponent(barco)}`),
   generarDebrief: (c, ambito, barco, texto) => pedir('POST', `/api/campeonatos/${id(c)}/debrief`, { ambito, barco, ...(texto != null ? { texto } : {}) }),
+  crearSesion: (nombre, clase) => pedir('POST', '/api/sesiones', { nombre, clase, zona: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+  subirVkx: async (sid, archivo, vela, nombre) => {
+    const q = new URLSearchParams({ vela, nombre: nombre || '', archivo: archivo.name });
+    const r = await fetch(`/api/sesiones/${sid}/vkx?${q}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: archivo });
+    const datos = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(`${archivo.name}: ${typeof datos?.detail === 'string' ? datos.detail : 'error ' + r.status}`);
+    return datos;
+  },
+  quitarVkx: (sid, n) => pedir('DELETE', `/api/sesiones/${sid}/vkx/${n}`),
   preferencias: () => pedir('GET', '/api/preferencias'),
   fijarBarco: (barco) => pedir('PUT', '/api/preferencias', { barco }),
 };

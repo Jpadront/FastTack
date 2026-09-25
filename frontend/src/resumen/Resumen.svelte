@@ -55,6 +55,9 @@
   const nombreDia = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const SECCIONES = [['r-general', 'General'], ['r-puestos', 'Puestos'], ['r-metrica', 'Por prueba'], ['r-medias', 'Medias'],
     ['r-escora', 'Escora'], ['r-salidas', 'Salidas y maniobras'], ['r-viento', 'Viento'], ['r-debrief', 'Debrief IA']];
+  // Sesión con un solo barco (archivos .vkx): sin general ni puestos, que no dicen nada
+  const solo = $derived((res?.inscritos ?? 0) <= 1);
+  const secciones = $derived(solo ? SECCIONES.filter(([id]) => id !== 'r-general' && id !== 'r-puestos') : SECCIONES);
   const pruebas = $derived(res ? res.pruebas.map((p) => `P${p.numero}`) : []);
   const general = $derived(res?.general || []);
   const miFila = $derived(general.find((f) => f.vela === ref));
@@ -132,13 +135,15 @@
   <header class="cab">
     <div>
       <a class="volver" href={`#/c/${encodeURIComponent(campId)}`}>← {camp.nombre}</a>
-      <h1>Resumen del campeonato</h1>
+      <h1>Resumen {camp.fuente === 'vkx' ? 'de la sesión' : 'del campeonato'}</h1>
+      {#if solo}<p class="meta">{res.pruebas.length} pruebas · 1 barco (archivos .vkx): métricas de tu barco, sin comparación con la flota</p>{:else}
       <p class="meta">{res.pruebas.length} pruebas · {res.inscritos} barcos · general <b>calculada</b> con
         <select aria-label="Descartes" value={res.descartes} onchange={(e) => cambiarDescartes(Number(e.currentTarget.value))}>
           {#each [0, 1, 2, 3] as d}<option value={d}>{d} {d === 1 ? 'descarte' : 'descartes'}{d === res.descartes_defecto ? ' (por defecto)' : ''}</option>{/each}
         </select>
-      </p>
+      </p>{/if}
     </div>
+    {#if !solo}
     <div class="seleccion">
       <span class="etiqueta">Comparar con</span>
       <div class="modos" role="group" aria-label="Comparar con">
@@ -147,11 +152,13 @@
         {/each}
       </div>
     </div>
+    {/if}
   </header>
 
   {#if progreso}<p class="progreso" role="status"><span class="rueda" aria-hidden="true"></span>{progreso} Las métricas se completan al terminar.</p>{/if}
 
-  {#if miFila}
+  {#if solo}
+  {:else if miFila}
     <section class="tiles">
       <div class="tarjeta tile"><i>Puesto calculado</i><b class="num">{miFila.puesto}.º</b><small>de {res.inscritos}</small></div>
       <div class="tarjeta tile"><i>Puntos netos</i><b class="num">{miFila.neto}</b><small>total {miFila.total}</small></div>
@@ -163,8 +170,9 @@
   {/if}
 
   <nav class="indice" aria-label="Secciones del resumen">
-    {#each SECCIONES as [id, t]}<button onclick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t}</button>{/each}
+    {#each secciones as [id, t]}<button onclick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t}</button>{/each}
   </nav>
+  {#if !solo}
   <div id="r-general" class="ancla"></div>
   <Tabla titulo="General calculada" {ref} colores={colores} filas={filasGeneral} ordenInicial="puesto" columnas={columnasGeneral}
     nota={`Puntuación baja sin penalizaciones ni decisiones del jurado (DSQ, redress…): puede diferir de la oficial. OCS (solo con la lista del comité fiable) y sin llegada (DNF) = ${res.inscritos + 1} puntos. Entre paréntesis, los descartes. «rec.»: llegadas reconstruidas desde la telemetría. Empates: RRS A8.`} />
@@ -177,6 +185,7 @@
     <GraficoPruebas {pruebas} series={seriePuesto} invertido titulo="Puesto por prueba" />
     <p class="nota">Arriba, mejores puestos. Huecos: OCS o sin llegada.</p>
   </section>
+  {/if}
 
   <div id="r-metrica" class="ancla"></div>
   <section class="tarjeta bloque">

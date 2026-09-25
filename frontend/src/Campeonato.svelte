@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { api, horaLocal, duracion, clave } from './api.js';
+  import SubirVkx from './SubirVkx.svelte';
 
   let { id, barco, onBarco } = $props();
 
@@ -83,7 +84,18 @@
     else error = `No encuentro «${barcoTexto}» en la flota de este campeonato.`;
   }
 
-  const estadoTexto = { oficial: 'oficial', reconstruida: 'reconstruida', 'sin llegadas': 'sin llegadas' };
+  const estadoTexto = { oficial: 'oficial', reconstruida: 'reconstruida', 'sin llegadas': 'sin llegadas', estimada: 'estimada' };
+  const propia = $derived(camp?.fuente === 'vkx');
+
+  async function quitar(a) {
+    if (!confirm(`¿Quitar ${a.archivo || 'el archivo'} (${a.vela}) de la sesión?`)) return;
+    try {
+      await api.quitarVkx(id, a.n);
+      await leer();
+    } catch (e) {
+      error = e.message;
+    }
+  }
 </script>
 
 {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -108,10 +120,10 @@
     <div>
       <div class="etiqueta">{camp.clase} · {camp.division} · {horaLocal(camp.inicio, camp.tz_offset_ms).split(' · ')[0]} – {horaLocal(camp.fin, camp.tz_offset_ms).split(' · ')[0]}</div>
       <h1>{camp.nombre}</h1>
-      <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} barcos · datos de RaceSense (revisión {camp.revision})</p>
+      <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} {camp.barcos.length === 1 ? 'barco' : 'barcos'} · {propia ? `archivos .vkx del Atlas (${camp.archivos.length})` : `datos de RaceSense (revisión ${camp.revision})`}</p>
       <div class="acciones-camp">
-        <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen del campeonato →</a>
-        <button class="boton claro recargar" onclick={actualizar} title="Vuelve a leer el campeonato en RaceSense: pruebas y llegadas nuevas (la telemetría ya descargada se reutiliza)">↻ Actualizar pruebas</button>
+        <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen {propia ? 'de la sesión' : 'del campeonato'} →</a>
+        {#if !propia}<button class="boton claro recargar" onclick={actualizar} title="Vuelve a leer el campeonato en RaceSense: pruebas y llegadas nuevas (la telemetría ya descargada se reutiliza)">↻ Actualizar pruebas</button>{/if}
       </div>
     </div>
     <form class="selector" onsubmit={elegirBarco}>
@@ -126,7 +138,7 @@
     </form>
   </header>
 
-  {#if camp.desactualizado}
+  {#if camp.desactualizado && !propia}
     <section class="tarjeta aviso-act" role="status">
       <p><b>Hay una versión mejor de la detección de pruebas y llegadas.</b> Vuelve a cargar el campeonato para aplicarla: la telemetría ya descargada se reutiliza y tus ajustes (viento, numeración, «Cuenta») se mantienen.</p>
       <button class="boton" onclick={actualizar}>Actualizar</button>
@@ -166,7 +178,27 @@
       </tbody>
     </table>
   </section>
+  {#if propia}
+    <section class="tarjeta archivos">
+      <h2>Archivos de la sesión</h2>
+      <ul>
+        {#each camp.archivos as a (a.n)}
+          <li>
+            <b>{a.vela}</b>{#if a.nombre} · {a.nombre}{/if}
+            <span class="tenue">{a.archivo} · {horaLocal(a.desde, camp.tz_offset_ms)}–{horaLocal(a.hasta, camp.tz_offset_ms, false)} · {a.salidas} salidas · {a.pings} pings de línea</span>
+            <button class="enlace" onclick={() => quitar(a)}>Quitar</button>
+          </li>
+        {/each}
+      </ul>
+      <details>
+        <summary>Añadir archivos (otro día u otro barco)</summary>
+        <SubirVkx sid={id} onHecho={leer} />
+      </details>
+    </section>
+    <p class="tenue pie">«Estimada»: la llegada de cada barco es el final de su último tramo (los archivos no traen la línea de llegada) y las balizas salen de sus rodeos. La salida usa los pings de pin y comité del Atlas. Con pocos barcos no hay comparación con la flota ni top 5; cuantos más archivos de otros barcos del mismo día, más completo el análisis.</p>
+  {:else}
   <p class="tenue pie">«Reconstruida»: prueba o llegadas obtenidas de la telemetría porque RaceSense no las tiene (puesto provisional). «Cuenta»: desmárcala para dejar fuera una prueba (entrenamiento, anulada); la numeración se ajusta sola. Pulsa «Analizar» para abrir el análisis de una prueba.</p>
+  {/if}
 {/if}
 
 <style>
@@ -222,6 +254,13 @@
     td:nth-child(7)::before { content: 'Cuenta'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     .n { text-align: left; }
   }
+  .archivos { padding: 14px 16px; margin-top: 12px; display: grid; gap: 10px; }
+  .archivos h2 { font-size: 20px; margin: 0; }
+  .archivos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .archivos li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .archivos li .tenue { font-size: 14px; }
+  .archivos summary { cursor: pointer; font: 600 15px var(--display); color: var(--foco); margin-bottom: 8px; }
+  .enlace { background: none; border: 0; padding: 0; color: var(--foco); text-decoration: underline; font-size: 14px; }
   .acciones-camp { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .resumen { display: inline-block; text-decoration: none; font-size: 15px; padding: 7px 14px; }
   .recargar { font-size: 15px; padding: 7px 14px; }

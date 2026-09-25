@@ -5,13 +5,15 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..ingesta import campeonato as camp_mod
+from ..ingesta import sesion as sesion_mod
+from ..ingesta.vkx import ErrorVKX
 from ..ingesta.almacen import Almacen
 from ..ingesta.campeonato import DivisionAmbigua, elegir_division
 from ..ingesta.racesense import ErrorRaceSense
@@ -39,6 +41,15 @@ class AjustePrueba(BaseModel):
     excluida: bool | None = None
     viento_kn: float | None = None
     viento_dir: float | None = None
+
+
+class PeticionSesion(BaseModel):
+    nombre: str
+    clase: str | None = None
+    zona: str | None = None     # zona horaria del navegador (Europe/Madrid) para las horas locales
+
+
+MAX_VKX = 200 * 1024 * 1024
 
 
 class Preferencias(BaseModel):
@@ -88,6 +99,39 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         tareas[camp_id] = {"progreso": "Empezando", "desde": time.time()}
         threading.Thread(target=_cargar, args=(camp_id, p.url, div["name"]), daemon=True).start()
         return {"id": camp_id, "estado": "cargando"}
+
+    # ------------------------------------------------------------------ sesiones propias (.vkx)
+    @app.post("/api/sesiones", status_code=201)
+    def crear_sesion(p: PeticionSesion):
+        return sesion_mod.crear(alm, p.nombre, p.clase, p.zona)
+
+    @app.post("/api/sesiones/{sid}/vkx")
+    async def subir_vkx(sid: str, request: Request, vela: str, nombre: str = "", archivo: str = ""):
+        datos = await request.body()
+        if not datos:
+            raise HTTPException(422, "El archivo está vacío.")
+        if len(datos) > MAX_VKX:
+            raise HTTPException(413, "El archivo es demasiado grande.")
+        try:
+            return sesion_mod.añadir_vkx(alm, sid, datos, vela, nombre, archivo)
+        except KeyError as e:
+            raise HTTPException(404, "Sesión no encontrada") from e
+        except (ErrorVKX, ValueError) as e:
+            raise HTTPException(422, str(e)) from e
+
+    @app.delete("/api/sesiones/{sid}/vkx/{n}")
+    def quitar_vkx(sid: str, n: int):
+        try:
+            return sesion_mod.quitar_archivo(alm, sid, n)
+        except KeyError as e:
+            raise HTTPException(404, "Sesión no encontrada") from e
+
+    @app.post("/api/sesiones/{sid}/reconstruir")
+    def reconstruir_sesion(sid: str):
+        try:
+            return sesion_mod.reconstruir(alm, sid)
+        except KeyError as e:
+            raise HTTPException(404, "Sesión no encontrada") from e
 
     @app.get("/api/campeonatos")
     def lista():
