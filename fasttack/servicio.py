@@ -29,7 +29,7 @@ def analisis_prueba(alm: Almacen, camp_id: str, clave: str, recalcular: bool = F
     cols = alm.telemetria(camp["event_id"], camp["division"], desde, hasta)
     if not len(cols["ts"]):
         raise PruebaNoAnalizable("RaceSense no tiene telemetría de esta prueba.")
-    res = analisis.analizar(prueba, cols, {k: int(v) for k, v in camp["roles_recorrido"].items()})
+    res = analisis.analizar(prueba, cols, {k: int(v) for k, v in camp["roles_recorrido"].items()}, camp.get("clase"))
     res["prueba"] = {"clave": clave, "numero": prueba["numero"], "estado": prueba["estado"],
                      "viento_kn": prueba.get("viento_kn"), "nota": prueba.get("nota")}
     ruta.write_text(json.dumps(res, ensure_ascii=False, default=float))

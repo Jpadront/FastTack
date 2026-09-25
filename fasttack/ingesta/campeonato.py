@@ -97,7 +97,7 @@ def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None 
 
     progreso("Descargando el resumen de la telemetría")
     resumen = alm.json(ev, "racing_summary", lambda: alm.cliente.racing_summary(ev), refrescar=True)
-    ventanas = [r for d in resumen.get("divisions") or [] if d.get("division") == nombre_div
+    ventanas = [r for d in resumen.get("divisions") or [] if nz.misma_division(d.get("division"), nombre_div)
                 for r in d.get("races") or []]
     roles = roles_recorrido(div)
 

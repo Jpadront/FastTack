@@ -18,7 +18,7 @@ from ..ingesta.almacen import Almacen
 from . import hechos as hechos_mod
 from .validar import no_verificadas
 
-COMUN = """Eres el analista de rendimiento de un equipo de J/70. Escribe en español de España, para la tripulación, de forma directa y concreta.
+COMUN = """Eres el analista de rendimiento de un equipo de {clase}. Escribe en español de España, para la tripulación, de forma directa y concreta.
 
 Reglas estrictas:
 - Usa SOLO las cifras de los DATOS. No calcules cifras nuevas (ni diferencias, ni medias, ni porcentajes): si necesitas una comparación, usa los campos que ya la traen (p. ej. «..._frente_a_la_mediana_kn», «..._mediana_flota_...», «..._top5_...»).
@@ -65,6 +65,7 @@ class IANoDisponible(RuntimeError):
 
 def instrucciones(datos: dict) -> str:
     base = CAMPEONATO if datos.get("tipo") == "debrief del campeonato" else PRUEBA
+    base = base.replace("{clase}", datos.get("clase") or "vela")
     return base + "\nDATOS:\n```json\n" + json.dumps(datos, ensure_ascii=False, indent=1) + "\n```\n"
 
 
@@ -132,8 +133,8 @@ def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
             raise ValueError("Faltan pruebas por analizar: abre antes el resumen del campeonato.")
         if barco not in res["barcos"]:
             raise ValueError("Este barco no tiene llegadas en el campeonato.")
-        return hechos_mod.de_campeonato(res, barco, camp.get("nombre") or "", nombres)
+        return hechos_mod.de_campeonato(res, barco, camp.get("nombre") or "", nombres, camp.get("clase"))
     an = servicio.analisis_prueba(alm, camp_id, ambito)
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:
         raise ValueError("Este barco no tiene datos en esta prueba.")
-    return hechos_mod.de_prueba(an, barco, nombres)
+    return hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))

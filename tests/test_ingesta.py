@@ -43,3 +43,10 @@ def test_huecos_de_cache():
     assert _huecos(0, 100, [(0, 100)]) == []
     assert _huecos(0, 100, [(20, 40), (60, 80)]) == [(0, 20), (40, 60), (80, 100)]
     assert _huecos(50, 70, [(0, 60)]) == [(60, 70)]
+
+
+def test_division_de_la_telemetria():
+    from fasttack.ingesta.normalizar import division_tele, misma_division
+    assert division_tele("Snipe Worlds 2026") == "Snipe_Worlds_2026"
+    assert division_tele("Open") == "Open"
+    assert misma_division("Snipe_Worlds_2026", "Snipe Worlds 2026") and not misma_division("Open", "Gold")

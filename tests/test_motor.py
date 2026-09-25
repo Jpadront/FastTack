@@ -121,3 +121,9 @@ def test_recorrido_dudoso():
     llegadas = {"A": 4000_000, "B": 4020_000}   # 4000 s tras la señal (0), 4 tramos -> ~1000 s por tramo
     assert not recorrido_dudoso([tramo(1200), tramo(900), tramo(1100), tramo(800)], llegadas, 0)
     assert recorrido_dudoso([tramo(500), tramo(200), tramo(200), tramo(3100)], llegadas, 0)
+
+
+def test_zona_segun_la_clase():
+    from fasttack.motor.recorrido import zona_de
+    assert abs(zona_de("J/70") - 20.79) < 0.01 and abs(zona_de("Snipe") - 14.16) < 0.01
+    assert zona_de("clase desconocida") == zona_de("J/70")

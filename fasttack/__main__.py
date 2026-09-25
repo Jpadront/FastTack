@@ -20,7 +20,7 @@ def ip_local() -> str | None:
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="fasttack", description="Análisis de regatas J/70 con datos de RaceSense")
+    ap = argparse.ArgumentParser(prog="fasttack", description="Análisis de regatas con datos de RaceSense")
     ap.add_argument("--puerto", type=int, default=8000)
     ap.add_argument("--solo-este-ordenador", action="store_true", help="no aceptar conexiones de la Wi-Fi")
     a = ap.parse_args()

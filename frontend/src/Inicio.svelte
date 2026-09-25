@@ -35,8 +35,8 @@
 </script>
 
 <header class="intro">
-  <h1>Análisis post-regata de J/70</h1>
-  <p class="tenue">Con los datos de los Atlas de RaceSense: recorrido y viento reconstruidos, métricas por tramo frente a la flota y al top 5, general calculada y debrief escrito por IA con cifras comprobadas.</p>
+  <h1>Análisis post-regata de vela</h1>
+  <p class="tenue">Para cualquier clase que navegue con Atlas 2 de Vakaros (RaceSense): recorrido y viento reconstruidos, métricas por tramo frente a la flota y al top 5, general calculada y debrief escrito por IA con cifras comprobadas.</p>
 </header>
 <div class="columnas">
 <section class="guardados">

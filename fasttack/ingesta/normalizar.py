@@ -1,6 +1,8 @@
 """Normalización de los datos de RaceSense (reglas en docs/fuente_datos.md)."""
 from __future__ import annotations
 
+import re
+
 from datetime import datetime, timezone
 
 
@@ -40,3 +42,13 @@ def latlon_de_geojson(obj) -> tuple[float, float] | None:
     """{coordinates: [lon, lat]} → (lat, lon)."""
     c = (obj or {}).get("coordinates")
     return (c[1], c[0]) if c else None
+
+
+def division_tele(nombre: str) -> str:
+    """Nombre de la división en la API de telemetría: el documento del comité usa espacios
+    («Snipe Worlds 2026») y la telemetría, guiones bajos («Snipe_Worlds_2026»)."""
+    return re.sub(r"\s+", "_", (nombre or "").strip())
+
+
+def misma_division(a: str, b: str) -> bool:
+    return re.sub(r"[^a-z0-9]", "", (a or "").lower()) == re.sub(r"[^a-z0-9]", "", (b or "").lower())

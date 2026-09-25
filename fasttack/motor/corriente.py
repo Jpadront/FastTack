@@ -103,7 +103,7 @@ def _observaciones(trazas: dict[str, Traza], tramos: list[dict]):
             if x is None:
                 continue
             i = x.tramo(e + MARGEN_RODEO_MS, s - MARGEN_RODEO_MS)
-            i = i[(x.sog[i] > (2.5 if ce else 3.0)) & ~np.isnan(x.cog[i]) & ~np.isnan(x.hdg[i])]
+            i = i[(x.sog[i] > t.get("sog_min", 2.5 if ce else 3.0)) & ~np.isnan(x.cog[i]) & ~np.isnan(x.hdg[i])]
             rel = _wrap(x.cog[i] - t["avance"])
             for lado in (1, -1):
                 j = i[rel * lado > 0]
@@ -147,7 +147,7 @@ def transversal_por_velocidades(trazas: dict[str, Traza], tramo: dict) -> float 
         if x is None:
             continue
         i = x.tramo(e + MARGEN_RODEO_MS, s - MARGEN_RODEO_MS)
-        i = i[(x.sog[i] > 2.0) & ~np.isnan(x.cog[i])]
+        i = i[(x.sog[i] > tramo.get("sog_min", 2.0)) & ~np.isnan(x.cog[i])]
         g.append(x.sog[i][:, None] * np.stack([np.sin(np.radians(x.cog[i])), np.cos(np.radians(x.cog[i]))], 1))
         lados.append(_wrap(x.cog[i] - tramo["avance"]))
     if not g:

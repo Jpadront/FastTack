@@ -47,6 +47,8 @@ class VientoTramo:
     t0: int
     t1: int
     cortes: list[Corte] = field(default_factory=list)
+    # SOG mínima para usar una muestra: relativa a la flota (sirve para cualquier clase y viento)
+    sog_min: float = 2.0
 
     def twd_en(self, t) -> np.ndarray:
         """TWD interpolada entre los centros de los cortes (constante fuera)."""
@@ -79,6 +81,21 @@ def _dos_grupos(cog: np.ndarray, ref: float, ceñida: bool):
     return c1, c2, int(g1.sum()), int((~g1).sum())
 
 
+FRACCION_SOG_MIN, SOG_MIN_ABS = 0.4, 1.0
+
+
+def sog_minima(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]]) -> float:
+    """SOG por debajo de la cual una muestra no se usa (parado, rodeando, maniobrando): el 40 % de
+    la SOG mediana de la flota en el tramo, y al menos 1 kn. En un J/70 da ~2,2 kn en ceñida y
+    ~3 kn en popa, como los umbrales fijos de antes; en clases lentas o con poco viento no
+    descarta la mitad de los datos."""
+    s = [trazas[v].sog[trazas[v].tramo(e + MARGEN_RODEO_MS, sal - MARGEN_RODEO_MS)]
+         for v, (e, sal) in en_tramo.items() if v in trazas]
+    s = np.concatenate(s) if s else np.array([])
+    s = s[~np.isnan(s)]
+    return max(SOG_MIN_ABS, FRACCION_SOG_MIN * float(np.median(s))) if len(s) else 2.0
+
+
 def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]], t0: int, t1: int,
                  ceñida: bool, ref: float, limite_deg: float | None = None,
                  eje: float | None = None) -> VientoTramo:
@@ -86,6 +103,7 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
     anterior o el rumbo del eje). Con `limite_deg`, un corte que se aparte más de eso de `ref`
     se descarta como dato insuficiente (en popa los grupos de COG son más frágiles)."""
     vt = VientoTramo(ceñida, t0, t1)
+    vt.sog_min = sog_minima(trazas, en_tramo)
     d = (t1 - t0) / N_CORTES
     previo = ref
     for k in range(N_CORTES):
@@ -103,7 +121,7 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
                 continue
             c = tr.cog[i]
             estable = np.r_[False, np.abs(dif(np.diff(c))) < 8]
-            ok = ~np.isnan(c) & estable & (tr.sog[i] > (2.0 if ceñida else 3.0))
+            ok = ~np.isnan(c) & estable & (tr.sog[i] > vt.sog_min)
             if ok.any():
                 cogs.append(c[ok]); sogs.append(tr.sog[i][ok]); barcos.add(v)
                 if eje is not None:

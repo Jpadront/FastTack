@@ -108,7 +108,10 @@
       <div class="etiqueta">{camp.clase} · {camp.division} · {horaLocal(camp.inicio, camp.tz_offset_ms).split(' · ')[0]} – {horaLocal(camp.fin, camp.tz_offset_ms).split(' · ')[0]}</div>
       <h1>{camp.nombre}</h1>
       <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} barcos · datos de RaceSense (revisión {camp.revision})</p>
-      <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen del campeonato →</a>
+      <div class="acciones-camp">
+        <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen del campeonato →</a>
+        <button class="boton claro recargar" onclick={actualizar} title="Vuelve a leer el campeonato en RaceSense: pruebas y llegadas nuevas (la telemetría ya descargada se reutiliza)">↻ Actualizar pruebas</button>
+      </div>
     </div>
     <form class="selector" onsubmit={elegirBarco}>
       <label class="etiqueta" for="barco">Barco de referencia</label>
@@ -217,7 +220,9 @@
     td:nth-child(7)::before { content: 'Cuenta'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     .n { text-align: left; }
   }
-  .resumen { display: inline-block; margin-top: 6px; text-decoration: none; font-size: 15px; padding: 7px 14px; }
+  .acciones-camp { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .resumen { display: inline-block; text-decoration: none; font-size: 15px; padding: 7px 14px; }
+  .recargar { font-size: 15px; padding: 7px 14px; }
   .aviso-act { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 10px; border-left: 4px solid var(--estimado); }
   .aviso-act p { margin: 0; font-size: 14px; flex: 1 1 320px; }
 </style>

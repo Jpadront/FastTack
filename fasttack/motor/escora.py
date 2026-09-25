@@ -48,7 +48,7 @@ def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], vien
             b = a + SEGMENTO_MS
             if not any(a - TRAS_MANIOBRA_MS < m < b + ANTES_MANIOBRA_MS for m in mans) and x.cobertura(a, b) >= 0.7:
                 i = x.tramo(a, b)
-                i = i[~np.isnan(x.cog[i]) & (x.sog[i] > 2)]
+                i = i[~np.isnan(x.cog[i]) & (x.sog[i] > viento.sog_min)]
                 if len(i) >= 8:
                     twd = viento.twd_en(x.ts[i])
                     rel = (x.cog[i] - twd + 540) % 360 - 180

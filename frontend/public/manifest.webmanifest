@@ -1,7 +1,7 @@
 {
   "name": "FastTack",
   "short_name": "FastTack",
-  "description": "Análisis post-regata de J/70 con datos de RaceSense",
+  "description": "Análisis post-regata de vela con datos de RaceSense",
   "lang": "es",
   "start_url": "/",
   "display": "standalone",

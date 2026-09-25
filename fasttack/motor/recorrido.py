@@ -21,7 +21,17 @@ from .pistas import Pista
 from .trazas import Traza
 
 HISTERESIS_MIN_M = 150.0
-ZONA_M = 3 * 6.93          # zona de baliza: 3 esloras de J/70
+# Eslora (m) por clase, para la zona de baliza (3 esloras). Sin clase conocida, la del J/70.
+ESLORAS = {"j/70": 6.93, "j/80": 8.0, "j/24": 7.32, "snipe": 4.72, "ilca": 4.23, "laser": 4.23, "470": 4.7,
+           "420": 4.2, "49er": 4.99, "49erfx": 4.99, "nacra 17": 5.25, "finn": 4.5, "star": 6.92, "etchells": 9.3,
+           "melges 24": 7.32, "melges 20": 6.1, "sb20": 6.15, "dragon": 8.9, "optimist": 2.31, "29er": 4.45,
+           "flying fifteen": 6.1, "rs21": 6.4, "j/111": 11.1, "fireball": 4.93}
+ZONA_M = 3 * 6.93
+
+
+def zona_de(clase: str | None) -> float:
+    """Zona de baliza: 3 esloras de la clase del campeonato."""
+    return 3 * ESLORAS.get((clase or "").strip().lower(), 6.93)
 RADIO_ATLAS_M = 250.0      # un Atlas a menos de esto del rodeo de la flota es esa baliza
 OFFSET_VENTANA_MS = 150_000  # el offset se rodea en los 2,5 min siguientes a la baliza
 OFFSET_BAJADA_M = 40.0       # empieza la popa cuando se baja más de esto respecto a la baliza
@@ -93,7 +103,7 @@ def extremos(tr: Traza, eje: float, t0: int, t1: int, histeresis: float) -> list
 
 def reconstruir(trazas: dict[str, Traza], balizas: dict[int, Pista], roles: dict[str, int],
                 senal: int, llegadas: dict[str, int], pin: Pista, comite: Pista,
-                llegada_a: Pista | None, llegada_b: Pista | None):
+                llegada_a: Pista | None, llegada_b: Pista | None, zona_m: float = ZONA_M):
     """Devuelve (controles, pasos por barco, eje inicial, nº de vueltas, avisos)."""
     avisos = []
     eje = eje_inicial(trazas, pin, comite, senal)
@@ -179,16 +189,16 @@ def reconstruir(trazas: dict[str, Traza], balizas: dict[int, Pista], roles: dict
                 k = int(c.id[1:])
                 cand = [p for p in rodeos.get((c.tipo, k), []) if p[0] == v]
                 if cand:
-                    pv[c.id] = _paso(tr, c, cand[0][1], eje)
+                    pv[c.id] = _paso(tr, c, cand[0][1], eje, zona_m)
         if v in llegadas:
             xy = tr.en(llegadas[v], hueco_ms=30_000)
             pv["llegada"] = Paso(llegadas[v], *(xy if xy else (np.nan, np.nan)))
         pasos[v] = pv
-    controles = _offsets(trazas, controles, pasos, eje)
+    controles = _offsets(trazas, controles, pasos, eje, zona_m)
     return controles, pasos, eje, vueltas, avisos
 
 
-def _offsets(trazas, controles, pasos, eje) -> list[Control]:
+def _offsets(trazas, controles, pasos, eje, zona_m: float = ZONA_M) -> list[Control]:
     """Offset tras cada baliza de barlovento, estimado con la flota: tras la baliza se navega de
     través hasta el offset y allí empieza la popa. Por barco, el punto de rodeo es la última
     muestra antes de bajar OFFSET_BAJADA_M respecto a la baliza; su mediana es el offset si está a
@@ -225,7 +235,7 @@ def _offsets(trazas, controles, pasos, eje) -> list[Control]:
             p = pasos[v].get(c.id)
             if p is None:
                 continue
-            q = _paso(tr, off, p.t + 60_000, eje)
+            q = _paso(tr, off, p.t + 60_000, eje, zona_m)
             if not np.isnan(q.x) and q.t >= p.t:
                 pasos[v][off.id] = q
                 tiempos.append(q.t)
@@ -257,7 +267,7 @@ def _puerta(cid, balizas, sns, mx, my, t_med) -> Control | None:
     return Control(cid, "Puerta", "sotavento", "atlas", pts, t_med)
 
 
-def _paso(tr: Traza, c: Control, t_rodeo: int, eje: float) -> Paso:
+def _paso(tr: Traza, c: Control, t_rodeo: int, eje: float, zona_m: float = ZONA_M) -> Paso:
     """Máxima aproximación a la baliza (o a la de la puerta elegida) en ±4 min del rodeo."""
     i = tr.tramo(t_rodeo - 240_000, t_rodeo + 240_000)
     if not len(i):
@@ -274,7 +284,7 @@ def _paso(tr: Traza, c: Control, t_rodeo: int, eje: float) -> Paso:
     if mejor is None:
         return Paso(t_rodeo, np.nan, np.nan)
     dmin, j, lado, d = mejor
-    dentro = np.nonzero(d <= max(ZONA_M, dmin + 5))[0]
+    dentro = np.nonzero(d <= max(zona_m, dmin + 5))[0]
     ent = int(tr.ts[i[dentro[0]]]) if len(dentro) else None
     sal = int(tr.ts[i[dentro[-1]]]) if len(dentro) else None
     puerta = None

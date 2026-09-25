@@ -39,7 +39,7 @@ def _limpia(d):
     return d
 
 
-def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
+def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None = None) -> dict:
     nombres = nombres or {}
     p = an["prueba"]
     clas = an["clasificacion"]
@@ -47,6 +47,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
     top5 = [c["vela"] for c in clas if c["vela"] != v][:5]   # referencia: los 5 primeros (sin este barco)
     h = {
         "tipo": "debrief de una prueba",
+        "clase": clase,
         "barco": _vela(v, nombres),
         "prueba": {
             "numero": p.get("numero"),
@@ -222,7 +223,7 @@ def _escora_camp(res, v, top5):
             "nota": "todas las ceñidas del campeonato juntas; VMG relativa a los barcos vecinos por franja de 2° de escora"}
 
 
-def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None) -> dict:
+def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None, clase: str | None = None) -> dict:
     nombres = nombres or {}
     gen = res["general"]
     mia = next(f for f in gen if f["vela"] == v)
@@ -281,6 +282,7 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
         } | fila_top5)
     h = {
         "tipo": "debrief del campeonato",
+        "clase": clase,
         "campeonato": nombre_camp,
         "barco": _vela(v, nombres),
         "general_calculada": {"puesto": mia["puesto"], "barcos": res["inscritos"], "puntos_netos": mia["neto"],

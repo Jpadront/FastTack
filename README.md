@@ -1,6 +1,6 @@
 # FastTack
 
-Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
+Análisis post-regata con los datos de **Vakaros RaceSense** (dispositivos Atlas 2), para **cualquier clase** que los use. Nació para el J/70 (equipo de ESP 1214) y se ha probado también con el Mundial de Snipe 2026. Uso interno del equipo y su entrenador.
 
 > Estado: **primera versión completa (v0.7.0), validada** (Fase 5). Carga cualquier campeonato de RaceSense, analiza cada prueba (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos), resume el campeonato con una general calculada y escribe debriefs con IA comparando con el top 5. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); fuente de datos en [`docs/fuente_datos.md`](docs/fuente_datos.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
@@ -58,6 +58,13 @@ En la lista de pruebas:
 - **sin llegadas**: no se detecta una llegada de la flota (entrenamiento, anulada o sin datos). No cuenta.
 - **Viento ref. (kn)**: la intensidad del viento en el disparo, si la sabéis. Sin ella, la intensidad del viento del análisis se mostrará relativa y «sin calibrar».
 - **Cuenta**: desmárcala para dejar fuera una prueba; la numeración se ajusta sola.
+
+## Cualquier clase y campeonatos en curso
+
+- **Clases**: lo que depende del barco se adapta solo. La zona de baliza son 3 esloras de la clase del campeonato (tabla con las clases habituales; si no está, la del J/70). Los umbrales de velocidad son relativos a la flota de cada tramo (40 % de su SOG mediana). El debrief se escribe para la clase del campeonato. Probado con J/70 (Mundial 2026, Cascais Vela) y Snipe (Mundial 2026, Mahón).
+- **Recorridos**: barlovento-sotavento con offset y puerta, a una o varias vueltas. Un recorrido con tramos de través (triángulo, trapecio) no se reconstruye bien: el análisis lo marcará como «recorrido dudoso» y sus métricas no entrarán en el resumen.
+- **Campeonatos en curso**: las pruebas que terminan después de cargarlo aparecen al pulsar **↻ Actualizar pruebas** en la página del campeonato (la telemetría ya descargada se reutiliza). Una prueba que aún se está navegando sale como «sin llegadas» hasta que termine.
+- **Divisiones**: el enlace puede llevar cualquier sufijo (`#day=…&race=…`); si el campeonato tiene varias divisiones, se pide cuál.
 
 ## Analizar una prueba
 

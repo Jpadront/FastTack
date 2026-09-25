@@ -20,7 +20,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.6.7"
+VERSION = "0.7.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -76,7 +76,7 @@ def recorrido_dudoso(tramos: list[dict], llegadas: dict, senal: int) -> bool:
     return False
 
 
-def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
+def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None = None) -> dict:
     senal = prueba["senal"]
     llegadas = {v: t for v, t in prueba["llegadas"].items()}
     comp = cols["role"] != "mark"
@@ -93,7 +93,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         avisos.append("La línea de salida se toma del documento del comité (sus balizas no transmiten).")
 
     controles, pasos, eje, vueltas, av = rec.reconstruir(trazas, balizas, roles, senal, llegadas,
-                                                          pin, comite, lleg_a, lleg_b)
+                                                          pin, comite, lleg_a, lleg_b, rec.zona_de(clase))
     avisos += av
     for c in controles:
         if c.fuente == "estimada":
@@ -240,7 +240,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
             "desde": t["desde"], "hasta": t["hasta"], "t0": vt.t0, "t1": vt.t1,
             "rumbo_eje": round(t["eje"], 1), "largo_m": _r(t["largo_m"], 0),
-            "viento": {"twd_media": round(vt.twd_media, 1), "twa_flota": _r(twa_flota, 1), "cortes": cortes,
+            "viento": {"sog_min": round(vt.sog_min, 2), "twd_media": round(vt.twd_media, 1), "twa_flota": _r(twa_flota, 1), "cortes": cortes,
                        "tws_calibrada": bool(prueba.get("viento_kn"))},
             "fases_rolada": fr,
             "fases_presion": fp,
@@ -307,7 +307,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                          "twd": round(twd, 1)}
 
     # Corriente de la prueba (constante): brújula + comprobación con las velocidades de las amuras
-    entrada_corr = [{"ceñida": t["tipo"] == "ceñida", "t0": t["t0"], "t1": t["t1"],
+    entrada_corr = [{"ceñida": t["tipo"] == "ceñida", "t0": t["t0"], "t1": t["t1"], "sog_min": t["viento"]["sog_min"],
                      "avance": t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360,
                      "barcos": {v: (f["t_entrada"], f["t_salida"]) for v, f in t["barcos"].items()}}
                     for t in salida_tramos]

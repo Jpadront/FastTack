@@ -20,6 +20,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from .. import config
+from .normalizar import division_tele
 from .racesense import COLUMNAS, Cliente
 
 _ESQUEMA = """
@@ -106,12 +107,13 @@ class Almacen:
         idx_p = d / "tramos.json"
         tramos = json.loads(idx_p.read_text()) if idx_p.exists() else []
         for a, b in _huecos(desde, hasta, [(t["desde"], t["hasta"]) for t in tramos if t["definitivo"]]):
-            cols = self.cliente.telemetria(event_id, division, a, b, progreso)
+            cols = self.cliente.telemetria(event_id, division_tele(division), a, b, progreso)
             nombre = f"tel_{a}_{b}.parquet"
             pq.write_table(pa.table({c: cols[c] for c in COLUMNAS}), d / nombre, compression="zstd")
             tramos = [t for t in tramos if not (t["desde"] == a and t["hasta"] == b)]
             tramos.append({"desde": a, "hasta": b, "archivo": nombre,
-                           "definitivo": b < time.time() * 1000 - config.MARGEN_DIRECTO_MS})
+                           # un trozo vacío no se da por definitivo: se vuelve a pedir la próxima vez
+                           "definitivo": bool(len(cols["ts"])) and b < time.time() * 1000 - config.MARGEN_DIRECTO_MS})
             idx_p.write_text(json.dumps(tramos))
         partes = []
         for t in tramos:
