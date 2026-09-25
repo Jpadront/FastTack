@@ -55,7 +55,11 @@ finish:      sailNumber, serialNumber, finishingTime (RFC 3339), positionAtFinis
 Detalles importantes:
 
 - **Varias entradas en `starts[]`** significan llamadas generales. La que vale es la última.
-- **(nuevo)** Hay regatas **sin ninguna llegada** y con media flota en `ocsParticipants` (J/70: regatas 1, 4 y 7, con 50, 31 y 26 OCS). Tienen `stopReason: "finished"` igualmente. Son salidas anuladas: una regata sin `finishes[]` se trata como **no navegada** (no puntúa, no se marca a todos DNF).
+- **(nuevo)** Hay regatas **sin ninguna llegada** y con media flota en `ocsParticipants` (J/70: regatas 1, 4 y 7, con 50, 31 y 26 OCS). Tienen `stopReason: "finished"` igualmente.
+  - La **regata 1 de J/70 fue la de entrenamiento** (confirmado por el equipo). No era oficial, por eso hubo 50 OCS, y la flota la dejó al final de la segunda ceñida.
+  - **`isPractice` no la marca** (vale `false`), así que no sirve para distinguir el entrenamiento.
+  - Regla: una regata sin `finishes[]` **no puntúa** y no se marca a todos DNF. Su telemetría **sí se analiza** (salida, ceñidas, rodeos) hasta donde llegó la flota.
+  - Las regatas 4 y 7 de J/70 siguen sin explicación.
 - **(nuevo)** `participants[]` incluye entradas que no compiten (entrenadores: `USA 0000 «Coach Chris»`, `USA 1111`, `USA 2222`). La flota de cada regata es `checkedInParticipants` de la salida válida.
 - **(nuevo)** `startingStats[].serialNumber` es el nº de serie del Atlas en hexadecimal (`"73C4"`) y coincide con `sn` de la telemetría (`0x73C4`). ✔ 43/43 coincidencias en J/70 R2. En `finishes[]` suele venir vacío (99/100), así que la llegada se relaciona por `sailNumber`. `startingStats[].startTime` llega `null`.
 - **(nuevo)** `divisions[].courses[].achievements[]` define el recorrido con nombres (`Start`, `M1`, `M2`, `Gate`, `R1`, `Gate 3`, `Finish`…), tipo (`startLine`, `markRounding` + `roundingDirection`, `gate`, `finishLine`) y `deviceRoles[] {role, sn}`. El `sn` va en hex de 10 dígitos (`"0238004DAB"`) y **sus 16 bits bajos son el `sn` de la telemetría** (`0x4DAB` = 19883). ✔ Todas las balizas de `/courses` casan así. En J/70 la lista es `Start, Gate, M1, M2, Finish` repetida 3 veces: parece una plantilla, no el orden de paso, así que la secuencia se sigue infiriendo con la flota.
@@ -95,7 +99,7 @@ Detalles importantes:
 | `race_stage` | `pre_start`, `starting`, `in_progress`, `finishing`, `finished` | **(nuevo)** No es fiable: alterna entre valores en muestras consecutivas del mismo dispositivo. No se usa |
 | `role` | `competitor` o `mark` | **Las balizas llevan su propio Atlas y se transmite su posición** |
 | `latitude`, `longitude` | Grados WGS84 | |
-| `heading` | Rumbo de proa (°) | Enteros. ✔ Es rumbo de proa real, no COG: heading − COG tiene mediana +0,5…+0,9° y p5/p95 de −19/+23° (deriva, corriente, ruido). Con esa mediana no se distingue verdadero de magnético (declinación −1,5…−3°): se asume **verdadero** y se revisará al calcular el abatimiento |
+| `heading` | Rumbo de proa (°) | Enteros. ✔ Es rumbo de proa real, no COG: heading − COG tiene mediana +0,5…+0,9° y p5/p95 de −19/+23° (deriva, corriente, ruido). **(corregido)** Cada Atlas 2 se configura en verdadero o magnético y **la mayoría va en magnético**; la telemetría no dice cuál. Regla: se asume **magnético** y se pasa a verdadero sumando la declinación (WMM, en la posición y la fecha del evento; Cascais ≈ −1°, Dublín ≈ −2°). Por dispositivo, la mediana de heading − COG va de −12° a +10° (un caso de +30°): el error de alineación de la instalación es mucho mayor que la declinación, así que verdadero/magnético **no se puede detectar** con los datos. Se calibra un **offset por dispositivo** contra el COG en tramos estables (absorbe también un dispositivo que esté en verdadero), con ajuste manual por barco en la app |
 | `sog` | Velocidad sobre el fondo, **nudos** | ✔ Siempre múltiplo de 0,1 m/s (5,442752 kn = 2,8 m/s). **(nuevo)** Hay picos espurios (29,2 kn en un J/70): hay que filtrar valores atípicos |
 | `roll` | **Escora (°)** | Enteros con signo. ✔ **`roll > 0` = escora a estribor, `roll < 0` = escora a babor.** En la primera ceñida, con el viento estimado: J/70 amura babor +17° (99 % > 0), amura estribor −12° (70 % < 0); ILCA babor +6° (72 % > 0), estribor −5° (68 % < 0). **(nuevo)** Hay dispositivos con desviación fija (+20° en las dos amuras) y valores fuera de rango (−127): hace falta calibrar un offset por dispositivo y recortar |
 | `pitch` | **Cabeceo (°)** | Enteros |
@@ -127,7 +131,7 @@ Detalles importantes:
 - ✔ En J/70, el sn 25687 es el extremo del comité en la salida (a 2 m de `startLine.rightEnd`), y también la puerta izquierda y la llegada izquierda. Hacia el minuto 60 se desplaza unos 490 m **a la vez que** 25639 (puerta y llegada derecha): se recoloca la puerta/llegada. Es decir, un mismo dispositivo cambia de función y de sitio durante la regata, y la posición se toma siempre en el instante de cada paso.
 - **(nuevo)** Las balizas transmiten **solo posición**: `sog`, `heading`, `roll`, `pitch` y `status` valen siempre 0.
 - **(nuevo)** Hay dispositivos `role=mark` que **no están en ningún recorrido**. Son embarcaciones de apoyo: neumáticas que se mueven 1–4 km (J/70: 16525, 21253, 24575, 25470; ILCA: 30835, 30911, 30966) y barcos fondeados junto al comité (J/70: 19800; ILCA: 28881 y 30894, a unos 43 m de `rightEnd`; 11011). Se excluyen del recorrido; como mucho, se muestran en una capa aparte.
-- **(nuevo)** Los recorridos (`/courses` y `/api/regatta`) son la **definición actual**, no una por regata. En J/70 R2 no hay telemetría de M1 ni M2 (sn 18759 y 19228), así que la posición de la baliza de barlovento también puede tener que inferirse de los pasos de la flota.
+- **(nuevo)** Los recorridos (`/courses` y `/api/regatta`) son la **definición actual**, no una por regata. En J/70 R2 no hay telemetría de M1 ni M2 (sn 18759 y 19228), así que no transmitieron. **Regla: cuando una baliza no transmite, su posición se supone a partir de la flota**, en el punto donde los barcos la rodean (cambio de rumbo y de amura o trasluchada concentrados en el mismo sitio), y se recalcula si cambia a lo largo de la regata. Se marca como «estimada».
 - **Hay que inferir la secuencia de tramos** a partir de los barcos: el orden en que la flota rodea cada baliza (paso a menos de X m con cambio de rumbo) da el recorrido real de cada regata (vueltas, offset, puerta o baliza simple). Así se generan las pestañas dinámicas.
 - Las balizas pueden moverse durante la regata (cambios de recorrido): como se transmite su posición, se usa la posición en el instante de cada paso.
 
@@ -137,10 +141,10 @@ Detalles importantes:
 |---|---|---|
 | Posición GPS de cada barco | Sí | telemetría |
 | SOG | Sí | telemetría |
-| Rumbo de proa (HDG) | Sí | telemetría |
+| Rumbo de proa (HDG) | Sí | telemetría (magnético por defecto → verdadero con la declinación; offset por dispositivo) |
 | COG | Se calcula | posiciones |
 | Escora y cabeceo | **Sí** | telemetría (`roll`, `pitch`) |
-| Posición de las balizas en el tiempo | Sí | telemetría `role=mark` + `/courses` |
+| Posición de las balizas en el tiempo | Sí, si transmiten | telemetría `role=mark` + `/courses`. Si no transmiten, se estima a partir de la flota |
 | Línea de salida (pin y comité) | Sí | `start.startLine` + telemetría |
 | Hora de salida (señal) | Sí | `start.startTime` (redondeado al minuto) |
 | OCS | Sí | `ocsParticipants` − `exoneratedParticipants` − `clearedOcs` |

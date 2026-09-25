@@ -32,8 +32,8 @@ LIMIT = 100_000
 OUT = Path("data/sample")
 
 EVENTOS = [
-    # (etiqueta, eventId, división, raceNumber de /api/regatta). La J/70 regata 1 se anuló en la
-    # salida (50 OCS, sin llegadas), así que se muestrea la 2.
+    # (etiqueta, eventId, división, raceNumber de /api/regatta). La J/70 regata 1 fue la de
+    # entrenamiento (50 OCS, sin llegadas: se dejó tras la 2.ª ceñida), así que se muestrea la 2.
     ("j70", "oRkxbTpSZPbSkrmKrbj2", "Open", 2),
     ("ilca7", "5JsqWPmBU6P7G5rk15ic", "Gold", 1),
 ]
