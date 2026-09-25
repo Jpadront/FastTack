@@ -15,6 +15,7 @@ from ..ingesta.almacen import Almacen
 from ..ingesta.campeonato import DivisionAmbigua, elegir_division
 from ..ingesta.racesense import ErrorRaceSense
 from ..ingesta.url import UrlNoValida, leer_url
+from .. import servicio
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 BARCO_POR_DEFECTO = "ESP1214"
@@ -102,6 +103,17 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
                 f"on conflict(campeonato, clave) do update set " + ", ".join(f"{c}=excluded.{c}" for c in cambios),
                 (camp_id, clave, *[int(v) if isinstance(v, bool) else v for v in cambios.values()]))
         return detalle(camp_id)
+
+    @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/analisis")
+    def analisis(camp_id: str, clave: str, recalcular: bool = False):
+        try:
+            return servicio.analisis_prueba(alm, camp_id, clave, recalcular)
+        except KeyError as e:
+            raise HTTPException(404, "Prueba no encontrada") from e
+        except servicio.PruebaNoAnalizable as e:
+            raise HTTPException(422, str(e)) from e
+        except ErrorRaceSense as e:
+            raise HTTPException(502, str(e)) from e
 
     @app.get("/api/campeonatos/{camp_id:path}")
     def detalle(camp_id: str):

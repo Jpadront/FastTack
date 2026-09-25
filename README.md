@@ -2,7 +2,7 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 1** — carga de campeonatos, caché local y lista de pruebas (incluidas las que RaceSense no tiene). El análisis por prueba llega en los hitos siguientes; el plan completo está en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **Fase 4 · hito 2** — carga de campeonatos y lista de pruebas (hito 1) y motor de análisis por prueba (hito 2, API `/api/campeonatos/{id}/pruebas/{clave}/analisis`; fórmulas y validación en [`docs/metricas.md`](docs/metricas.md)). Las pantallas de análisis llegan en el hito 3; el plan completo está en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
 ## Instalación (una vez)
 
