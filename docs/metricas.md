@@ -12,6 +12,12 @@
 - **Lados**: izquierda/derecha del campo **mirando a barlovento**. La puerta, en cambio, se nombra **mirando a sotavento** (como la ve el barco que llega y como la nombra RaceSense con `gateLeft`/`gateRight`).
 - **Huecos de telemetría**: nunca se rellenan. El COG solo existe entre muestras a ≤ 5 s.
 
+## Muestras congeladas
+
+RaceSense repite a veces una muestra de un barco (misma posición, SOG y rumbo) durante minutos, mezclada con las reales: el barco parece saltar de un punto a otro y salen rumbos y VMG absurdos (p. ej. VMG 2,7 kn a TWA 104° en una popa a 12 kn). En el Mundial afectaba al 8–40 % de las muestras de 8 de 10 pruebas, y en Cascais Vela al 18–86 % de 5 de 9. Al leer la telemetría se quita toda muestra que repite posición, SOG y rumbo de otra anterior más de 5 s después con el barco en movimiento (> 0,5 kn); las balizas fondeadas no se tocan. La cobertura baja en consecuencia: ahora es real. Con los datos limpios, la general calculada del Mundial queda con 31 barcos en el puesto exacto y 79 de 100 a ±3 (antes 32 y 83: la prueba 3 empeora de 1,4 a 2,2 puestos de error medio y la 8 mejora de 0,9 a 0,4); la validación con Track to Tactics no cambia.
+
+**Entrenamientos**: si el comité marca como OCS a más del 25 % de la flota, la prueba no se reconstruye (entrenamiento o anulada; el entrenamiento del Mundial tuvo 36 OCS). Se puede marcar en «Cuenta» si fue válida.
+
 ## Calidad de los datos (cobertura)
 
 `cobertura(tramo)` = fracción del tiempo del tramo cubierta por muestras separadas ≤ 15 s.

@@ -1,1 +1,1 @@
-__version__ = "0.12.0"  # debrief por día
+__version__ = "0.13.0"  # muestras congeladas

@@ -81,7 +81,7 @@ def roles_recorrido(division: dict) -> dict[str, int]:
 
 # Sube cuando cambia cómo se obtienen las pruebas o las llegadas: la web propone volver a cargar
 # los campeonatos guardados con una versión anterior (la telemetría ya descargada se reutiliza).
-VERSION_INGESTA = 2
+VERSION_INGESTA = 3
 
 
 def cargar(alm: Almacen, url: str | RefCampeonato, division_elegida: str | None = None,
@@ -222,7 +222,15 @@ def _linea(balizas, roles, izq, der, proy, linea_doc=None):
     return None
 
 
+FRACCION_OCS_ENTRENAMIENTO = 0.25      # con tantos OCS no es una prueba real (habría llamada general)
+
+
 def _reconstruir_llegadas(alm, ev, division, roles, p: Prueba, desde, hasta, dur_ganador, minimo):
+    # Muchos OCS del comité = entrenamiento o prueba anulada (el entrenamiento del Mundial tuvo 36)
+    if len(p.ocs) > FRACCION_OCS_ENTRENAMIENTO * (minimo / FRACCION_FLOTA_LLEGADA):
+        p.nota = (f"{len(p.ocs)} OCS del comité: parece un entrenamiento o una prueba anulada. "
+                  "No cuenta (márcala en «Cuenta» si fue válida).")
+        return
     proy, barcos, balizas = _telemetria_pistas(alm, ev, division, desde, hasta)
     if not barcos:
         return

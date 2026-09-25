@@ -129,7 +129,38 @@ class Almacen:
         clave = cols["ts"].astype(np.int64) * 65536 + cols["sn"].astype(np.int64)
         _, unicos = np.unique(clave, return_index=True)
         orden = unicos[np.argsort(cols["ts"][unicos], kind="stable")]
-        return {c: v[orden] for c, v in cols.items()}
+        cols = {c: v[orden] for c, v in cols.items()}
+        return quitar_congeladas(cols)
+
+
+CONGELADA_MS = 5_000
+
+
+def quitar_congeladas(cols: dict) -> dict:
+    """Quita las muestras «congeladas»: RaceSense repite a veces la misma muestra de un barco (misma
+    posición, SOG y rumbo) durante minutos, mezclada con las reales. Un barco que navega no vuelve
+    exactamente al mismo punto con la misma velocidad y rumbo: se conserva la primera vez y se quitan
+    las repeticiones > 5 s después. Las balizas (fondeadas) no se tocan."""
+    n = len(cols["ts"])
+    if not n:
+        return cols
+    lat = np.round(cols["latitude"].astype(float) * 1e6).astype(np.int64)
+    lon = np.round(cols["longitude"].astype(float) * 1e6).astype(np.int64)
+    sog = np.round(np.nan_to_num(cols["sog"].astype(float), nan=-1) * 100).astype(np.int64)
+    hdg = np.round(np.nan_to_num(cols["heading"].astype(float), nan=-1) * 10).astype(np.int64)
+    sn = cols["sn"].astype(np.int64)
+    ts = cols["ts"].astype(np.int64)
+    orden = np.lexsort((ts, hdg, sog, lon, lat, sn))
+    k = np.stack([sn, lat, lon, sog, hdg])[:, orden]
+    nuevo = np.r_[True, np.any(k[:, 1:] != k[:, :-1], axis=0)]
+    inicio = np.maximum.accumulate(np.where(nuevo, np.arange(n), 0))
+    t_ord = ts[orden]
+    congelada = (t_ord - t_ord[inicio] > CONGELADA_MS) & (sog[orden] > 50)   # moviéndose (> 0,5 kn)
+    if "role" in cols:
+        congelada &= cols["role"][orden] != "mark"
+    quitar = np.zeros(n, bool)
+    quitar[orden[congelada]] = True
+    return {c: v[~quitar] for c, v in cols.items()}
 
 
 def _huecos(desde: int, hasta: int, cubiertos: list[tuple[int, int]]) -> list[tuple[int, int]]:

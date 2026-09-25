@@ -50,3 +50,19 @@ def test_division_de_la_telemetria():
     assert division_tele("Snipe Worlds 2026") == "Snipe_Worlds_2026"
     assert division_tele("Open") == "Open"
     assert misma_division("Snipe_Worlds_2026", "Snipe Worlds 2026") and not misma_division("Open", "Gold")
+
+
+def test_quitar_muestras_congeladas():
+    import numpy as np
+    from fasttack.ingesta.almacen import quitar_congeladas
+    # barco 1 navegando; en t=20 s y t=30 s RaceSense repite la muestra de t=1 s (congelada)
+    ts = np.array([0, 1000, 2000, 20000, 21000, 30000])
+    lat = np.array([38.0, 38.0001, 38.0002, 38.0001, 38.0020, 38.0001])
+    cols = {"ts": ts, "sn": np.ones(6, int), "latitude": lat, "longitude": np.full(6, -9.4),
+            "sog": np.array([6.0, 6.1, 6.2, 6.1, 6.3, 6.1]), "heading": np.array([10.0, 11, 12, 11, 13, 11]),
+            "role": np.array(["boat"] * 6, dtype=object)}
+    out = quitar_congeladas(cols)
+    assert list(out["ts"]) == [0, 1000, 2000, 21000]
+    # una baliza fondeada repite posición y no se toca
+    cols["role"] = np.array(["mark"] * 6, dtype=object)
+    assert len(quitar_congeladas(cols)["ts"]) == 6

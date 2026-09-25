@@ -23,6 +23,7 @@ COMUN = """Eres el analista de rendimiento de un equipo de {clase}. Escribe en e
 Reglas estrictas:
 - Usa SOLO las cifras de los DATOS. No calcules cifras nuevas (ni diferencias, ni medias, ni porcentajes): si necesitas una comparación, usa los campos que ya la traen (p. ej. «..._frente_a_la_mediana_kn», «..._mediana_flota_...», «..._top5_...»).
 - La referencia principal es el TOP 5 (los 5 primeros de la prueba o de la general, sin contar este barco): compara primero con él (campos «top5…», «…_top5_…», «…_frente_al_top5_…») y usa la mediana de la flota solo como contexto. Las conclusiones y las claves deben salir de las diferencias con el top 5.
+- Cuando hables de un tramo, nómbralo siempre con su nombre concreto y la prueba («Popa 2 de la prueba 3»). Si la cifra es una media de varios tramos («vmg_media_de_las_popas…»), dilo así («media de las dos popas»); no la atribuyas a un tramo.
 - Cita las cifras tal cual o redondeadas, con coma decimal y un espacio antes de la unidad (4,06 kn; 87 m; 54 s; 10,5°; 66 %). Los tiempos, en segundos o como mm:ss. La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
 - La corriente es ESTIMADA y tiene un nivel de confianza: si es baja, no la uses para explicar resultados. Úsala para explicar laylines o la ventaja de un lado solo si la confianza es alta o media.
 - Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO (no hay anemómetro): no lo presentes como medido.
@@ -168,6 +169,17 @@ def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
             raise ValueError("Este barco no tiene llegadas ese día.")
         hasta = servicio.resumen_campeonato(alm, camp_id, hasta_dia=dia)
         h = hechos_mod.de_dia(res, hasta, barco, dia, camp.get("nombre") or "", nombres, camp.get("clase"))
+        # desglose por tramo de cada prueba del día (con el top 5 de esa prueba)
+        por_numero = {p["numero"]: p for p in res["pruebas"]}
+        for fila in h["pruebas"]:
+            p = por_numero.get(fila["prueba"])
+            try:
+                an = servicio.analisis_prueba(alm, camp_id, p["clave"])
+            except Exception:  # noqa: BLE001
+                continue
+            if an.get("recorrido_dudoso"):
+                continue
+            fila["tramos"] = hechos_mod.tramos_compactos(hechos_mod.de_prueba(an, barco, nombres, camp.get("clase")))
         # la escora óptima de un solo día tiene pocos datos: la del campeonato hasta ese día
         h["escora_optima_en_ceñida"] = hechos_mod._escora_camp(hasta, barco, [x["vela"] for x in hasta["general"] if x["vela"] != barco][:5])
         if h["escora_optima_en_ceñida"]:

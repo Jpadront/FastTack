@@ -103,6 +103,7 @@
     <a class="boton claro" href="#/">Volver</a>
   </section>
 {:else}
+  <a class="volver" href="#/">← Campeonatos</a>
   <header class="cab">
     <div>
       <div class="etiqueta">{camp.clase} · {camp.division} · {horaLocal(camp.inicio, camp.tz_offset_ms).split(' · ')[0]} – {horaLocal(camp.fin, camp.tz_offset_ms).split(' · ')[0]}</div>
@@ -174,6 +175,7 @@
   .rueda { display: inline-block; width: 12px; height: 12px; margin-right: 8px; border: 2px solid var(--linea); border-top-color: var(--yo); border-radius: 50%; animation: gira 1s linear infinite; vertical-align: -1px; }
   @keyframes gira { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .rueda { animation: none; } }
+  .volver { display: inline-block; font: 600 14px var(--display); color: var(--tinta-2); text-decoration: none; margin-bottom: 4px; }
   .cab { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
   .cab h1 { font-size: clamp(24px, 4vw, 34px); margin-top: 2px; }
   .cab p { margin: 4px 0 0; }
