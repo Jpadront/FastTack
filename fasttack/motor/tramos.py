@@ -147,9 +147,10 @@ def layline(tr: Traza, t0: int, t1: int, marca_xy, viento: VientoTramo, twa_flot
     if along <= 0:
         return {"estado": "OK", "lado": None, "metros": 0.0, "segundos": 0}
     exceso_lat = abs(lat) - along * math.tan(alpha)
-    # Lado del campo mirando a barlovento: si la baliza queda a la derecha del barco, el barco
-    # está a la izquierda (en popa el eje mira a sotavento y se invierte).
-    a_la_izquierda = lat > 0 if viento.ceñida else lat < 0
+    # Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento,
+    # como Track to Tactics y como se nombran las puertas): si la baliza queda a la derecha del
+    # barco, el barco está a la izquierda.
+    a_la_izquierda = lat > 0
     lado_campo = "IZQUIERDA" if a_la_izquierda else "DERECHA"
     if exceso_lat <= 0:
         return {"estado": "OK", "lado": None, "metros": 0.0, "segundos": 0}

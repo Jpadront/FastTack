@@ -208,7 +208,7 @@
         <div><i>Líder</i><b>{vc(Object.entries(tr.barcos).find(([, f]) => f.posicion === 1)?.[0] || '')}</b></div>
       </section>
       <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
-        nota="En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes."
+        nota={`En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}.`}
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
           { k: 'posicion', titulo: 'Pos.', num: true },

@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.4.1** (Fase 4 · hito 5). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.4.2** (Fase 4 · hito 7). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -58,7 +58,7 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 | Distancia navegada | calculada | suma de los segmentos entre muestras (cobertura ≥ 50 %) |
 | Maniobras | estimada | cambios del lado del viento (COG respecto a TWD) mantenidos ≥ 15 s; las pegadas (< 20 s) a un rodeo no cuentan, salvo al inicio de la ceñida desde la salida |
 | Pérdida en maniobra (m) | estimada | VMG de referencia = media de −30…−10 s y de +20…+30 s; pérdida = referencia × 30 s − avance real entre −10 y +20 s (≥ 0) |
-| Layline | estimada | desde la última maniobra antes de la baliza (o el inicio del tramo), exceso lateral más allá de la recta que sale de la baliza con el TWA de la flota, medido en perpendicular a esa recta. Lado del campo y segundos navegados fuera de la layline |
+| Layline | estimada | desde la última maniobra antes de la baliza (o el inicio del tramo), exceso lateral más allá de la recta que sale de la baliza con el TWA de la flota, medido en perpendicular a esa recta. Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento, como Track to Tactics y las puertas) y segundos navegados fuera de la layline. No se calcula hacia la línea de llegada |
 | Escora, cabeceo | directa | mediana de \|roll − desviación del sensor\| y de pitch; IQR. **Desviación del sensor** = media de la escora mediana en amura babor y en amura estribor (en ceñida); 0 si faltan datos de alguna |
 | Modo | estimada | frente a la mediana de la flota en el tramo. Ceñida: TWA < med − 1,5° y SOG < med → ALTURA; TWA > med + 1,5° y SOG > med → VELOCIDAD; si no, VMG. Popa: TWA > med + 3° y SOG < med → PROFUNDO; TWA < med − 3° y SOG > med → VELOCIDAD |
 | Barco fantasma | estimada | recorre el tramo con el TWA de la flota y siempre en la amura favorecida: en cada corte avanza largo/10 a lo largo del eje y navega (largo/10) / cos(α − \|δ\|), con δ = TWD del corte − rumbo del eje (en popa, con TWD + 180°) |
@@ -102,24 +102,27 @@ Medias de VMG, SOG, TWA, escora y cabeceo en ceñida y en popa, ponderadas por e
 
 ## Validación con Cascais Vela · prueba 9 (frente a Track to Tactics)
 
-Datos: 34 barcos, M1 y puerta con Atlas. Comparación de todos los barcos y todos los tramos con su informe de ejemplo (`scratchpad`, no versionado).
+Motor **0.4.2** (hito 7). 34 barcos, M1 y puerta con Atlas. Comparación de todos los barcos y todos los tramos con su informe de ejemplo (en el `scratchpad` de desarrollo, no versionado). Sin viento de referencia (TWS sin calibrar).
 
 | Qué | Resultado |
 |---|---|
-| Pasos por M1, puerta, M2 y llegada | diferencia mediana **0,0 s**, máx. 2 s (34/34 barcos) |
+| Pasos por M1, puerta, M2 y llegada | diferencia mediana **1,0 s**, máx. 3,4 s (34/34 barcos). Offset 1 (estimado): mediana 5 s, máx. 8 s |
 | Elección de puerta | **34/34** iguales |
-| Parciales de popa (desde el offset) | 504 s frente a 493 s y 517 s frente a 525 s (ESP 1170); ellos acaban en la entrada a la zona |
-| SOG por tramo | diferencia mediana −0,01 kn (ceñida), correlación 0,83–0,91 |
-| Distancia navegada | correlación 0,93–0,97; nuestra ~+33 m en ceñida (ellos remuestrean cada 3 s e interpolan) |
-| Escora | diferencia mediana 0,0–0,25°, correlación 0,89–0,94 |
-| Pérdida en virada | mediana 3,3 m frente a 2,9 m (C1) y 2,9 m frente a 3,2 m (C2) |
-| Pérdida en trasluchada | menor que la suya (0–9 m frente a 15–19 m) con planeo; nuestras ventanas exigen datos densos (pocas medidas) |
-| Salida (ESP 1170) | línea −1,4 % frente a −1,1 %; margen −6,0 m frente a −5,2 m; SOG 3,8 frente a 4,1 kn; cruce +6,0 s frente a +5,7 s (con la misma señal); B1 4.º +9 s igual |
-| **TWD** | la nuestra, 5–6° a la izquierda de la suya en ceñida (312,8° frente a 317,7°). Nuestra bisectriz es exacta respecto a los datos: las amuras navegan a 271° y 353,5° (bisectriz 312,25°). La suya deja la flota con TWA muy asimétricos (36° y 47°); probablemente corrige los COG con su estimación de corriente |
-| **VMG** | la nuestra explica el resultado: correlación con el parcial del tramo **−0,92 / −0,86 / −0,91** (C1, C2, P2) frente a **−0,14 / −0,15 / −0,33** la suya |
-| Maniobras | contamos ~1,5 menos por ceñida: las que caen dentro de un hueco de datos no se pueden ver (ellos interpolan la traza) |
-| Layline | mismo lado; metros distintos (21,6 frente a 71,6 m en C1 de ESP 1170): su layline usa polar, corriente y su TWD |
-| +60/+180 s | definiciones distintas: la suya parece la distancia a la baliza 1 (1.603 m), la nuestra la distancia al primero a lo largo del eje |
+| Puerta favorecida | la misma (**derecha**); ventaja 13,4 m frente a 23,6 m (depende de la TWD, ver abajo) |
+| SOG por tramo | ceñidas −0,01 y −0,03 kn (correlación 0,89 y 0,83); popa 2 −0,36 kn (0,91). Popa 1 −0,93 kn (0,58): solo 8 barcos tienen ≥ 50 % de datos en ese tramo; ellos interpolan los huecos |
+| Distancia navegada | correlación 0,93–0,97; la nuestra ~+33 m en ceñida (ellos remuestrean cada 3 s) |
+| Escora | diferencia mediana 0,0–0,25°, correlación 0,86–0,94 |
+| **TWD** | la nuestra, 4–6° a la izquierda en C1, P1 y C2 (−1° en P2). Nuestra bisectriz es exacta respecto a los COG; ellos estiman **corriente: 0,88 kn, 0,73 kn hacia sotavento** en el eje del recorrido, y corrigen con ella. Es la diferencia principal y explica también que toda la flota sobrepase laylines con nuestra TWD |
+| **VMG** | la nuestra explica el resultado: correlación con el parcial **−0,92 / −0,68 / −0,86 / −0,86** (C1, P1, C2, P2) frente a **−0,14 / −0,52 / −0,15 / −0,39** la suya |
+| Layline | **mismo lado 28/28** en los barcos que ambos marcan (en popa, lado mirando a sotavento, como ellos); sobrepasadas 21 frente a 23 (C1) y 17 frente a 22 (C2). No calculamos la layline a la línea de llegada (ellos marcan 8 en P2) |
+| Fases de rolada | C1 estable en ambos. En popa y C2 difieren: su TWD corregida por corriente cambia la forma (p. ej. C2: ellos rolada izquierda 0–60 %, nosotros estable hasta el 85 % y luego izquierda). «Quién la recibió primero»: ellos «flota» en todas las fases; nosotros «flota» en las roladas |
+| Fases de presión | no comparables sin viento de referencia: ellos usan TWS de su polar; nosotros, SOG mediano relativo (umbral 0,2 kn) |
+| Pérdida en maniobras | la suya es la pérdida total del tramo; la nuestra suma solo las maniobras con datos densos (por eso 16–30 m menor). Por maniobra, las medianas coinciden (≈3 m por virada) |
+| Maniobras | contamos ~1,5 menos por ceñida: las que caen dentro de un hueco de datos no se ven (ellos interpolan) |
+| Salida (ESP 1170) | línea −1,4 % frente a −1,1 %; margen −6,0 m frente a −5,2 m; SOG 3,8 frente a 4,1 kn; cruce +6,0 s frente a +5,7 s; B1 4.º +9 s igual |
+| +60/+180 s | definiciones distintas: la suya parece la distancia a la baliza 1; la nuestra, la distancia al primero a lo largo del eje |
+
+**Conclusión**: pasos, puertas, velocidades, distancias, escora, salida y lado de las laylines coinciden con Track to Tactics. Las diferencias vienen de la **corriente** (ellos la estiman, nosotros no): afecta a TWD, TWA, VMG absoluta, fases de rolada y metros de layline. Estimar la corriente es la siguiente mejora del motor.
 
 ## Pruebas del Mundial de J/70 2026
 
@@ -156,6 +159,7 @@ Comparada con los resultados oficiales publicados por el club organizador (100 b
 ## Debrief con IA (texto)
 
 - **Qué recibe la IA**: un JSON con las cifras del motor ya redondeadas como en la web (`fasttack/ia/hechos.py`). La unidad va en el nombre de cada campo (`_kn`, `_m`, `_s`, `_grados`, `_pct`) y las comparaciones con la flota vienen calculadas (`..._frente_a_la_mediana_kn`, `..._mediana_flota_...`, `..._top5_...`) para que la IA no haga cuentas.
+- **Referencia: el top 5.** En una prueba, los 5 primeros de esa prueba; en el campeonato, los 5 primeros de la general (sin contar el barco analizado). Para cada tramo y cada media van la mediana del top 5 y la diferencia del barco con ella (`..._top5_...`, `..._frente_al_top5_...`), además de la mediana de la flota como contexto. Las conclusiones deben salir de las diferencias con el top 5.
 - **Reglas** (`fasttack/ia/debrief.py`): solo cifras de los datos, con su unidad; lo estimado no se presenta como medido; los huecos de telemetría son un límite del análisis, no un fallo del barco; causas solo como hipótesis; formato fijo (prueba: resumen, salida, ceñidas, popas, maniobras/laylines/puertas, 3 claves; campeonato: balance, 3 puntos fuertes, 3 áreas de mejora, prioridades de entrenamiento).
 - **Validación** (`fasttack/ia/validar.py`): cada número del texto, con su unidad, debe ser un redondeo (± media unidad de su último decimal) de una cifra de los datos con la misma unidad; los mm:ss se pasan a segundos. Se ignoran etiquetas (P3, Ceñida 2, top 10, velas), marcadores de lista y recuentos ≤ 3 sin unidad. Las cifras que no cuadran se resaltan; se vuelve a comprobar cada vez que se abre.
 - **Caché**: el texto se guarda con la huella (SHA-1) de sus cifras; si las cifras cambian, se avisa de que conviene regenerarlo.

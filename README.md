@@ -2,7 +2,16 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 6** — cargar un campeonato, ver sus pruebas, abrir el análisis de cada una (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos), el **resumen del campeonato** y los **debriefs con IA** de cada prueba y del campeonato. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **primera versión completa (v0.7.0), validada** (Fase 5). Carga cualquier campeonato de RaceSense, analiza cada prueba (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos), resume el campeonato con una general calculada y escribe debriefs con IA comparando con el top 5. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); fuente de datos en [`docs/fuente_datos.md`](docs/fuente_datos.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+
+Lo que hace, de un vistazo:
+
+1. **Pegas el enlace** del visor de RaceSense → carga el campeonato y reconstruye las pruebas y llegadas que RaceSense no tiene.
+2. **Analizar una prueba** → recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), métricas por tramo y barco, salida, maniobras, laylines, puertas, barco fantasma.
+3. **Resumen del campeonato** → general calculada, evolución por prueba frente a la flota y al top 5, salidas, maniobras, laylines, puertas y viento.
+4. **Debrief con IA** → texto para la tripulación a partir de esas cifras; cada cifra se comprueba.
+
+Todo es cálculo determinista con los datos de RaceSense; lo que depende del viento reconstruido va marcado como **estimado**. La IA solo redacta.
 
 ## Instalación (una vez)
 
@@ -53,7 +62,7 @@ En la lista de pruebas:
 Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y se descargan las trazas (unos segundos); después queda guardado.
 
 - **Barcos en mapa y tabla**: solo el tuyo, top 5/10/15 de la prueba, toda la flota o *Elegir…* uno a uno. Cada barco tiene un color fijo; el tuyo, naranja.
-- **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Offset 1, Popa 1, Puerta…, Llegada, Rendimiento; la pestaña del offset incluye también el paso por la baliza de barlovento). Cada una lleva el reproductor a su momento.
+- **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Offset 1, Popa 1, Puerta…, Llegada, Rendimiento, Debrief IA; la pestaña del offset incluye también el paso por la baliza de barlovento). Cada una lleva el reproductor a su momento.
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
 - **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
@@ -69,6 +78,7 @@ En la página del campeonato, **Resumen del campeonato →**. La primera vez ana
 - **General calculada**: puntuación baja con los descartes que elijas (por defecto 1 a partir de 4 pruebas). No incluye decisiones del jurado, así que puede diferir algo de la oficial. «rec.» = llegadas reconstruidas.
 - **Comparar con**: tu barco solo, o frente al top 3/5/10 de la general.
 - **Gráficos por prueba**: puesto y la métrica que elijas (VMG, SOG, TWA, escora, cabeceo, pérdidas), con la mediana de la flota.
+- **Debrief del campeonato** al final (ver abajo).
 - **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
 
 Si al abrir un campeonato ya guardado aparece «Hay una versión mejor de la detección…», pulsa **Actualizar**: vuelve a calcular pruebas y llegadas con la telemetría ya descargada y conserva tus ajustes.
@@ -81,7 +91,39 @@ En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. 
 - **Con Claude.ai**: *Copiar las instrucciones* (llevan las cifras), pegarlas en una conversación nueva de claude.ai, y pegar la respuesta en FastTack. Sirve desde cualquier sitio, también desde el móvil.
 - El texto se guarda y se reutiliza. Si cambian las cifras (nueva versión del motor, viento de referencia…), avisa de que conviene regenerarlo.
 
-Para instalar Claude Code en el Mac: `npm install -g @anthropic-ai/claude-code` (o el instalador de la web de Claude Code) y ejecutar `claude` una vez para iniciar sesión.
+- **Referencia: el top 5.** Las conclusiones salen de comparar con los 5 primeros de la prueba (o de la general, en el campeonato); la mediana de la flota queda como contexto.
+
+Para instalar Claude Code en el Mac (sin Node ni permisos de administrador):
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+Abre una ventana nueva del Terminal, ejecuta `claude` una vez para iniciar sesión con tu cuenta de Claude (suscripción, no clave de API) y sal con `/exit`. Arranca FastTack desde una ventana abierta después de instalarlo. Si `claude` no se encuentra: `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`.
+
+## Actualizar FastTack
+
+- **Con git** (si lo clonaste): `git pull` dentro de la carpeta.
+- **Con el ZIP**: descarga el nuevo, copia la subcarpeta `datos/` de la versión anterior dentro de la nueva (así no se vuelve a descargar nada) y borra la anterior.
+
+Después, recarga el navegador con Cmd+Shift+R y comprueba la versión al pie de la página. Los análisis se recalculan solos cuando cambia la versión del motor.
+
+## Validación
+
+- **Frente a Track to Tactics** (Cascais Vela, prueba 9, 34 barcos): pasos por baliza a ±2 s (offset estimado ±8 s), elección de puerta 34/34, puerta favorecida la misma, SOG, distancia y escora con correlaciones de 0,83–0,97, salida y lado de las laylines iguales (28/28). Nuestra VMG explica el resultado del tramo mucho mejor (correlación con el parcial −0,68 a −0,92 frente a −0,14 a −0,52). La diferencia principal es la **corriente**: ellos la estiman (0,9 kn en esa prueba) y nosotros no, lo que desplaza nuestra TWD 4–6°.
+- **Frente a la clasificación oficial** (Mundial 2026, 100 barcos, 10 pruebas): 83 de 100 barcos a ±3 puestos en la general calculada, incluidas 4 pruebas reconstruidas desde la telemetría; las diferencias son decisiones del jurado.
+- **Flujo completo** desde una instalación vacía (Cascais Vela, vista de móvil): carga en 7 s, resumen con las 9 pruebas analizadas en ~2 min, debrief en ~35 s, sin errores.
+
+Detalles en [`docs/metricas.md`](docs/metricas.md).
+
+## Limitaciones conocidas
+
+- **Corriente**: no se estima todavía. Afecta a TWD, TWA, VMG absoluta, roladas y metros de layline (no a pasos, velocidades ni distancias). Es la siguiente mejora prevista.
+- **Sin anemómetro ni corredera**: todo el viento es reconstruido desde la flota; la intensidad solo se calibra con el viento de referencia que introduzcáis.
+- **Huecos de telemetría** (RaceSense guarda ~50 % de las muestras): lo que pasa dentro de un hueco no se ve (maniobras, pérdidas); cada métrica lleva su calidad de datos.
+- **General calculada** sin decisiones del jurado (DSQ, redress…). Las llegadas reconstruidas son provisionales.
+- **Recorrido dudoso**: si las balizas estimadas no cuadran con la duración de la prueba, la prueba cuenta en la general pero sus métricas no entran en el resumen (en el Mundial, la prueba 4).
+- No se calcula la layline hacia la línea de llegada. HDG tal cual lo da el dispositivo (sin corregir la declinación). Sin PDF (fuera de v1).
 
 ## Desarrollo
 
@@ -97,14 +139,15 @@ Estructura:
 | Carpeta | Qué hay |
 |---|---|
 | `fasttack/ingesta/` | URL → campeonato, cliente de RaceSense, normalización, caché (SQLite + Parquet), lista de pruebas |
-| `fasttack/motor/` | Cálculo puro y con tests: trazas, detección de salidas y llegadas (y, en los hitos siguientes, el resto del análisis) |
+| `fasttack/motor/` | Cálculo puro y con tests: trazas, detección de salidas y llegadas, recorrido, viento, tramos, salida, análisis de una prueba, resumen y general calculada |
+| `fasttack/ia/` | Debrief: cifras para la IA, instrucciones, validación de cifras y caché |
 | `fasttack/api/` | API FastAPI y servidor de la web |
 | `frontend/` | Web (Svelte) |
 | `tests/` | Tests del motor y de la ingesta |
 | `docs/` | Fuente de datos, inventario de métricas, plan |
 | `fase1_*.py`, `prototipo/` | Scripts de exploración de la Fase 1 y el prototipo de visor |
 
-Variables de entorno: `FASTTACK_DATOS` (carpeta de datos; por defecto `datos/`), `FASTTACK_PAUSA_S` (pausa entre peticiones a RaceSense; por defecto 1 s).
+Variables de entorno: `FASTTACK_DATOS` (carpeta de datos; por defecto `datos/`), `FASTTACK_PAUSA_S` (pausa entre peticiones a RaceSense; por defecto 1 s), `FASTTACK_CLAUDE` (comando de Claude Code; por defecto `claude`).
 
 ## Datos y uso responsable
 

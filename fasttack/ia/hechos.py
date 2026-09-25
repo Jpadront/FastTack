@@ -44,6 +44,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
     p = an["prueba"]
     clas = an["clasificacion"]
     mia = next((c for c in clas if c["vela"] == v), None)
+    top5 = [c["vela"] for c in clas if c["vela"] != v][:5]   # referencia: los 5 primeros (sin este barco)
     h = {
         "tipo": "debrief de una prueba",
         "barco": _vela(v, nombres),
@@ -57,6 +58,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             "tiempo_s": _r(mia["tiempo_s"]) if mia else None,
             "detras_del_ganador_s": _r(mia["tiempo_s"] - clas[0]["tiempo_s"]) if mia and clas else None,
             "recorrido_dudoso": bool(an.get("recorrido_dudoso")),
+            "top5_de_la_prueba": [_vela(x, nombres) for x in top5],
         },
     }
     # Salida
@@ -68,6 +70,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
                                          "no: hueco de datos de RaceSense, la salida no se puede medir (no es un fallo del barco)"),
             "margen_a_la_linea_m": _r(b.get("margen_m"), 1),
             "posicion_en_la_linea_pct": _r(b.get("posicion_linea_pct")),
+            "posicion_en_la_linea_significa": "dónde salió en la línea: 0 % = extremo del comité, 100 % = pin (no es una nota)",
             "sog_en_el_disparo_kn": _r(b.get("sog_disparo"), 2),
             "cruce_gps_tras_la_senal_s": b.get("cruce_s"),
             "vmg_primeros_90_s_kn": _r(b.get("vmg_0_90"), 2),
@@ -80,6 +83,12 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             "sesgo_de_la_linea_grados": _r(s["sesgo"]["grados"], 1), "ventaja_del_extremo_m": _r(s["sesgo"]["metros"]),
             "twd_en_el_disparo_grados": _r(s.get("twd_disparo")),
         }
+        s5 = [s["barcos"][x] for x in top5 if (s["barcos"].get(x) or {}).get("en_salida")]
+        h["salida"]["top5"] = {"con_datos_en_el_disparo": len(s5),
+                               "margen_a_la_linea_mediana_m": _r(_mediana([x.get("margen_m") for x in s5]), 1),
+                               "posicion_en_la_linea_mediana_pct": _r(_mediana([x.get("posicion_linea_pct") for x in s5])),
+                               "puesto_a_60_s_mediano": _r(_mediana([x.get("pos_60") for x in s5])),
+                               "vmg_primeros_90_s_mediana_kn": _r(_mediana([x.get("vmg_0_90") for x in s5]), 2)}
     # Tramos
     pos_ant = None
     tramos = []
@@ -87,6 +96,8 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
         f = t["barcos"].get(v)
         buenos = [x for x in t["barcos"].values() if x.get("calidad") in CALIDAD_BUENA]
         med = {k: _mediana([x.get(k) for x in buenos]) for k in ("vmg", "sog", "twa", "perdida_m")}
+        cinco = [t["barcos"][x] for x in top5 if (t["barcos"].get(x) or {}).get("calidad") in CALIDAD_BUENA]
+        m5 = {k: _mediana([x.get(k) for x in cinco]) for k in ("vmg", "sog", "twa", "perdida_m", "maniobras", "distancia_m", "escora")}
         tr = {"nombre": t["nombre"], "tipo": t["tipo"], "largo_m": _r(t.get("largo_m")),
               "viento": {"twd_media_grados": _r(t["viento"]["twd_media"]),
                          "twa_de_la_flota_grados": _r(t["viento"].get("twa_flota")),
@@ -108,12 +119,22 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             "calidad_de_datos": f.get("calidad"), "cobertura_pct": _r((f.get("cobertura") or 0) * 100),
             "vmg_kn": _r(f.get("vmg"), 2), "vmg_mediana_flota_kn": _r(med["vmg"], 2),
             "vmg_frente_a_la_mediana_kn": _r(f["vmg"] - med["vmg"], 2) if f.get("vmg") is not None and med["vmg"] is not None else None,
+            "top5": {"barcos_con_datos": len(cinco),
+                     "vmg_mediana_kn": _r(m5["vmg"], 2), "sog_mediana_kn": _r(m5["sog"], 2),
+                     "twa_mediana_grados": _r(m5["twa"], 1), "maniobras_mediana": _r(m5["maniobras"]),
+                     "perdida_en_maniobras_mediana_m": _r(m5["perdida_m"]),
+                     "distancia_navegada_mediana_m": _r(m5["distancia_m"]), "escora_mediana_grados": _r(m5["escora"]),
+                     "con_layline_sobrepasada": sum(1 for x in cinco if (x.get("layline") or {}).get("estado") == "SOBREPASADA")},
+            "vmg_frente_al_top5_kn": _r(f["vmg"] - m5["vmg"], 2) if f.get("vmg") is not None and m5["vmg"] is not None else None,
+            "sog_frente_al_top5_kn": _r(f["sog"] - m5["sog"], 2) if f.get("sog") is not None and m5["sog"] is not None else None,
+            "distancia_frente_al_top5_m": _r(f["distancia_m"] - m5["distancia_m"]) if f.get("distancia_m") is not None and m5["distancia_m"] is not None else None,
             "sog_kn": _r(f.get("sog"), 2), "sog_mediana_flota_kn": _r(med["sog"], 2),
             "twa_grados": _r(f.get("twa"), 1), "twa_mediana_flota_grados": _r(med["twa"], 1),
             "distancia_navegada_m": _r(f.get("distancia_m")),
             "maniobras": f.get("maniobras"), "perdida_en_maniobras_m": _r(f.get("perdida_m")),
             "perdida_en_maniobras_mediana_flota_m": _r(med["perdida_m"]),
-            "layline": ({"estado": "sobrepasada", "lado": (lay.get("lado") or "").lower(), "exceso_m": _r(lay.get("metros")),
+            "layline": ({"estado": "sobrepasada", "lado": (lay.get("lado") or "").lower()
+                         + (" (mirando a sotavento)" if t["tipo"] == "popa" else " (mirando a barlovento)"), "exceso_m": _r(lay.get("metros")),
                          "tiempo_fuera_s": lay.get("segundos")} if lay.get("estado") == "SOBREPASADA"
                         else {"estado": "correcta"} if lay.get("estado") == "OK" else None),
             "modo": (f.get("modo") or "").lower() or None,
@@ -129,7 +150,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
         pos_ant = f.get("posicion") or pos_ant
         tramos.append(tr)
     h["tramos"] = tramos
-    # Medias de la prueba frente a la flota
+    # Medias de la prueba frente al top 5 y a la flota
     r = an["rendimiento"].get(v)
     if r:
         rend = {}
@@ -141,6 +162,11 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             mn = k.replace("_m", "_mediana_flota_m") if u is None else f"{k}_mediana_flota_{u}"
             rend[nombre] = _r(r.get(k), d)
             rend[mn] = _r(med, d)
+            t5 = _mediana([an["rendimiento"][x].get(k) for x in top5
+                           if x in an["rendimiento"] and (an["rendimiento"][x].get("cobertura") or 0) >= 0.5])
+            rend[k.replace("_m", "_top5_m") if u is None else f"{k}_top5_{u}"] = _r(t5, d)
+            if r.get(k) is not None and t5 is not None:
+                rend[k.replace("_m", "_frente_al_top5_m") if u is None else f"{k}_frente_al_top5_{u}"] = _r(r[k] - t5, d)
         rend["viradas"] = r.get("n_viradas")
         rend["trasluchadas"] = r.get("n_trasluchadas")
         rend["cobertura_pct"] = _r((r.get("cobertura") or 0) * 100)
@@ -171,7 +197,10 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                     ("escora_popa", "grados", 0), ("perdida_virada_m", None, 1), ("perdida_trasluchada_m", None, 1)):
         nombre = k if u is None else f"{k}_{u}"
         rend[nombre] = _r(t["rend"].get(k), d)
-        rend[(k.replace("_m", "_top5_m") if u is None else f"{k}_top5_{u}")] = media_top5(lambda x, k=k: x["rend"].get(k), d)
+        t5 = media_top5(lambda x, k=k: x["rend"].get(k), d)
+        rend[(k.replace("_m", "_top5_m") if u is None else f"{k}_top5_{u}")] = t5
+        if t["rend"].get(k) is not None and t5 is not None:
+            rend[(k.replace("_m", "_frente_al_top5_m") if u is None else f"{k}_frente_al_top5_{u}")] = _r(t["rend"][k] - t5, d)
 
     def top15(m):
         r = [f["rango"][m]["pos"] for f in b["por_prueba"] if f and m in f.get("rango", {}) and f["rango"][m]["pos"]]
@@ -183,6 +212,16 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
     for k, p in enumerate(res["pruebas"]):
         pt = mia["puntos"][k]
         f = b["por_prueba"][k]
+        v5 = {m: _mediana([(res["barcos"][x]["por_prueba"][k] or {}).get("rend", {}).get(m) if res["barcos"][x]["por_prueba"][k]
+                           and res["barcos"][x]["por_prueba"][k].get("rend") else None for x in top5])
+              for m in ("vmg_ceñida", "vmg_popa")}
+        mv = (f or {}).get("rend") or {}
+        fila_top5 = {
+            "vmg_ceñida_top5_kn": _r(v5["vmg_ceñida"], 2),
+            "vmg_ceñida_frente_al_top5_kn": _r(mv["vmg_ceñida"] - v5["vmg_ceñida"], 2) if mv.get("vmg_ceñida") is not None and v5["vmg_ceñida"] is not None else None,
+            "vmg_popa_top5_kn": _r(v5["vmg_popa"], 2),
+            "vmg_popa_frente_al_top5_kn": _r(mv["vmg_popa"] - v5["vmg_popa"], 2) if mv.get("vmg_popa") is not None and v5["vmg_popa"] is not None else None,
+        }
         pruebas.append({
             "prueba": p["numero"], "puntos": pt["pts"], "codigo": pt["cod"], "descartada": pt["desc"],
             "llegadas": "reconstruidas" if p["estado"] == "reconstruida" else "oficiales",
@@ -195,7 +234,7 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
             "vmg_popa_kn": _r(f["rend"].get("vmg_popa"), 2) if f and f.get("rend") else None,
             "vmg_popa_mediana_flota_kn": _r((p.get("flota") or {}).get("vmg_popa"), 2),
             "vmg_popa_frente_a_la_mediana_kn": _dif(f, p, "vmg_popa"),
-        })
+        } | fila_top5)
     h = {
         "tipo": "debrief del campeonato",
         "campeonato": nombre_camp,
@@ -208,8 +247,15 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                                          "comparacion": "top5 = mediana de los 5 primeros de la general (sin contar este barco)"},
         "top_15_de_la_flota": {"vmg_ceñida": top15("vmg_ceñida"), "vmg_popa": top15("vmg_popa"),
                                "perdida_virada": top15("perdida_virada_m"), "perdida_trasluchada": top15("perdida_trasluchada_m")},
+        "top5_de_la_general": [_vela(x, nombres) for x in top5],
+        "salidas_top5": {"margen_medio_mediana_m": media_top5(lambda x: x["salida"]["margen_m"], 1),
+                         "veces_en_el_top_10_a_60_s": sum(res["barcos"][x]["totales"]["salida"]["top10_60"] for x in top5),
+                         "salidas_con_puesto_a_60_s": sum(res["barcos"][x]["totales"]["salida"]["con_60"] for x in top5)},
+        "puertas_top5": {"puertas_con_ventaja_clara": sum(res["barcos"][x]["totales"]["puertas"]["total"] for x in top5),
+                         "eligieron_la_favorecida": sum(res["barcos"][x]["totales"]["puertas"]["buenas"] for x in top5)},
         "salidas": {"salidas_con_datos": t["salida"]["pruebas"], "margen_medio_m": _r(t["salida"]["margen_m"], 1),
                     "posicion_media_en_la_linea_pct": _r(t["salida"]["posicion_linea_pct"]),
+                    "posicion_en_la_linea_significa": "dónde sale en la línea: 0 % = extremo del comité, 100 % = pin (no es una nota)",
                     "veces_en_el_top_10_a_60_s": t["salida"]["top10_60"], "salidas_con_puesto_a_60_s": t["salida"]["con_60"],
                     "ocs": t["salida"]["ocs"], "sobre_la_linea_gps": t["salida"]["sobre_linea_gps"]},
         "laylines": {"tramos_con_dato": n_lay, "correctas": lay["ok"], "sobrepasadas": lay["sobrepasadas"],

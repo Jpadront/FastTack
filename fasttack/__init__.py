@@ -1,1 +1,1 @@
-__version__ = "0.6.0"  # hito 6 de la Fase 4
+__version__ = "0.7.0"  # primera versión completa (Fase 5)
