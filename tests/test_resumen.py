@@ -51,7 +51,7 @@ def test_resumen_agrega_pruebas_analizadas():
     assert r["pendientes"] == ["2"] and r["descartes"] == 0
     a = r["barcos"]["A"]
     assert a["por_prueba"][1] is None and a["totales"]["analizadas"] == 1
-    assert a["totales"]["laylines"] == {"ok": 0, "sobrepasadas": 1, "metros": 40.0}
+    assert a["totales"]["laylines"] == {"ok": 0, "sobrepasadas": 1, "metros": 40.0, "por_trafico": 0}
     assert a["totales"]["puertas"] == {"buenas": 1, "total": 1}
     assert a["totales"]["salida"]["top10_60"] == 1
     # D tiene el mejor VMG en ceñida de la prueba 1

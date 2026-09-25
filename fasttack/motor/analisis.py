@@ -15,12 +15,13 @@ from .pistas import Pista, Proyeccion, pistas
 from . import recorrido as rec
 from . import salida as sal
 from . import corriente as corr
+from . import trafico as traf
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -92,6 +93,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
     if comite.fija:
         avisos.append("La línea de salida se toma del documento del comité (sus balizas no transmiten).")
 
+    zona = rec.zona_de(clase)
     controles, pasos, eje, vueltas, av = rec.reconstruir(trazas, balizas, roles, senal, llegadas,
                                                           pin, comite, lleg_a, lleg_b, rec.zona_de(clase))
     avisos += av
@@ -159,6 +161,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         twas = [c.twa_flota for c in vt.cortes if c.twa_flota]
         twa_flota = float(np.median(twas)) if twas else None
         filas = {}
+        rejilla = None
         for v, (e, s) in t["en_tramo"].items():
             tr = trazas[v]
             i = tr.tramo(e, s)
@@ -196,6 +199,17 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 else:
                     marca = _punto(fin_ctrl, s)
             f["layline"] = tm.layline(tr, e, s, marca, vt, twa_flota, mans[-1] if mans else None)
+            lay = f["layline"]
+            if lay.get("estado") == "SOBREPASADA":
+                # ¿tráfico o cálculo? (posiciones de la flota entre el cruce de la layline y la última maniobra)
+                if rejilla is None:
+                    rejilla = traf.Rejilla(trazas, min(a for a, _ in t["en_tramo"].values()),
+                                           max(b for _, b in t["en_tramo"].values()))
+                centro, semi = lay["_cono"]
+                t_desde = mans[-2].t if len(mans) >= 2 else e
+                lay["trafico"] = traf.analizar(rejilla, v, marca, centro, semi, t_desde, lay["_tp"], zona)
+            lay.pop("_cono", None)
+            lay.pop("_tp", None)
             f["puerta"] = paso_fin.puerta if paso_fin else None
             filas[v] = f
         # posiciones y gaps al final del tramo

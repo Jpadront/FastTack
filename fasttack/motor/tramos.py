@@ -172,7 +172,8 @@ def layline(tr: Traza, t0: int, t1: int, marca_xy, viento: VientoTramo, twa_flot
     if len(i) > 1:
         e, _ = fuera(mx - tr.x[i], my - tr.y[i])
         seg = int(np.sum(np.minimum(np.diff(tr.ts[i]), HUECO_MS)[(e != 0)[:-1]]) / 1000)
-    return {"estado": "SOBREPASADA", "lado": lado_campo, "metros": round(metros, 1), "segundos": seg}
+    return {"estado": "SOBREPASADA", "lado": lado_campo, "metros": round(metros, 1), "segundos": seg,
+            "_cono": (centro, semi), "_tp": tp}
 
 
 def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, ceñida: bool) -> str | None:

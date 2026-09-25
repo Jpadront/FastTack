@@ -92,6 +92,8 @@ def por_prueba(an: dict, puntos: dict[str, tuple[int, str | None]]) -> dict:
         lay = [t["barcos"][v]["layline"] for t in an["tramos"] if v in t["barcos"] and t["barcos"][v].get("layline")]
         ok = sum(1 for x in lay if x["estado"] == "OK")
         sob = [x["metros"] for x in lay if x["estado"] == "SOBREPASADA"]
+        por_trafico = sum(1 for x in lay if x["estado"] == "SOBREPASADA"
+                          and (x.get("trafico") or {}).get("motivo") in ("no_podia_virar", "layline_con_trafico"))
         pz = [an["pasos"].get(v, {}).get(c["id"], {}).get("puerta") for c in puertas]
         pz_tot = [(p, c["puerta"]["favorecida"]) for p, c in zip(pz, puertas) if p]
         barcos[v] = {
@@ -99,7 +101,7 @@ def por_prueba(an: dict, puntos: dict[str, tuple[int, str | None]]) -> dict:
             "rend": {m: r.get(m) for m in METRICAS_REND} if r else None,
             "cobertura": r.get("cobertura") if r else None,
             "salida": {k: sb.get(k) for k in ("margen_m", "pos_60", "posicion_linea_pct", "sobre_linea_gps", "en_salida")} if sb else None,
-            "laylines": {"ok": ok, "sobrepasadas": len(sob), "metros": _media(sob)},
+            "laylines": {"ok": ok, "sobrepasadas": len(sob), "metros": _media(sob), "por_trafico": por_trafico},
             "puertas": {"buenas": sum(1 for p, f in pz_tot if p == f), "total": len(pz_tot)},
         }
     # flota: mediana por métrica y rango de cada barco (solo barcos con cobertura suficiente)
@@ -142,6 +144,7 @@ def totales(filas: list[dict | None], vientos: list[float | None]) -> dict:
                    "ocs": sum(1 for f, _ in hechas if f["cod"] == "OCS"),
                    "sobre_linea_gps": sum(1 for x in sal if x.get("sobre_linea_gps"))},
         "laylines": {"ok": sum(f["laylines"]["ok"] for f, _ in hechas), "sobrepasadas": n_sob,
+                     "por_trafico": sum(f["laylines"].get("por_trafico", 0) for f, _ in hechas),
                      "metros": round(sum(n * m for n, m in sob if m is not None) / n_sob, 1) if n_sob else None},
         "puertas": {"buenas": sum(f["puertas"]["buenas"] for f, _ in hechas),
                     "total": sum(f["puertas"]["total"] for f, _ in hechas)},

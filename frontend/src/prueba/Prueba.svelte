@@ -90,6 +90,7 @@
     .map(([v, f]) => ({ vela: v, ...f, pos_final: posFinal[v] })) : []);
   const filasTramo = $derived(tab?.tipo === 'tramo' ? Object.entries(tab.tramo.barcos).filter(([v]) => sel.has(v))
     .map(([v, f]) => ({ vela: v, ...f, baja: f.calidad === 'baja' || f.calidad === 'insuficiente',
+      motivo_txt: f.layline?.estado !== 'SOBREPASADA' ? '' : ({ no_podia_virar: 'tráfico: no podía virar', layline_con_trafico: 'tráfico en la layline', calculo: 'cálculo' })[f.layline.trafico?.motivo] || 'sin datos',
       layline_txt: f.layline?.estado === 'SOBREPASADA' ? `${f.layline.lado === 'DERECHA' ? 'Dcha' : 'Izda'} +${num(f.layline.metros, 0)} m` : f.layline?.estado === 'OK' ? 'OK' : '—' })) : []);
   function filasPaso(cid) {
     const pasos = Object.entries(an.pasos).filter(([, p]) => p[cid]).map(([v, p]) => ({ vela: v, ...p[cid] }));
@@ -211,7 +212,7 @@
         <div><i>Líder</i><b>{vc(Object.entries(tr.barcos).find(([, f]) => f.posicion === 1)?.[0] || '')}</b></div>
       </section>
       <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
-        nota={`En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}.`}
+        nota={`En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «tráfico en la layline» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
           { k: 'posicion', titulo: 'Pos.', num: true },
@@ -224,6 +225,7 @@
           { k: 'maniobras', titulo: 'Man.', num: true, est: true },
           { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
           { k: 'layline_txt', titulo: 'Layline', est: true },
+          { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
           { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
           ...(tr.tipo === 'ceñida' && tr.escora_optima ? [{ k: 'escora_en_rango_pct', titulo: 'En rango', num: true, est: true, ayuda: 'Tiempo con la escora en el rango óptimo del tramo', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') }] : []),
           { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },

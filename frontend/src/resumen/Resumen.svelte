@@ -111,6 +111,7 @@
     virada: T(v).rend.perdida_virada_m, trasluchada: T(v).rend.perdida_trasluchada_m,
     lay_ok: T(v).laylines.ok + T(v).laylines.sobrepasadas ? (T(v).laylines.ok / (T(v).laylines.ok + T(v).laylines.sobrepasadas)) * 100 : null,
     lay_n: T(v).laylines.ok + T(v).laylines.sobrepasadas, lay_m: T(v).laylines.metros,
+    lay_sob: T(v).laylines.sobrepasadas, lay_traf: T(v).laylines.por_trafico ?? 0,
     puertas: T(v).puertas.total ? T(v).puertas.buenas : null, puertas_n: T(v).puertas.total })) : []);
   const filasRend = $derived(res ? comparados.map((v) => ({ vela: v, pos: general.find((g) => g.vela === v)?.puesto, analizadas: T(v).analizadas, ...T(v).rend })) : []);
   const conViento = $derived(res ? res.pruebas.filter((p) => p.viento_kn != null).length : 0);
@@ -234,6 +235,7 @@
         { k: 'virada', titulo: 'Virada', num: true, est: true, fmt: fM }, { k: 'trasluchada', titulo: 'Trasluchada', num: true, est: true, fmt: fM },
         { k: 'lay_ok', titulo: 'Layline OK', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} % de ${f.lay_n}`) },
         { k: 'lay_m', titulo: 'Sobrepasada', num: true, est: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' m') },
+        { k: 'lay_traf', titulo: 'Por tráfico', num: true, est: true, ayuda: 'Sobrepasadas en las que había tráfico (no podía virar o la layline estaba ocupada)', fmt: (v, f) => (f.lay_sob ? `${v} de ${f.lay_sob}` : '—') },
         { k: 'puertas', titulo: 'Puerta favorecida', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${v} de ${f.puertas_n}`) },
       ]} />
   </div>

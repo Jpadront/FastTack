@@ -22,6 +22,18 @@ def _mediana(vals):
     return statistics.median(vals) if vals else None
 
 
+MOTIVOS = {"no_podia_virar": "tráfico: no podía virar (barco a menos de 3 esloras hacia donde tenía que virar)",
+           "layline_con_trafico": "tráfico: la layline ya estaba ocupada por barcos delante (virar debajo era aire sucio)",
+           "calculo": "cálculo: nadie le impedía virar ni ocupaba la layline"}
+
+
+def _motivo(tr):
+    if not tr:
+        return {"motivo": "sin datos suficientes para saberlo"}
+    return {"motivo": MOTIVOS.get(tr["motivo"], tr["motivo"]), "barcos_ya_en_la_layline": tr["barcos_en_layline"],
+            "segundos_desde_la_layline_hasta_virar_s": tr["segundos_hasta_virar"]}
+
+
 def _lado(p):
     return {"IZQUIERDA": "izquierda", "DERECHA": "derecha", "flota": "toda la flota a la vez"}.get(p) if p else None
 
@@ -149,7 +161,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "perdida_en_maniobras_mediana_flota_m": _r(med["perdida_m"]),
             "layline": ({"estado": "sobrepasada", "lado": (lay.get("lado") or "").lower()
                          + (" (mirando a sotavento)" if t["tipo"] == "popa" else " (mirando a barlovento)"), "exceso_m": _r(lay.get("metros")),
-                         "tiempo_fuera_s": lay.get("segundos")} if lay.get("estado") == "SOBREPASADA"
+                         "tiempo_fuera_s": lay.get("segundos"), **_motivo(lay.get("trafico"))} if lay.get("estado") == "SOBREPASADA"
                         else {"estado": "correcta"} if lay.get("estado") == "OK" else None),
             "modo": (f.get("modo") or "").lower() or None,
             "frente_al_barco_fantasma_m": _r(f.get("vs_fantasma_m")),
@@ -307,6 +319,8 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                     "veces_en_el_top_10_a_60_s": t["salida"]["top10_60"], "salidas_con_puesto_a_60_s": t["salida"]["con_60"],
                     "ocs": t["salida"]["ocs"], "sobre_la_linea_gps": t["salida"]["sobre_linea_gps"]},
         "laylines": {"tramos_con_dato": n_lay, "correctas": lay["ok"], "sobrepasadas": lay["sobrepasadas"],
+                     "sobrepasadas_por_trafico": lay.get("por_trafico"),
+                     "sobrepasadas_por_calculo_o_sin_dato": lay["sobrepasadas"] - (lay.get("por_trafico") or 0),
                      "correctas_pct": _r(lay["ok"] / n_lay * 100) if n_lay else None,
                      "exceso_medio_m": _r(lay["metros"]),
                      "correctas_top5_pct": media_top5(lambda x: x["laylines"]["ok"] / (x["laylines"]["ok"] + x["laylines"]["sobrepasadas"]) * 100
