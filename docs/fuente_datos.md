@@ -59,7 +59,7 @@ Detalles importantes:
   - La **regata 1 de J/70 fue la de entrenamiento** (confirmado por el equipo). No era oficial, por eso hubo 50 OCS, y la flota la dejó al final de la segunda ceñida.
   - **`isPractice` no la marca** (vale `false`), así que no sirve para distinguir el entrenamiento.
   - Regla: una regata sin `finishes[]` **no puntúa** y no se marca a todos DNF. Su telemetría **sí se analiza** (salida, ceñidas, rodeos) hasta donde llegó la flota.
-  - Las regatas 4 y 7 de J/70 siguen sin explicación.
+  - Las regatas 4 y 7 **sí se navegaron y terminaron**; ver «Regatas que faltan en `/api/regatta`» más abajo.
 - **(nuevo)** `participants[]` incluye entradas que no compiten (entrenadores: `USA 0000 «Coach Chris»`, `USA 1111`, `USA 2222`). La flota de cada regata es `checkedInParticipants` de la salida válida.
 - **(nuevo)** `startingStats[].serialNumber` es el nº de serie del Atlas en hexadecimal (`"73C4"`) y coincide con `sn` de la telemetría (`0x73C4`). ✔ 43/43 coincidencias en J/70 R2. En `finishes[]` suele venir vacío (99/100), así que la llegada se relaciona por `sailNumber`. `startingStats[].startTime` llega `null`.
 - **(nuevo)** `divisions[].courses[].achievements[]` define el recorrido con nombres (`Start`, `M1`, `M2`, `Gate`, `R1`, `Gate 3`, `Finish`…), tipo (`startLine`, `markRounding` + `roundingDirection`, `gate`, `finishLine`) y `deviceRoles[] {role, sn}`. El `sn` va en hex de 10 dígitos (`"0238004DAB"`) y **sus 16 bits bajos son el `sn` de la telemetría** (`0x4DAB` = 19883). ✔ Todas las balizas de `/courses` casan así. En J/70 la lista es `Start, Gate, M1, M2, Finish` repetida 3 veces: parece una plantilla, no el orden de paso, así que la secuencia se sigue infiriendo con la flota.
@@ -99,7 +99,7 @@ Detalles importantes:
 | `race_stage` | `pre_start`, `starting`, `in_progress`, `finishing`, `finished` | **(nuevo)** No es fiable: alterna entre valores en muestras consecutivas del mismo dispositivo. No se usa |
 | `role` | `competitor` o `mark` | **Las balizas llevan su propio Atlas y se transmite su posición** |
 | `latitude`, `longitude` | Grados WGS84 | |
-| `heading` | Rumbo de proa (°) | Enteros. ✔ Es rumbo de proa real, no COG: heading − COG tiene mediana +0,5…+0,9° y p5/p95 de −19/+23° (deriva, corriente, ruido). **(corregido)** Cada Atlas 2 se configura en verdadero o magnético y **la mayoría va en magnético**; la telemetría no dice cuál. Regla: se asume **magnético** y se pasa a verdadero sumando la declinación (WMM, en la posición y la fecha del evento; Cascais ≈ −1°, Dublín ≈ −2°). Por dispositivo, la mediana de heading − COG va de −12° a +10° (un caso de +30°): el error de alineación de la instalación es mucho mayor que la declinación, así que verdadero/magnético **no se puede detectar** con los datos. Se calibra un **offset por dispositivo** contra el COG en tramos estables (absorbe también un dispositivo que esté en verdadero), con ajuste manual por barco en la app |
+| `heading` | Rumbo de proa (°) | Enteros. ✔ Es rumbo de proa real, no COG: heading − COG tiene mediana +0,5…+0,9° y p5/p95 de −19/+23° (deriva, corriente, ruido). **(corregido)** Cada Atlas 2 se configura en verdadero o magnético y **la mayoría va en magnético**; la telemetría no dice cuál. Regla: se asume **magnético** y se pasa a verdadero sumando la declinación (WMM, en la posición y la fecha del evento; Cascais ≈ −1°, Dublín ≈ −2°). Por dispositivo, la mediana de heading − COG va de −12° a +10° (un caso de +30°): el error de alineación de la instalación es mucho mayor que la declinación, así que verdadero/magnético **no se puede detectar** con los datos. En Cascais hay zonas de mucha corriente, así que heading − COG **no** se puede comparar con cero. El **offset de cada dispositivo se calibra frente a la flota**: la mediana en el tiempo de (heading − COG) del barco menos la mediana de la flota cercana en el mismo instante. La corriente y el abatimiento son comunes a la flota y se cancelan; lo que queda es el error de alineación (y un dispositivo que esté en verdadero). El nivel absoluto lo da la declinación. Hay ajuste manual por barco en la app |
 | `sog` | Velocidad sobre el fondo, **nudos** | ✔ Siempre múltiplo de 0,1 m/s (5,442752 kn = 2,8 m/s). **(nuevo)** Hay picos espurios (29,2 kn en un J/70): hay que filtrar valores atípicos |
 | `roll` | **Escora (°)** | Enteros con signo. ✔ **`roll > 0` = escora a estribor, `roll < 0` = escora a babor.** En la primera ceñida, con el viento estimado: J/70 amura babor +17° (99 % > 0), amura estribor −12° (70 % < 0); ILCA babor +6° (72 % > 0), estribor −5° (68 % < 0). **(nuevo)** Hay dispositivos con desviación fija (+20° en las dos amuras) y valores fuera de rango (−127): hace falta calibrar un offset por dispositivo y recortar |
 | `pitch` | **Cabeceo (°)** | Enteros |
@@ -150,12 +150,41 @@ Detalles importantes:
 | OCS | Sí | `ocsParticipants` − `exoneratedParticipants` − `clearedOcs` |
 | Distancia a la línea en el disparo | Sí (del dispositivo) | `startingStats[].dtlMm` |
 | Hora de llegada, distancia recorrida y velocidad máxima | Sí | `finishes[]` |
-| Clasificación por regata | Sí (por hora de llegada) | `finishes[]` |
+| Clasificación por regata | Sí (por hora de llegada) | `finishes[]`. Si faltan llegadas o la regata entera, se reconstruye desde la telemetría y se marca como «reconstruida» |
 | General con penalizaciones, retiradas y jurado | **No** | se calcula y se marca como calculada |
 | Viento (TWD y TWS) | **No** | se reconstruye (estimado) |
-| Corriente | **No** | se estima como la diferencia entre SOG/COG y la velocidad y el rumbo por el agua (estimado; con poca precisión sin corredera) |
+| Corriente | **No** | se estima como la diferencia entre SOG/COG y la velocidad y el rumbo por el agua (estimado; con poca precisión sin corredera). En Cascais es importante y varía por zonas: se estima por zona y hora a partir de la flota |
 | Nombre y función de cada baliza | Sí | `divisions[].courses[].achievements[]` (sn hex → 16 bits bajos) |
 | Secuencia del recorrido y vueltas | **No** | se infiere a partir de los pasos de la flota |
+
+## Regatas que faltan en `/api/regatta`
+
+El 9 y el 11 de septiembre se navegaron **2 pruebas cada día** (confirmado por el equipo), pero el visor solo muestra una por día:
+
+- `/api/regatta` guarda la salida de la primera prueba (regatas 4 y 7), **sin ninguna llegada** y con listas OCS dudosas (31 y 26 barcos). Con la telemetría, en la señal solo había 14 y 9 barcos en el lado del recorrido; de ellos, 13 y 9 están en esas listas.
+- La segunda prueba de esos días **no existe** en `/api/regatta`.
+- La telemetría sí tiene las cuatro pruebas. `racing-summary` también marca el cambio: su regata 5 empieza el 09-09 a las 14:06 UTC y su regata 8 el 11-09 a las 13:37.
+
+Reconstrucción con `fase1_reconstruir.py` (resultados en `data/sample/reconstruccion_j70.md`). Horas UTC; en Cascais la hora local es UTC+1.
+
+| Día | Prueba | En `/api/regatta` | Señal | 1.ª llegada | Última | Llegadas detectadas |
+|---|---|---|---|---|---|---|
+| 09-09 | 1 | regata 4, sin llegadas | 12:55 | 14:22:05 (15:22 local ✔ equipo) | 14:31:50 | 90 |
+| 09-09 | 2 | **no está** | 16:20 | 17:39:09 | 17:52:12 | 72 (la telemetría se corta hacia las 17:55) |
+| 11-09 | 1 | regata 7, sin llegadas | 12:05 | 13:26:40 (14:26 local ✔ equipo) | 13:36:06 | 96 |
+| 11-09 | 2 | **no está** | 13:55 | 15:15:48 | 15:25:11 | 94 |
+
+**Método**, validado con la regata 2, que sí tiene llegadas oficiales:
+
+- **Salida.** Se buscan los cruces de la línea pin→comité, usando la posición de las balizas en cada instante. La ventana de 60 s con más barcos distintos cruzando empieza unos 20 s antes de la señal, así que la señal es el minuto siguiente. Validación: 12:05:00, igual que la oficial.
+- **Llegada.** Los cruces de la línea de llegada se agrupan en «olas» separadas por más de 8 min. La última ola es la llegada y, para cada barco, cuenta su primer cruce en la dirección mayoritaria de esa ola.
+- **Validación de las llegadas:** 97 de 100 detectadas. Primera y última llegada idénticas a las oficiales. Error por barco: mediana 0,34 s, p90 1,0 s, máx. 2,9 s. En llegadas muy ajustadas el puesto puede variar en 1 o 2.
+
+**Consecuencias para la app:**
+
+- **`/api/regatta` no es la lista completa de regatas.** La lista de pruebas sale de cruzar `/api/regatta` con la telemetría. Se detectan las salidas (ráfagas de cruces de la línea) y las llegadas, y se añaden las que falten como «reconstruidas».
+- **Numeración.** Se numera cronológicamente, sin el entrenamiento, y se puede editar. Los `raceNumber` de la API no coinciden con la numeración oficial. En J/70: API 1 = entrenamiento; API 2 y 3 = pruebas 1 y 2 (08-09); API 4 = prueba 3; la prueba 4 (09-09) falta; API 5 y 6 = pruebas 5 y 6 (10-09); API 7 = prueba 7; la prueba 8 (11-09) falta; API 8 y 9 = pruebas 9 y 10 (12-09).
+- **Clasificación de las pruebas reconstruidas.** El orden sale de las llegadas detectadas. Los barcos sin llegada detectada quedan «sin dato», no DNF, porque puede ser un hueco de telemetría. No hay OCS fiables, así que las penalizaciones se introducen a mano.
 
 ## Prueba con otro campeonato
 
