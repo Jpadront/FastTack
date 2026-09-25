@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   // Escora óptima de una ceñida: VMG relativa a la flota por franja de escora (un eje, en %), con el
   // rango óptimo sombreado, la escora mediana del barco de referencia y la del top 5.
   import { num, mediana, COLOR_YO } from './datos.js';
@@ -37,7 +38,7 @@
   <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span><span><i class="l-rango"></i>rango óptimo</span><span><i class="l-yo"></i>{nombreRef}</span><span><i class="l-top5"></i>top 5</span></div>
   <div bind:clientWidth={W}>
     <svg viewBox={`0 0 ${W} ${H}`} style:height={H + 'px'} role="img" aria-label="VMG relativa por franja de escora">
-      <rect x={X(o.rango[0])} y={M.t} width={X(o.rango[1]) - X(o.rango[0])} height={H - M.t - M.b} class="rango" />
+      <rect x={X(o.rango[0])} y={M.t} width={Math.max(0, X(o.rango[1]) - X(o.rango[0]))} height={H - M.t - M.b} class="rango" />
       {#each [yLo + 1, 100, yHi - 1] as v}
         <line x1={M.l} x2={W - M.r} y1={Y(v)} y2={Y(v)} class="rej" class:cien={v === 100} />
         <text x={M.l - 6} y={Y(v) + 4} class="eje" text-anchor="end">{num(v, 0)} %</text>
@@ -61,8 +62,8 @@
       {/if}
     </svg>
   </div>
-  {#if nota}<p class="nota">{nota}</p>{/if}
-  <p class="nota">Cada punto: VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos (barcos en la misma amura a menos de 300 m en los mismos 30 s, con el mismo viento: así se quitan la presión y las roladas, también las locales). Tramos de 30 s en rumbo estable, sin rodeos ni maniobras. Si con más escora la SOG sube y la VMG baja, se va más rápido pero más abierto o con más abatimiento; si bajan las dos, falta potencia. Sombreado: rango sin franjas claramente peores que la mejor (≥ 1 % y más que el ruido). Es una asociación en la flota: la escora también depende del peso y del estilo de cada tripulación.</p>
+  {#if nota}<Nota texto={nota} resumen="Qué ceñidas entran" />{/if}
+  <Nota>Cada punto: VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos (barcos en la misma amura a menos de 300 m en los mismos 30 s, con el mismo viento: así se quitan la presión y las roladas, también las locales). Tramos de 30 s en rumbo estable, sin rodeos ni maniobras. Si con más escora la SOG sube y la VMG baja, se va más rápido pero más abierto o con más abatimiento; si bajan las dos, falta potencia. Sombreado: rango sin franjas claramente peores que la mejor (≥ 1 % y más que el ruido). Es una asociación en la flota: la escora también depende del peso y del estilo de cada tripulación.</Nota>
 </section>
 
 <style>

@@ -201,7 +201,7 @@
 </div>
 
 <style>
-  .mapa { position: relative; width: 100%; height: 100%; background: var(--agua); border-radius: 6px; overflow: hidden; }
+  .mapa { position: relative; width: 100%; height: 100%; background: #dce7eb; color-scheme: light; border-radius: 6px; overflow: hidden; }
   canvas { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
   :global(.maplibregl-ctrl-top-right) { z-index: 3; }
   .corr { position: absolute; left: 8px; top: 8px; z-index: 3; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.9);

@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   import { onMount, onDestroy } from 'svelte';
   import uPlot from 'uplot';
   import 'uplot/dist/uPlot.min.css';
@@ -146,7 +147,7 @@
     {#if lectura}{fmtT(lectura.t)} · {#each lectura.vals as l, k}{k ? ' · ' : ''}{velaCorta(l.v, nombres)} {num(l.val, m.d)} {m.u}{/each}
     {:else}Pasa el cursor por el gráfico para ver los valores.{/if}
   </p>
-  <p class="nota">{m.maniobra ? 'Cada punto es una maniobra con datos suficientes para medir su pérdida.' : 'Datos crudos (medias de 5 s) en tenue; tendencia robusta (mediana móvil de 60 s) destacada. Solo tramos de ' + m.tipo + ' (sombreados), cada barco con sus propios pasos por baliza y sin los 20 s de cada rodeo. La línea vertical sigue al reproductor.'}</p>
+  <Nota>{m.maniobra ? 'Cada punto es una maniobra con datos suficientes para medir su pérdida.' : 'Datos crudos (medias de 5 s) en tenue; tendencia robusta (mediana móvil de 60 s) destacada. Solo tramos de ' + m.tipo + ' (sombreados), cada barco con sus propios pasos por baliza y sin los 20 s de cada rodeo. La línea vertical sigue al reproductor.'}</Nota>
 </section>
 
 <style>

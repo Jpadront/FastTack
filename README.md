@@ -39,7 +39,9 @@ Opciones: `--puerto 8080` para usar otro puerto; `--solo-este-ordenador` para no
 
 1. El Mac y el móvil tienen que estar en **la misma Wi-Fi**.
 2. Al arrancar, el terminal muestra la dirección para el móvil (p. ej. `http://192.168.1.34:8000`) y un **QR**: escanéalo con la cámara.
-3. Para tenerlo a mano: en Safari, *Compartir → Añadir a pantalla de inicio*.
+3. Para tenerlo a mano: en Safari, *Compartir → Añadir a pantalla de inicio* (queda con su icono y se abre a pantalla completa).
+
+En el móvil, las pestañas de la prueba quedan fijas arriba y el reproductor fijo abajo (el botón ×4 cambia la velocidad), para mover el tiempo mientras se leen las tablas. Las explicaciones de cada cálculo están plegadas en «Cómo se calcula». Con el móvil en modo oscuro, FastTack también se ve en oscuro.
 
 Si no carga: comprueba que el Mac no esté en reposo y que el cortafuegos de macOS permite conexiones entrantes a Python (*Ajustes del Sistema → Red → Cortafuegos*).
 

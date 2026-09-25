@@ -143,7 +143,7 @@
             <td class="n num grande">{#if p.n_llegadas}<a class="abrir" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`} aria-label={`Analizar la prueba ${p.numero ?? ''}`}>{p.numero ?? '—'}</a>{:else}{p.numero ?? '—'}{/if}</td>
             <td>
               {horaLocal(p.senal, camp.tz_offset_ms)}
-              {#if p.nota}<div class="nota">{p.nota}</div>{/if}
+              {#if p.nota}<div class="nota" title={p.nota}>{p.nota}</div>{/if}
             </td>
             <td><span class="chip {p.estado.replace(' ', '-')}">{estadoTexto[p.estado]}</span></td>
             <td class="n num mio">{r.mio}{#if r.de}<span class="tenue de">/{r.de}</span>{/if}</td>
@@ -151,7 +151,7 @@
               {#if p.n_llegadas}<a class="analizar" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`}>Analizar →</a>{/if}</td>
             <td class="n">
               <input class="campo viento num" inputmode="decimal" aria-label={`Viento de referencia de la prueba ${p.numero ?? ''}`}
-                     value={p.viento_kn ?? ''} placeholder="sin calibrar" onchange={(e) => viento(p, e.currentTarget.value)}>
+                     value={p.viento_kn ?? ''} placeholder="—" title="Viento en el disparo (kn). Vacío: intensidad sin calibrar" onchange={(e) => viento(p, e.currentTarget.value)}>
             </td>
             <td>
               <label class="cuenta"><input type="checkbox" checked={!p.excluida}
@@ -184,16 +184,19 @@
   .grande { font-size: 18px; font-weight: 500; }
   .mio { color: var(--yo); font-weight: 600; white-space: nowrap; }
   .de { margin-left: 4px; font-weight: 400; }
-  .nota { font-size: 13px; color: var(--tinta-3); max-width: 46ch; }
+  .nota { font-size: 13px; color: var(--tinta-3); max-width: 46ch; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
   tr.excluida td { color: var(--tinta-3); }
   tr.excluida .mio { color: var(--tinta-3); }
-  .viento { width: 13ch; text-align: right; padding: 5px 8px; font-size: 14px; }
+  .viento { width: 7ch; text-align: right; padding: 5px 8px; font-size: 14px; }
   .viento::placeholder { color: var(--tinta-3); }
   .tiempo { margin-left: 8px; }
   .cuenta { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
   .pie { font-size: 14px; max-width: 90ch; margin-top: 10px; }
   .abrir { color: inherit; text-decoration: none; }
-  .analizar { display: inline-block; margin-left: 10px; font: 600 14px var(--display); color: var(--foco); text-decoration: none; white-space: nowrap; }
+  .analizar { display: inline-block; margin-left: 10px; font: 600 14px var(--display); color: var(--foco); text-decoration: none; white-space: nowrap;
+    border: 1px solid color-mix(in srgb, var(--foco) 40%, transparent); border-radius: 14px; padding: 1px 10px; }
+  .analizar:hover { background: color-mix(in srgb, var(--foco) 10%, transparent); }
+  tbody tr:hover td { background: color-mix(in srgb, var(--foco) 4%, transparent); }
 
   /* Móvil: cada prueba es una ficha */
   @media (max-width: 700px) {
@@ -205,9 +208,12 @@
     td:nth-child(2) { grid-column: 2; }
     td:nth-child(3) { grid-column: 3; justify-self: end; }
     td:nth-child(4) { grid-column: 3; text-align: right; }
-    td:nth-child(5) { grid-column: 2; font-size: 14px; }
-    td:nth-child(6), td:nth-child(7) { grid-column: 2 / 4; display: flex; justify-content: flex-start; align-items: center; gap: 8px; margin-top: 4px; }
-    td:nth-child(6)::before { content: 'Viento ref. (kn)'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
+    td:nth-child(5) { grid-column: 2 / 4; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    td:nth-child(5) .analizar { margin-left: auto; }
+    td:nth-child(6), td:nth-child(7) { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    td:nth-child(6) { grid-column: 2; }
+    td:nth-child(7) { grid-column: 3; justify-content: flex-end; }
+    td:nth-child(6)::before { content: 'Viento kn'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     td:nth-child(7)::before { content: 'Cuenta'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     .n { text-align: left; }
   }

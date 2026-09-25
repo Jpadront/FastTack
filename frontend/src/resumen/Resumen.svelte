@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   import { onMount } from 'svelte';
   import { api, clave as claveVela } from '../api.js';
   import { COLOR_YO, PALETA, num, velaCorta } from '../prueba/datos.js';
@@ -50,6 +51,8 @@
   }
   function guardar() { try { localStorage.setItem(clavePref, JSON.stringify({ descartes, comparar })); } catch {} }
 
+  const SECCIONES = [['r-general', 'General'], ['r-puestos', 'Puestos'], ['r-metrica', 'Por prueba'], ['r-medias', 'Medias'],
+    ['r-escora', 'Escora'], ['r-salidas', 'Salidas y maniobras'], ['r-viento', 'Viento'], ['r-debrief', 'Debrief IA']];
   const pruebas = $derived(res ? res.pruebas.map((p) => `P${p.numero}`) : []);
   const general = $derived(res?.general || []);
   const miFila = $derived(general.find((f) => f.vela === ref));
@@ -156,10 +159,15 @@
     <p class="tenue">Tu barco ({barco}) no aparece en las llegadas de este campeonato: elige otro en la página del campeonato.</p>
   {/if}
 
+  <nav class="indice" aria-label="Secciones del resumen">
+    {#each SECCIONES as [id, t]}<button onclick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t}</button>{/each}
+  </nav>
+  <div id="r-general" class="ancla"></div>
   <Tabla titulo="General calculada" {ref} colores={colores} filas={filasGeneral} ordenInicial="puesto" columnas={columnasGeneral}
     nota={`Puntuación baja sin penalizaciones ni decisiones del jurado (DSQ, redress…): puede diferir de la oficial. OCS (solo con la lista del comité fiable) y sin llegada (DNF) = ${res.inscritos + 1} puntos. Entre paréntesis, los descartes. «rec.»: llegadas reconstruidas desde la telemetría. Empates: RRS A8.`} />
   <button class="boton claro mas" onclick={() => (verFlota = !verFlota)}>{verFlota ? 'Ver solo el top 10 y los comparados' : `Ver toda la flota (${general.length})`}</button>
 
+  <div id="r-puestos" class="ancla"></div>
   <section class="tarjeta bloque">
     <h3>Puesto por prueba</h3>
     <div class="leyenda">{#each comparados as v}<span><i style:background={colores[v]}></i>{vc(v)}</span>{/each}</div>
@@ -167,6 +175,7 @@
     <p class="nota">Arriba, mejores puestos. Huecos: OCS o sin llegada.</p>
   </section>
 
+  <div id="r-metrica" class="ancla"></div>
   <section class="tarjeta bloque">
     <div class="cabm">
       <h3>{m[1]} por prueba <span class="tenue">({m[2]})</span>{#if m[4]}<span class="est"> estimado</span>{/if}</h3>
@@ -180,6 +189,7 @@
     </p>
   </section>
 
+  <div id="r-medias" class="ancla"></div>
   <Tabla titulo="Medias del campeonato" {ref} {colores} filas={filasRend} ordenInicial="pos"
     nota="Medias de las pruebas con métricas, ponderadas por la cobertura de datos de cada barco en cada prueba. * estimado con el viento reconstruido."
     columnas={[
@@ -191,6 +201,7 @@
       { k: 'cabeceo_ceñida', titulo: 'Cabeceo ↑', num: true, fmt: fG(0) }, { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fG(0) },
     ]} />
 
+  <div id="r-escora" class="ancla"></div>
   {#if res.escora}
     {@const e = res.escora}
     {@const mio = e.barcos[ref]}
@@ -203,6 +214,7 @@
     </div>
   {/if}
 
+  <div id="r-salidas" class="ancla"></div>
   <div class="dos">
     <Tabla titulo="Salidas acumuladas" {ref} {colores} filas={filasSalida} ordenInicial="top10_60"
       nota="Solo las salidas con datos del barco en el disparo. Margen negativo = por detrás de la línea. +60 s: puesto avanzando hacia la baliza 1. * estimado."
@@ -224,6 +236,7 @@
       ]} />
   </div>
 
+  <div id="r-viento" class="ancla"></div>
   <section class="tarjeta bloque">
     <h3>Según la intensidad del viento <span class="est">estimado</span></h3>
     {#if !conViento}
@@ -235,10 +248,11 @@
         <tbody>{#each comparados as v}<tr class:yo={v === ref}><td><span class="punto" style:background={colores[v]}></span>{vc(v)}</td>
           {#each T(v).viento as t}<td class="n num">{t.pruebas}</td><td class="n num">{t.puesto_medio == null ? '—' : num(t.puesto_medio, 1)}</td><td class="n num">{t.vmg_ceñida == null ? '—' : num(t.vmg_ceñida, 2) + ' / ' + num(t.vmg_popa, 2)}</td>{/each}</tr>{/each}</tbody>
       </table></div>
-      <p class="nota">Con el viento de referencia que has introducido ({conViento} de {res.pruebas.length} pruebas). El puesto medio usa los puntos de cada prueba (incluidos OCS y sin llegada).</p>
+      <Nota>Con el viento de referencia que has introducido ({conViento} de {res.pruebas.length} pruebas). El puesto medio usa los puntos de cada prueba (incluidos OCS y sin llegada).</Nota>
     {/if}
   </section>
 
+  <div id="r-debrief" class="ancla"></div>
   {#if res.pendientes.length || progreso}
     <section class="tarjeta bloque"><h3>Debrief del campeonato · IA</h3><p class="tenue">Disponible cuando terminen de analizarse todas las pruebas.</p></section>
   {:else if miFila}
@@ -285,4 +299,10 @@
   tr.yo td { background: color-mix(in srgb, var(--yo) 14%, transparent); font-weight: 600; }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .bloque-ia { margin-top: 10px; }
+  .indice { position: sticky; top: var(--alto-barra, 45px); z-index: 20; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+    background: var(--fondo); padding: 6px 0; margin: 4px 0 2px; border-bottom: 1px solid var(--linea); }
+  .indice::-webkit-scrollbar { display: none; }
+  .indice button { flex: none; font: 600 13px var(--display); padding: 4px 10px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); }
+  .indice button:hover { color: var(--tinta); border-color: var(--tinta-3); }
+  .ancla { scroll-margin-top: calc(var(--alto-barra, 45px) + 48px); }
 </style>

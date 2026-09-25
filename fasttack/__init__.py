@@ -1,1 +1,1 @@
-__version__ = "0.9.1"  # escora óptima del campeonato
+__version__ = "0.10.0"  # mejora visual

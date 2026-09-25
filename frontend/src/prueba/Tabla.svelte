@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   // columnas: [{ k, titulo, fmt?, num?, est? (estimado), ayuda? }]; filas: objetos con .vela
   let { columnas, filas, ref, colores = {}, titulo = '', nota = '', ordenInicial = null } = $props();
   let orden = $state(ordenInicial);
@@ -48,7 +49,7 @@
       </tbody>
     </table>
   </div>
-  {#if nota}<p class="nota">{nota}</p>{/if}
+  {#if nota}<div class="pie-nota"><Nota texto={nota} /></div>{/if}
 </section>
 
 <style>
@@ -67,5 +68,5 @@
   tr.tenue td { color: var(--tinta-3); }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .est { color: var(--estimado); margin-left: 1px; }
-  .nota { font-size: 12px; color: var(--tinta-3); margin: 6px 12px 0; }
+  .pie-nota { padding: 0 12px; }
 </style>

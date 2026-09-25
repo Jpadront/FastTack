@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   // Evolución del viento en un tramo: TWD y presión frente al % del tramo (dos gráficos, un eje cada
   // uno). El cursor sigue al reproductor. Todo estimado a partir de la flota.
   import { num } from './datos.js';
@@ -65,7 +66,7 @@
     </div>
   {/each}
   </div>
-  <p class="nota">Eje horizontal: % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</p>
+  <Nota>Eje horizontal: % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
 </section>
 
 <style>

@@ -1,4 +1,5 @@
 <script>
+  import Nota from '../Nota.svelte';
   import { onMount, untrack } from 'svelte';
   import { api, horaLocal, clave as claveVela } from '../api.js';
   import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta, tramoEn, twdEn, faseEn, corrienteEn } from './datos.js';
@@ -253,7 +254,7 @@
           <h3 class="h3b">Fases de presión</h3>
           <table class="mini"><thead><tr><th>Tramo</th><th>Tipo</th><th class="n">Δ</th><th>Primero</th></tr></thead>
             <tbody>{#each tr.fases_presion as f}<tr><td class="num">{f.desde_pct}–{f.hasta_pct} %</td><td>{f.tipo.toLowerCase()}</td><td class="n num">{f.delta > 0 ? '+' : ''}{num(f.delta, 2)} kn{tr.viento.tws_calibrada ? '' : ' SOG'}</td><td>{lado(f.primero)}</td></tr>{/each}</tbody></table>
-          <p class="nota">Primero: el lado del campo (mirando a barlovento) que recibió antes la rolada o el cambio de presión. «Toda la flota» si llegó a la vez. Estimado.</p>
+          <Nota>Primero: el lado del campo (mirando a barlovento) que recibió antes la rolada o el cambio de presión. «Toda la flota» si llegó a la vez. Estimado.</Nota>
         </section>
       </div>
       {#if an.corriente}
@@ -268,7 +269,7 @@
                 <tr><td>Vuelta {v.vuelta}</td><td class="n num">{num(v.velocidad_kn, 2)} kn → {num(v.hacia_grados, 0)}°</td><td class="n num">{comp(v.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(v.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{v.confianza}</td></tr>
               {/if}{/each}
             </tbody></table></div>
-          <p class="nota">Sin corredera: sale de comparar el rumbo de proa (brújula del Atlas) con el rumbo sobre el fondo de toda la flota, descontando el desvío de cada brújula y el abatimiento ({num(c.abatimiento_grados, 1)}°). Se comprueba con la diferencia de velocidad entre amuras en ceñida (transversal {c.transversal_velocidades_kn == null ? 'sin dato' : num(c.transversal_velocidades_kn, 2) + ' kn'}): confianza alta si coinciden (±0,15 kn). {c.barcos} barcos{c.brujulas_descartadas.length ? `; ${c.brujulas_descartadas.length} brújula(s) descartada(s) por desvío > 15°` : ''}. Derecha/izquierda mirando a barlovento. Las laylines sobre el fondo ya la incluyen; TWD y TWA son sobre el fondo.</p>
+          <Nota>Sin corredera: sale de comparar el rumbo de proa (brújula del Atlas) con el rumbo sobre el fondo de toda la flota, descontando el desvío de cada brújula y el abatimiento ({num(c.abatimiento_grados, 1)}°). Se comprueba con la diferencia de velocidad entre amuras en ceñida (transversal {c.transversal_velocidades_kn == null ? 'sin dato' : num(c.transversal_velocidades_kn, 2) + ' kn'}): confianza alta si coinciden (±0,15 kn). {c.barcos} barcos{c.brujulas_descartadas.length ? `; ${c.brujulas_descartadas.length} brújula(s) descartada(s) por desvío > 15°` : ''}. Derecha/izquierda mirando a barlovento. Las laylines sobre el fondo ya la incluyen; TWD y TWA son sobre el fondo.</Nota>
         </section>
       {/if}
     {:else if tab.tipo === 'baliza'}
@@ -347,7 +348,9 @@
   .elegir { padding: 10px 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; max-height: 240px; overflow: auto; margin-bottom: 10px; font-size: 14px; }
   .elegir label { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-  .pestanas { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--linea); margin-bottom: 10px; scrollbar-width: thin; }
+  .pestanas { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--linea); margin-bottom: 10px; scrollbar-width: none;
+    position: sticky; top: var(--alto-barra, 45px); z-index: 20; background: var(--fondo); }
+  .pestanas::-webkit-scrollbar { display: none; }
   .pestanas button { font: 600 15px var(--display); padding: 8px 12px; border: 0; background: none; color: var(--tinta-2); white-space: nowrap; border-bottom: 3px solid transparent; }
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
   .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 10px; align-items: start; }
@@ -356,7 +359,14 @@
   .indic { font-size: 13px; color: var(--tinta-2); display: flex; gap: 4px; flex-wrap: wrap; }
   .peq { font-size: 12px !important; font-weight: 500 !important; color: var(--tinta-3); }
   .mapabox { height: min(62vh, 560px); min-height: 300px; }
-  @media (max-width: 900px) { .rejilla { grid-template-columns: minmax(0, 1fr); } .mapabox { height: 46vh; } }
+  @media (max-width: 900px) {
+    .rejilla { grid-template-columns: minmax(0, 1fr); } .mapabox { height: 46vh; }
+    .contenido { padding-bottom: 76px; }   /* sitio para el reproductor fijo */
+    .modos { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .modos button { flex: none; }
+    .seleccion .etiqueta { display: none; }
+    .cab { margin-bottom: 6px; }
+  }
   .contenido { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
   .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 10px 12px; }
   .resumen div { display: grid; gap: 2px; }

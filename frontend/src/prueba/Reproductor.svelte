@@ -35,6 +35,8 @@
   <button class="play" onclick={alternar} aria-label={jugando ? 'Pausar' : 'Reproducir'}>{jugando ? '❚❚' : '▶'}</button>
   <input type="range" min={ventana[0]} max={ventana[1]} step="0.5" bind:value={T} aria-label="Momento de la prueba">
   <div class="reloj num"><b>{fmtT(T)}</b><span>{hora}</span></div>
+  <!-- en el móvil, un solo botón que va cambiando de velocidad -->
+  <button class="vel-movil num" onclick={() => (velocidad = { 1: 4, 4: 10, 10: 30, 30: 1 }[velocidad])} aria-label={`Velocidad ×${velocidad}; pulsa para cambiar`}>×{velocidad}</button>
   <div class="vel" role="group" aria-label="Velocidad de reproducción">
     {#each [1, 4, 10, 30] as v}
       <button class:activo={velocidad === v} aria-pressed={velocidad === v} onclick={() => (velocidad = v)}>×{v}</button>
@@ -51,5 +53,12 @@
   .vel { display: flex; gap: 3px; }
   .vel button { font: 500 12px var(--mono); padding: 4px 7px; border-radius: 4px; border: 1px solid var(--linea); background: var(--panel); }
   .vel button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
-  @media (max-width: 560px) { .rep { grid-template-columns: auto minmax(0, 1fr) auto; } .vel { grid-column: 1 / -1; justify-content: flex-end; } }
+  .vel-movil { display: none; font: 500 13px var(--mono); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--linea); background: var(--panel); min-width: 44px; }
+  /* Móvil: el reproductor queda fijo abajo para mover el tiempo mientras se leen las tablas */
+  @media (max-width: 900px) {
+    .rep { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+      grid-template-columns: auto minmax(0, 1fr) auto auto; box-shadow: 0 4px 18px rgba(16, 34, 43, .22); }
+    .vel { display: none; }
+    .vel-movil { display: block; }
+  }
 </style>
