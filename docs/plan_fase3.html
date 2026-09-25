@@ -1,0 +1,448 @@
+<title>Plan de FastTack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #eef2f3; --panel: #f9fbfb; --water: #dce7eb; --ink: #10222b; --ink-2: #4b5e67; --ink-3: #7d8f97;
+  --rule: #cad6db; --grid: #d8e2e6; --me: #e0622e; --mark: #4a3aa7; --ok: #1a7f4b; --warn: #a86400; --bad: #b3261e;
+  --est: #6a5acd; --tint: #e6eef1; --focus: #2a78d6;
+  --b1: #2a78d6; --b2: #1baf7a; --b3: #c98500; --b4: #d55181; --b5: #7a6fd6;
+  --display: "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark;
+    --bg: #0c171c; --panel: #112129; --water: #0f2630; --ink: #e6eff2; --ink-2: #a5b8c0; --ink-3: #6f8891;
+    --rule: #23373f; --grid: #1b323c; --me: #f0743d; --mark: #9085e9; --ok: #3fb97a; --warn: #e0a040; --bad: #ef6b62; --est: #a99cf0; --tint: #16303a; --focus: #3987e5; }
+}
+:root[data-theme="dark"] { color-scheme: dark;
+  --bg: #0c171c; --panel: #112129; --water: #0f2630; --ink: #e6eff2; --ink-2: #a5b8c0; --ink-3: #6f8891;
+  --rule: #23373f; --grid: #1b323c; --me: #f0743d; --mark: #9085e9; --ok: #3fb97a; --warn: #e0a040; --bad: #ef6b62; --est: #a99cf0; --tint: #16303a; --focus: #3987e5; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(32px, 5vw, 46px); font-weight: 700; }
+h2 { font-size: 28px; font-weight: 700; margin-block: 48px 12px; padding-top: 20px; border-top: 1px solid var(--rule); }
+h3 { font-size: 19px; font-weight: 600; margin-block: 22px 6px; }
+p, li { max-width: 72ch; }
+.eyebrow { font-family: var(--display); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+.lead { font-size: 18px; color: var(--ink-2); margin-top: 10px; }
+code { font-family: var(--mono); font-size: .88em; background: var(--tint); padding: 1px 5px; border-radius: 3px; }
+a { color: var(--focus); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; font-family: var(--display); font-size: 16px; font-weight: 500; }
+nav.toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav.toc a:hover { color: var(--ink); border-color: var(--ink); }
+.decisions { margin-top: 26px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--me); border-radius: 6px; padding: 16px 20px; }
+.decisions h3 { margin-top: 0; }
+.decisions ol { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 8px; }
+.tbl { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th { text-align: left; font-family: var(--display); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.rec td { background: color-mix(in srgb, var(--me) 10%, transparent); }
+.pill { display: inline-block; font-family: var(--display); font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.alta { color: var(--bad); } .pill.media { color: var(--warn); } .pill.baja { color: var(--ok); }
+.arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+.box { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; }
+.box h3 { margin-top: 0; }
+.box ul { margin: 6px 0 0; padding-left: 18px; font-size: 15px; }
+.box .tag { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.flow { overflow-x: auto; margin-top: 14px; }
+.flow svg { display: block; min-width: 760px; width: 100%; height: auto; }
+pre.cmd { font-family: var(--mono); font-size: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+.milestones { display: grid; gap: 8px; margin-top: 10px; counter-reset: h; }
+.milestones div { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: baseline; }
+.milestones b { font-family: var(--mono); font-weight: 500; color: var(--me); }
+
+/* ---------- maquetas ---------- */
+.screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.screens button { font: 600 15px var(--display); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 7px 12px; cursor: pointer; }
+.screens button[aria-selected="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.screens button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mockrow { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 22px; margin-top: 16px; align-items: start; }
+@media (max-width: 860px) { .mockrow { grid-template-columns: minmax(0, 1fr); } }
+.caption { font-family: var(--display); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+.phone { width: 340px; max-width: 100%; height: 700px; border: 10px solid #1d2a30; border-radius: 34px; overflow: hidden; background: var(--bg); position: relative; }
+.deskwrap { width: 100%; position: relative; overflow: hidden; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); }
+.desk { width: 1200px; height: 760px; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
+.note { font-size: 14px; color: var(--ink-2); margin-top: 10px; }
+
+/* elementos de la app dentro de las maquetas */
+.app { font-family: var(--body); font-size: 12px; color: var(--ink); height: 100%; display: flex; flex-direction: column; }
+.app .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+.app .brand { font: 700 15px var(--display); letter-spacing: .02em; }
+.app .sub { font-size: 11px; color: var(--ink-2); }
+.app .chip { font: 600 11px var(--display); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--rule); background: var(--panel); white-space: nowrap; }
+.app .chip.me { border-color: var(--me); color: var(--me); }
+.app .chip.est { border-style: dashed; border-color: var(--est); color: var(--est); }
+.app .chip.warn { border-color: var(--warn); color: var(--warn); }
+.app .tabs { display: flex; gap: 2px; padding: 6px 8px 0; overflow-x: auto; border-bottom: 1px solid var(--rule); background: var(--panel); scrollbar-width: none; }
+.app .tabs span { font: 600 12px var(--display); padding: 5px 9px; border-radius: 4px 4px 0 0; color: var(--ink-2); white-space: nowrap; }
+.app .tabs span.on { background: var(--bg); color: var(--ink); box-shadow: inset 0 2px 0 var(--me); }
+.app .body { flex: 1; overflow: hidden; padding: 8px; display: grid; gap: 8px; align-content: start; }
+.app .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 7px 9px; }
+.app .h { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 4px; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.app .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.app .kv div { display: grid; }
+.app .kv i { font-style: normal; font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.app .kv b { font: 500 14px var(--mono); }
+.app .kv b.me { color: var(--me); }
+.app table { font-size: 11px; }
+.app th { font-size: 10px; padding: 3px 5px; }
+.app td { padding: 3px 5px; }
+.app td.n { font-size: 11px; }
+.app tr.me td { background: color-mix(in srgb, var(--me) 14%, transparent); font-weight: 600; }
+.app .map { background: var(--water); border-radius: 5px; position: relative; overflow: hidden; }
+.app .map svg { width: 100%; height: 100%; display: block; }
+.app .layers { position: absolute; top: 6px; left: 6px; display: flex; gap: 3px; flex-wrap: wrap; }
+.app .layers span { font: 600 10px var(--display); background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; padding: 1px 6px; }
+.app .layers span.on { background: var(--ink); color: var(--panel); }
+.app .player { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 5px 8px; }
+.app .player .bar { flex: 1; height: 4px; background: var(--rule); border-radius: 2px; position: relative; }
+.app .player .bar::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: var(--me); border-radius: 2px; }
+.app .player .t { font: 500 11px var(--mono); white-space: nowrap; }
+.app .btn { font: 600 12px var(--display); background: var(--ink); color: var(--panel); border-radius: 4px; padding: 6px 10px; text-align: center; }
+.app .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+.app .input { border: 1px solid var(--rule); border-radius: 4px; padding: 7px 8px; background: var(--panel); font: 12px var(--mono); color: var(--ink-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.app .ai { border-left: 3px solid var(--est); }
+.app .ai p { margin: 2px 0; font-size: 11px; max-width: none; }
+.app .ai .cat { font: 700 10px var(--display); letter-spacing: .06em; color: var(--est); }
+.app .row { display: flex; gap: 8px; }
+.app .grow { flex: 1; min-width: 0; }
+.app .spark { height: 60px; }
+.app .spark svg { width: 100%; height: 100%; display: block; }
+.app .list div.item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--grid); gap: 8px; }
+.app .muted { color: var(--ink-3); }
+.app .est { color: var(--est); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">FastTack · Fase 3 · propuesta para confirmar</div>
+    <h1>Plan de la herramienta de análisis J/70</h1>
+    <p class="lead">Arquitectura, maquetas de las pantallas clave, coste de la IA por regata y riesgos. Nada de esto se construye hasta que lo confirmes.</p>
+    <nav class="toc" aria-label="Secciones">
+      <a href="#decisiones">Decisiones</a><a href="#arquitectura">Arquitectura</a><a href="#motor">Motor de análisis</a>
+      <a href="#maquetas">Maquetas</a><a href="#coste">Coste de la IA</a><a href="#riesgos">Riesgos</a><a href="#construccion">Plan de construcción</a>
+    </nav>
+  </header>
+
+  <section class="decisions" id="decisiones" aria-labelledby="dec-h">
+    <h3 id="dec-h">Lo que necesito que confirmes</h3>
+    <ol>
+      <li><b>La arquitectura</b> tal y como está abajo: la que propusiste, con dos ajustes. El frontend compilado va dentro del repositorio, para que en tu Mac solo haga falta Python. Y la telemetría se guarda en Parquet en lugar de SQLite.</li>
+      <li><b>El modelo de IA para los debriefs</b>: Claude Opus 5 (mejor calidad, unos 0,85 $ por regata y barco), Claude Sonnet 5 (unos 0,35 $) o Claude Haiku 4.5 (unos 0,12 $). Detalle en <a href="#coste">Coste de la IA</a>.</li>
+      <li><b>El «viento de referencia» por prueba</b>: un campo donde metéis la TWS en el disparo (la del comité o la vuestra). Sin él, la intensidad del viento se muestra relativa y marcada «sin calibrar». Es lo mismo que hace Track to Tactics a mano.</li>
+      <li><b>Dejar el PDF del debrief fuera de la v1.</b> La referencia lo tiene, pero no estaba en tu inventario.</li>
+    </ol>
+  </section>
+
+  <h2 id="arquitectura">Arquitectura</h2>
+  <p>Una sola aplicación que corre en tu Mac: un servidor en Python que descarga, calcula y sirve la web; un navegador (del Mac o del móvil) que la muestra. Todo el cálculo pesado se hace una vez en el servidor y se guarda. El móvil solo recibe resultados ya preparados.</p>
+
+  <div class="flow" role="img" aria-label="Flujo: RaceSense hacia ingesta y caché, motor de análisis, API y web; la IA solo recibe métricas calculadas">
+    <svg viewBox="0 0 1100 250" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/></marker></defs>
+      <g font-family="Barlow Semi Condensed, Arial Narrow, sans-serif" font-size="15" fill="var(--ink)">
+        <rect x="10" y="70" width="170" height="92" rx="6" fill="var(--panel)" stroke="var(--rule)"/>
+        <text x="95" y="100" text-anchor="middle" font-weight="700">RaceSense</text>
+        <text x="95" y="122" text-anchor="middle" fill="var(--ink-2)" font-size="13">/api/regatta</text>
+        <text x="95" y="140" text-anchor="middle" fill="var(--ink-2)" font-size="13">teleapi (telemetría)</text>
+        <rect x="230" y="70" width="190" height="92" rx="6" fill="var(--panel)" stroke="var(--rule)"/>
+        <text x="325" y="100" text-anchor="middle" font-weight="700">Ingesta + caché</text>
+        <text x="325" y="122" text-anchor="middle" fill="var(--ink-2)" font-size="13">SQLite (metadatos)</text>
+        <text x="325" y="140" text-anchor="middle" fill="var(--ink-2)" font-size="13">Parquet (telemetría)</text>
+        <rect x="470" y="70" width="200" height="92" rx="6" fill="var(--panel)" stroke="var(--me)" stroke-width="2"/>
+        <text x="570" y="100" text-anchor="middle" font-weight="700">Motor de análisis</text>
+        <text x="570" y="122" text-anchor="middle" fill="var(--ink-2)" font-size="13">funciones puras + tests</text>
+        <text x="570" y="140" text-anchor="middle" fill="var(--ink-2)" font-size="13">resultado JSON por prueba</text>
+        <rect x="720" y="70" width="160" height="92" rx="6" fill="var(--panel)" stroke="var(--rule)"/>
+        <text x="800" y="100" text-anchor="middle" font-weight="700">API FastAPI</text>
+        <text x="800" y="122" text-anchor="middle" fill="var(--ink-2)" font-size="13">+ web compilada</text>
+        <rect x="930" y="40" width="160" height="60" rx="6" fill="var(--panel)" stroke="var(--rule)"/>
+        <text x="1010" y="75" text-anchor="middle" font-weight="700">Ordenador</text>
+        <rect x="930" y="130" width="160" height="60" rx="6" fill="var(--panel)" stroke="var(--rule)"/>
+        <text x="1010" y="158" text-anchor="middle" font-weight="700">Móvil</text>
+        <text x="1010" y="176" text-anchor="middle" fill="var(--ink-2)" font-size="13">misma Wi-Fi</text>
+        <rect x="470" y="200" width="200" height="44" rx="6" fill="var(--panel)" stroke="var(--est)" stroke-dasharray="5 4"/>
+        <text x="570" y="227" text-anchor="middle" font-weight="700">Debrief IA (Claude)</text>
+        <g stroke="var(--ink-2)" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+          <path d="M180 116 H226"/><path d="M420 116 H466"/><path d="M670 116 H716"/>
+          <path d="M880 100 L926 76"/><path d="M880 132 L926 156"/><path d="M570 162 V196"/>
+        </g>
+        <text x="585" y="186" fill="var(--ink-2)" font-size="12">solo métricas</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="arch">
+    <div class="box">
+      <h3>Ingesta</h3><span class="tag">backend/ingesta</span>
+      <ul>
+        <li>De la URL del campeonato al <code>eventId</code> (cualquier campeonato de RaceSense).</li>
+        <li>Lista de pruebas: documento del comité + pruebas reconstruidas desde la telemetría, emparejadas por hora de señal.</li>
+        <li>Descarga educada: peticiones secuenciales con pausa y <code>User-Agent</code> propio. Una prueba terminada se descarga una sola vez.</li>
+        <li>Guarda también las correcciones del organizador (pruebas ocultas, recorrido, barcos silenciados).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Motor de análisis</h3><span class="tag">backend/motor</span>
+      <ul>
+        <li>Funciones puras en Python con numpy: entran datos, salen métricas. Sin red, sin base de datos.</li>
+        <li>Tests con pytest sobre las muestras guardadas y casos sintéticos (p. ej. una virada de pérdida conocida).</li>
+        <li>Resultado versionado: si cambia una fórmula, se recalcula solo lo afectado.</li>
+        <li>Cada cifra lleva su origen (directo, calculado o estimado) y su % de cobertura.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Debrief IA</h3><span class="tag">backend/debrief</span>
+      <ul>
+        <li>SDK oficial de Anthropic. Recibe solo las métricas de esa pestaña y de los mejores barcos.</li>
+        <li>La categoría del diagnóstico la decide el motor, no la IA.</li>
+        <li>Validador: cada número del texto tiene que existir en las métricas, con su unidad. Si no, se regenera una vez y, si falla, se avisa.</li>
+        <li>Se guarda por prueba, pestaña, barco y versión del motor. Botón para regenerar.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Web (PWA)</h3><span class="tag">frontend/</span>
+      <ul>
+        <li>Svelte + TypeScript: páginas ligeras, que en el móvil importan.</li>
+        <li>Mapa con MapLibre y mapa base vectorial gratuito (sin clave). Las trazas se dibujan en WebGL para que 100 barcos vayan fluidos.</li>
+        <li>Gráficos con uPlot (series temporales rápidas) y cursor sincronizado con el reproductor.</li>
+        <li>Diseño móvil primero: en el móvil, mapa arriba y tablas en tarjetas; en el ordenador, mapa y panel lado a lado.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Cómo se arranca</h3>
+  <pre class="cmd">uv run fasttack        # abre http://localhost:8000 e imprime la dirección y un QR para el móvil</pre>
+  <p>En el Mac solo hace falta <code>uv</code> (instala Python y las dependencias solo). La web va ya compilada dentro del repositorio, así que no necesitas Node. La clave de la API de Claude va en un archivo <code>.env</code>; te la pediré cuando lleguemos al debrief.</p>
+  <p><b>Móvil:</b> con el Mac y el móvil en la misma Wi-Fi, se abre la dirección que imprime el comando (o se escanea el QR). Se puede añadir a la pantalla de inicio. La instalación completa como PWA, con uso sin conexión, necesita HTTPS: llegará cuando la publiquemos para el equipo y el entrenador.</p>
+  <p><b>Publicación futura:</b> el mismo programa en un contenedor (Docker) en un servicio con HTTPS, con un acceso sencillo para el equipo. En la v1 no hay login ni pagos.</p>
+
+  <h2 id="motor">Motor de análisis: de la telemetría a la pestaña</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Paso</th><th>Qué hace</th><th>Datos de la Fase 1 que usa</th></tr></thead>
+      <tbody>
+        <tr><td>1. Normalizar</td><td>Velas sin espacios, un barco con dos Atlas, fechas en 4 formatos, coordenadas [lat, lon] frente a [lon, lat], rumbo magnético → verdadero y offset por dispositivo.</td><td>fuente_datos.md</td></tr>
+        <tr><td>2. Pruebas</td><td>Señal (minuto truncado), llegadas oficiales o detectadas, OCS efectivos. Pruebas que faltan: reconstruidas.</td><td>Detección validada: error mediano 0,3 s</td></tr>
+        <tr><td>3. Recorrido</td><td>Balizas con Atlas (posición en cada instante). Balizas y offsets sin Atlas: estimados con los rodeos de la flota. Secuencia de tramos y vueltas.</td><td>Rodeos por máximos a barlovento</td></tr>
+        <tr><td>4. Pasos por baliza</td><td>Por barco: entrada y salida de la zona, tiempo de paso, elección de puerta.</td><td></td></tr>
+        <tr><td>5. Viento</td><td>TWD por bisectriz de los COG de la flota en 10 cortes por tramo, con confianza. TWS por la polar J/70, calibrada con el viento de referencia.</td><td>Contraste con Open-Meteo</td></tr>
+        <tr><td>6. Métricas</td><td>Salida, tramos, maniobras, laylines, presión, fases de rolada, barco fantasma, rendimiento. Cada una con fórmula en <code>docs/metricas.md</code>.</td><td>Cobertura por tramo</td></tr>
+        <tr><td>7. Campeonato</td><td>General calculada (puntuación baja, descartes configurables), medias por prueba, tendencias por intensidad de viento.</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="maquetas">Maquetas</h2>
+  <p>Cinco pantallas, cada una en móvil y en ordenador. Son maquetas de estructura: <b>los números son ilustrativos, no resultados reales</b> (salvo los puestos de ESP 1214 en la lista de pruebas). El diseño final seguirá la línea del prototipo que ya viste.</p>
+  <div class="screens" role="tablist" aria-label="Pantallas">
+    <button role="tab" aria-selected="true" data-s="campeonato" id="t-campeonato">Selección de campeonato</button>
+    <button role="tab" aria-selected="false" data-s="salida" id="t-salida">Pestaña Salida</button>
+    <button role="tab" aria-selected="false" data-s="cenida" id="t-cenida">Pestaña de ceñida</button>
+    <button role="tab" aria-selected="false" data-s="rendimiento" id="t-rendimiento">Rendimiento</button>
+    <button role="tab" aria-selected="false" data-s="resumen" id="t-resumen">Resumen del campeonato</button>
+  </div>
+  <div class="mockrow">
+    <div><div class="caption">Móvil</div><div class="phone" id="phone"></div></div>
+    <div><div class="caption">Ordenador</div><div class="deskwrap" id="deskwrap"><div class="desk" id="desk"></div></div><p class="note" id="mocknote"></p></div>
+  </div>
+
+  <h2 id="coste">Coste de la IA</h2>
+  <p>Cada pestaña abierta genera un debrief la primera vez; después se guarda y no se vuelve a pagar. Una regata con dos vueltas tiene unas 11 pestañas. Cada debrief envía unos 5.500 tokens (instrucciones + métricas de la pestaña y de los mejores barcos) y devuelve unos 700 tokens de texto, más el razonamiento interno del modelo (unos 1.000 tokens en Opus y Sonnet).</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Modelo</th><th class="n">Precio entrada / salida (por millón de tokens)</th><th class="n">Por regata y barco (11 debriefs)</th><th class="n">Debrief del campeonato</th><th class="n">Campeonato de 10 pruebas</th><th>Comentario</th></tr></thead>
+      <tbody>
+        <tr class="rec"><td><b>Claude Opus 5</b></td><td class="n">5 $ / 25 $</td><td class="n">≈ 0,85 $</td><td class="n">≈ 0,16 $</td><td class="n">≈ 8,70 $</td><td>Mejor diagnóstico y comparación con los mejores. Recomendado para empezar.</td></tr>
+        <tr><td>Claude Sonnet 5</td><td class="n">2 $ / 10 $</td><td class="n">≈ 0,35 $</td><td class="n">≈ 0,07 $</td><td class="n">≈ 3,60 $</td><td>Buena opción si el coste pesa; la validación de cifras protege igual.</td></tr>
+        <tr><td>Claude Haiku 4.5</td><td class="n">1 $ / 5 $</td><td class="n">≈ 0,12 $</td><td class="n">≈ 0,03 $</td><td class="n">≈ 1,20 $</td><td>Textos más planos; útil para borradores rápidos.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Las cifras incluyen un 10 % de margen para regeneraciones por el validador. <b>El debrief depende del barco de referencia:</b> si el entrenador analiza cinco barcos de la misma regata, son cinco veces el coste de esa regata. El modelo se puede cambiar en el <code>.env</code> en cualquier momento.</p>
+
+  <h2 id="riesgos">Riesgos</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Riesgo</th><th>Prob.</th><th>Impacto</th><th>Qué haremos</th></tr></thead>
+      <tbody>
+        <tr><td>Vakaros cambia sus APIs (no están documentadas)</td><td><span class="pill media">media</span></td><td><span class="pill alta">alto</span></td><td>Ingesta aislada en un módulo, caché permanente (lo descargado sigue funcionando), tests con muestras guardadas que detectan cambios de formato.</td></tr>
+        <tr><td>La telemetría cubre solo ~50 % del tiempo</td><td><span class="pill alta">alta</span></td><td><span class="pill alta">alto</span></td><td>Cada métrica muestra su cobertura; por debajo del umbral, «datos insuficientes». Nunca se rellena lo que no hay. Preguntar a Vakaros por los registros completos.</td></tr>
+        <tr><td>El viento reconstruido no es fiable (sobre todo la TWS)</td><td><span class="pill alta">alta</span></td><td><span class="pill media">medio</span></td><td>Viento de referencia por prueba, confianza por corte, todo marcado «estimado». Validación contra Track to Tactics en Cascais Vela.</td></tr>
+        <tr><td>Balizas sin Atlas mal estimadas</td><td><span class="pill media">media</span></td><td><span class="pill media">medio</span></td><td>En Cascais Vela M1 y M2 sí transmiten: se compara la estimación con la posición real para medir el error.</td></tr>
+        <tr><td>Pruebas que faltan o mal numeradas</td><td><span class="pill alta">alta</span></td><td><span class="pill media">medio</span></td><td>Reconstrucción ya validada, emparejado por hora de señal y numeración editable.</td></tr>
+        <tr><td>La IA cita cifras falsas o con otra unidad</td><td><span class="pill media">media</span></td><td><span class="pill media">medio</span></td><td>Validador automático de números y unidades; la categoría la fija el motor.</td></tr>
+        <tr><td>Lentitud en el móvil con 100 barcos</td><td><span class="pill media">media</span></td><td><span class="pill media">medio</span></td><td>Datos precalculados y reducidos en el servidor, dibujo en WebGL, carga por pestaña.</td></tr>
+        <tr><td>Sin HTTPS en la Wi-Fi local, la PWA no se instala completa</td><td><span class="pill alta">alta</span></td><td><span class="pill baja">bajo</span></td><td>En la v1, acceso directo desde la pantalla de inicio. La PWA completa, al publicar con HTTPS.</td></tr>
+        <tr><td>Diferencias con Track to Tactics por definiciones distintas</td><td><span class="pill alta">alta</span></td><td><span class="pill baja">bajo</span></td><td>Cada fórmula documentada en <code>metricas.md</code> y cada diferencia explicada en la validación.</td></tr>
+        <tr><td>Condiciones de uso de Vakaros</td><td><span class="pill baja">baja</span></td><td><span class="pill alta">alto</span></td><td>Uso interno del equipo. Pedir permiso a Vakaros antes de abrirla a terceros.</td></tr>
+        <tr><td>El alcance de la v1 es grande</td><td><span class="pill media">media</span></td><td><span class="pill media">medio</span></td><td>Construcción por hitos: primero el flujo completo de punta a punta, después las capas finas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="construccion">Plan de construcción (Fase 4) y validación (Fase 5)</h2>
+  <p>Cada hito termina con algo que se puede abrir y probar, y con su resumen.</p>
+  <div class="milestones">
+    <div><b>H1</b><span>Esqueleto del proyecto, ingesta con caché y lista de pruebas (incluidas las reconstruidas). Pantalla de selección de campeonato funcionando con el Mundial.</span></div>
+    <div><b>H2</b><span>Motor base con tests: recorrido, pasos por baliza, tramos, viento, salida, maniobras y métricas de tramo. <code>docs/metricas.md</code>.</span></div>
+    <div><b>H3</b><span>Pestañas dinámicas: cabecera, selector de barcos, mapa con reproductor, panel instantáneo y tablas. <b>Primera versión de punta a punta.</b></span></div>
+    <div><b>H4</b><span>Capas del mapa (presión, TWD, rol, SOG), gráficos de viento y pestaña Rendimiento.</span></div>
+    <div><b>H5</b><span>Resumen del campeonato.</span></div>
+    <div><b>H6</b><span>Debrief con IA: validador, caché y botón de regenerar. Te pediré la clave aquí.</span></div>
+    <div><b>H7</b><span>Validación: Cascais Vela prueba 9 con ESP 1170 frente a Track to Tactics, y el flujo completo con el Mundial y ESP 1214. README final.</span></div>
+  </div>
+</div>
+
+<script>
+const SVGMAP = (w, h, opts = {}) => {
+  const tr = (d, c, sw = 1.2, op = .9) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}" stroke-linejoin="round"/>`;
+  const base = [
+    'M40 88% L70 70% L55 52% L95 33% L80 18%', 'M60 90% L95 74% L78 56% L120 38% L102 20%', 'M80 92% L118 72% L100 55% L140 37% L126 19%',
+  ];
+  const sx = (x) => x * w / 200, sy = (p) => parseFloat(p) / 100 * h;
+  const path = (s) => s.split(' L').map((pt, i) => { const [x, y] = pt.replace('M', '').split(' '); return (i ? 'L' : 'M') + sx(+x) + ' ' + sy(y); }).join(' ');
+  let s = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
+  if (opts.twd) {
+    s += `<rect x="0" y="0" width="${w * .38}" height="${h}" fill="var(--b1)" opacity=".10"/><rect x="${w * .62}" y="0" width="${w * .38}" height="${h}" fill="var(--bad)" opacity=".10"/>`;
+  }
+  if (opts.pressure) {
+    s += `<ellipse cx="${w * .7}" cy="${h * .45}" rx="${w * .16}" ry="${h * .12}" fill="var(--b1)" opacity=".22"/><ellipse cx="${w * .3}" cy="${h * .3}" rx="${w * .1}" ry="${h * .08}" fill="var(--b1)" opacity=".14"/>`;
+  }
+  const cols = ['var(--b1)', 'var(--b2)', 'var(--b3)'];
+  base.forEach((d, i) => { s += tr(path(d), cols[i], 1.3); });
+  s += tr(path('M100 90% L140 72% L120 54% L165 34% L148 16%'), 'var(--me)', 2.4, 1);
+  // línea de salida y balizas
+  s += `<line x1="${w * .15}" y1="${h * .9}" x2="${w * .88}" y2="${h * .92}" stroke="var(--ink)" stroke-dasharray="4 3" stroke-opacity=".6"/>`;
+  s += `<circle cx="${w * .15}" cy="${h * .9}" r="4" fill="var(--water)" stroke="var(--mark)" stroke-width="2"/><circle cx="${w * .88}" cy="${h * .92}" r="4" fill="var(--water)" stroke="var(--mark)" stroke-width="2"/>`;
+  s += `<circle cx="${w * .62}" cy="${h * .1}" r="4" fill="var(--water)" stroke="var(--mark)" stroke-width="2" stroke-dasharray="2 2"/>`;
+  if (opts.layline) s += `<line x1="${w * .62}" y1="${h * .1}" x2="${w * .95}" y2="${h * .55}" stroke="var(--ink-3)" stroke-dasharray="2 3"/><line x1="${w * .62}" y1="${h * .1}" x2="${w * .25}" y2="${h * .6}" stroke="var(--ink-3)" stroke-dasharray="2 3"/>`;
+  s += `<text x="${w * .62 + 7}" y="${h * .1 + 4}" font-size="10" fill="var(--est)" font-family="Barlow Semi Condensed, sans-serif">M1 (estimada)</text>`;
+  return s + '</svg>';
+};
+const spark = (w, h, pts, col = 'var(--me)', faint = true) => {
+  const n = pts.length, mx = Math.max(...pts), mn = Math.min(...pts);
+  const d = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / (n - 1) * w).toFixed(1)} ${(h - 4 - (v - mn) / (mx - mn || 1) * (h - 8)).toFixed(1)}`).join(' ');
+  let s = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`;
+  if (faint) s += `<path d="${pts.map((v, i) => `${i ? 'L' : 'M'}${(i / (n - 1) * w).toFixed(1)} ${(h - 4 - ((v + (i % 3 - 1) * .6) - mn) / (mx - mn || 1) * (h - 8)).toFixed(1)}`).join(' ')}" fill="none" stroke="${col}" stroke-opacity=".25"/>`;
+  return s + `<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`;
+};
+const TABS = (on) => `<div class="tabs">${['Salida', 'Ceñida 1', 'Baliza 1', 'Popa 1', 'Puerta', 'Ceñida 2', 'Baliza 2', 'Popa 2', 'Llegada', 'Rendimiento'].map(t => `<span class="${t === on ? 'on' : ''}">${t}</span>`).join('')}</div>`;
+const TOP = (sub = 'Mundial J/70 · Cascais · Prueba 9 · 12 sep') => `<div class="top"><div><div class="brand">FastTack</div><div class="sub">${sub}</div></div><div class="row" style="gap:4px;align-items:center"><span class="chip me">● ESP 1214</span><span class="chip">Top 5 ▾</span></div></div>`;
+const AI = (cat, txt) => `<div class="card ai"><div class="h"><span>Debrief del entrenador · IA</span><span class="chip">Regenerar</span></div><div class="cat">${cat}</div><p>${txt}</p></div>`;
+const PLAYER = `<div class="player"><span class="btn" style="padding:3px 8px">▶</span><div class="bar"></div><span class="t">+3:00 · 14:18:00</span><span class="chip">×4</span></div>`;
+const LAYERS = (on) => `<div class="layers">${['Presión', 'TWD', 'Rol', 'SOG'].map(l => `<span class="${l === on ? 'on' : ''}">${l}</span>`).join('')}</div>`;
+
+const M = {
+  campeonato: {
+    note: 'Pegas la URL de RaceSense, la app carga el campeonato y lo guarda. Las pruebas reconstruidas y la cobertura de datos se ven antes de entrar.',
+    phone: `<div class="app"><div class="top"><div class="brand">FastTack</div><span class="chip">Barco: ESP 1214 ▾</span></div><div class="body">
+      <div class="card"><div class="h">Cargar un campeonato</div><div class="input">https://player.vakaros.com/watch/oRkx…/J%2F70</div><div class="btn" style="margin-top:6px">Cargar</div></div>
+      <div class="card"><div class="h"><span>Mundial J/70 2026 · Cascais</span><span class="chip">guardado</span></div><div class="list">
+      ${[['Prueba 1', '8 sep · 13:05', '40.º', '63 %'], ['Prueba 2', '8 sep · 14:55', '59.º', '47 %'], ['Prueba 3', '9 sep · 13:55', '—', 'recons.'], ['Prueba 4', '9 sep · 17:20', '—', 'recons.'], ['Prueba 5', '10 sep · 13:50', '37.º', '62 %'], ['Prueba 6', '10 sep · 16:10', '8.º', '43 %'], ['Prueba 9', '12 sep · 13:15', '14.º', '92 %']].map(r => `<div class="item"><div><b>${r[0]}</b><div class="muted">${r[1]}</div></div><div style="text-align:right"><b>${r[2]}</b><div class="${r[3] === 'recons.' ? 'est' : 'muted'}">${r[3] === 'recons.' ? 'reconstruida' : 'datos ' + r[3]}</div></div></div>`).join('')}
+      </div></div>
+      <div class="card"><div class="h">Otros campeonatos guardados</div><div class="list"><div class="item"><span>Cascais Vela · ago 2026</span><span class="muted">9 pruebas</span></div></div></div>
+    </div></div>`,
+    desk: `<div class="app"><div class="top"><div class="brand">FastTack</div><span class="chip">Barco de referencia: ESP 1214 ▾</span></div><div class="body" style="grid-template-columns:360px 1fr;gap:12px;padding:14px">
+      <div style="display:grid;gap:12px;align-content:start"><div class="card"><div class="h">Cargar un campeonato</div><div class="input">https://player.vakaros.com/watch/oRkxbTpSZPbSkrmKrbj2/J%2F70</div><div class="btn" style="margin-top:8px">Cargar</div><p class="muted" style="margin:6px 0 0">Sirve cualquier enlace de RaceSense. Lo ya descargado no se vuelve a descargar.</p></div>
+      <div class="card"><div class="h">Campeonatos guardados</div><div class="list"><div class="item"><b>Mundial J/70 2026 · Cascais</b><span class="muted">10 pruebas</span></div><div class="item"><span>Cascais Vela · ago 2026</span><span class="muted">9 pruebas</span></div></div></div></div>
+      <div class="card"><div class="h"><span>Mundial J/70 2026 · Cascais · 4–13 sep</span><span class="row" style="gap:4px"><span class="chip">Resumen del campeonato →</span></span></div>
+      <table><thead><tr><th>Prueba</th><th>Fecha y señal</th><th>Barcos</th><th class="n">ESP 1214</th><th class="n">Ganador</th><th>Datos</th><th>Viento ref.</th></tr></thead><tbody>
+      ${[['1', '8 sep · 13:05', '100', '40.º', 'POR 1846', '63 %', '—'], ['2', '8 sep · 14:55', '95', '59.º', '—', '47 %', '—'], ['3', '9 sep · 13:55', '~100', '—', '—', 'reconstruida', '—'], ['4', '9 sep · 17:20', '~100', '—', '—', 'reconstruida', '—'], ['5', '10 sep · 13:50', '97', '37.º', '—', '62 %', '—'], ['6', '10 sep · 16:10', '97', '8.º', '—', '43 %', '—'], ['7', '11 sep · 13:05', '~100', '—', '—', 'reconstruida', '—'], ['8', '11 sep · 14:55', '~100', '—', '—', 'reconstruida', '—'], ['9', '12 sep · 13:15', '91', '14.º', '—', '92 %', '12 kn'], ['10', '12 sep · 15:05', '91', '18.º', '—', '64 %', '—']].map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="n">${r[3]}</td><td class="n">${r[4]}</td><td class="${r[5] === 'reconstruida' ? 'est' : ''}">${r[5]}</td><td>${r[6]}</td></tr>`).join('')}
+      </tbody></table></div></div></div>`,
+  },
+  salida: {
+    note: 'Arriba, el resumen de la salida; después, el mapa con el reproductor y la tabla de apertura. En el móvil, la tabla se desplaza en horizontal con la primera columna fija.',
+    phone: `<div class="app">${TOP()}${TABS('Salida')}<div class="body">
+      <div class="map" style="height:190px">${SVGMAP(300, 190, { twd: true })}${LAYERS('TWD')}</div>${PLAYER}
+      <div class="card"><div class="h">Salida</div><div class="kv"><div><i>Sesgo</i><b>0,2° pin</b></div><div><i>Viento disparo</i><b class="est">325° · 12 kn</b></div><div><i>ESP 1214</i><b class="me">12 % · 3,1 m</b></div></div></div>
+      <div class="card"><div class="h">Apertura</div><div class="tbl" style="margin:0"><table><thead><tr><th>Barco</th><th>Línea</th><th>Margen</th><th>SOG</th><th>+60</th></tr></thead><tbody>
+      <tr class="me"><td>ESP 1214</td><td class="n">12 %</td><td class="n">3,1 m</td><td class="n">5,4</td><td class="n">9</td></tr><tr><td>USA 169</td><td class="n">48 %</td><td class="n">1,8 m</td><td class="n">5,9</td><td class="n">2</td></tr><tr><td>FRA 1089</td><td class="n">71 %</td><td class="n">6,2 m</td><td class="n">4,8</td><td class="n">15</td></tr></tbody></table></div></div>
+      ${AI('SALIDA', 'Salisteis a 3,1 m de la línea en el disparo, 1,3 m más atrás que USA 169…')}
+    </div></div>`,
+    desk: `<div class="app">${TOP('Mundial J/70 · Cascais · Prueba 9 · 12 sep · 91 barcos · datos 73 %')}${TABS('Salida')}<div class="body" style="grid-template-columns:1fr 330px;gap:10px;padding:10px">
+      <div style="display:grid;gap:8px;align-content:start"><div class="map" style="height:390px">${SVGMAP(820, 390, { twd: true })}${LAYERS('TWD')}</div>${PLAYER}
+      <div class="card"><div class="h">Comparativa de apertura</div><table><thead><tr><th>Barco</th><th class="n">Línea C→P</th><th class="n">Margen</th><th class="n">SOG disparo</th><th class="n">Cruce</th><th class="n">VMG 0–90 s</th><th class="n">+60</th><th class="n">Δ60</th><th class="n">+180</th><th class="n">Δ180</th><th class="n">1.ª virada</th><th class="n">Baliza 1</th><th>OCS</th></tr></thead><tbody>
+      <tr class="me"><td>ESP 1214</td><td class="n">12 %</td><td class="n">3,1 m</td><td class="n">5,4</td><td class="n">+4 s</td><td class="n est">4,9</td><td class="n">9</td><td class="n">22 m</td><td class="n">11</td><td class="n">48 m</td><td class="n">95 s</td><td class="n est">12 +31 s</td><td>no</td></tr>
+      <tr><td>USA 169</td><td class="n">48 %</td><td class="n">1,8 m</td><td class="n">5,9</td><td class="n">+2 s</td><td class="n est">5,2</td><td class="n">2</td><td class="n">3 m</td><td class="n">1</td><td class="n">0 m</td><td class="n">—</td><td class="n est">1</td><td>no</td></tr>
+      <tr><td>FRA 1089</td><td class="n">71 %</td><td class="n">6,2 m</td><td class="n">4,8</td><td class="n">+7 s</td><td class="n est">4,6</td><td class="n">15</td><td class="n">41 m</td><td class="n">14</td><td class="n">63 m</td><td class="n">40 s</td><td class="n est">15 +44 s</td><td>no</td></tr></tbody></table></div></div>
+      <div style="display:grid;gap:8px;align-content:start"><div class="card"><div class="h">Resumen de la salida</div><div class="kv"><div><i>Comité · pin</i><b>25687 · 19883</b></div><div><i>Sesgo</i><b class="est">0,2° pin</b></div><div><i>Viento disparo</i><b class="est">325° · 12 kn</b></div></div><div class="kv" style="margin-top:6px"><div><i>Corriente</i><b class="muted">no disponible</b></div><div><i>Datos</i><b>73 %</b></div></div></div>
+      <div class="card"><div class="h">Valores en +3:00</div><div class="kv"><div><i>TWD</i><b class="est">327°</b></div><div><i>TWS</i><b class="est">12,4 kn</b></div><div><i>Tramo</i><b>Ceñida 1 · 14 %</b></div></div></div>
+      ${AI('SALIDA', 'Salisteis a 3,1 m de la línea en el disparo, 1,3 m más atrás que USA 169. A +60 s ibais 9.º con 22 m de desventaja…')}</div>
+    </div></div>`,
+  },
+  cenida: {
+    note: 'La tabla del tramo, el viento en 10 cortes y las fases de rolada y presión. Todo lo que depende del viento lleva el color de «estimado».',
+    phone: `<div class="app">${TOP()}${TABS('Ceñida 1')}<div class="body">
+      <div class="map" style="height:180px">${SVGMAP(300, 180, { pressure: true, layline: true })}${LAYERS('Presión')}</div>${PLAYER}
+      <div class="card"><div class="h">Ceñida 1 · ESP 1214</div><div class="kv"><div><i>Parcial</i><b class="me">21:18</b></div><div><i>VMG</i><b class="est">4,71</b></div><div><i>Layline</i><b class="est">Dcha +38 m</b></div><div><i>Maniobras</i><b>5 · 21 m</b></div><div><i>Escora</i><b>14°</b></div><div><i>Datos</i><b>88 %</b></div></div></div>
+      <div class="card"><div class="h">Viento en el tramo <span class="chip est">estimado</span></div><div class="spark">${spark(300, 60, [320, 322, 325, 327, 326, 328, 331, 330, 332, 331], 'var(--est)')}</div></div>
+      ${AI('GEOMETRÍA / DISTANCIA', 'Sobrepasasteis la layline derecha 38 m…')}
+    </div></div>`,
+    desk: `<div class="app">${TOP('Mundial J/70 · Cascais · Prueba 9 · 12 sep · 91 barcos · datos 73 %')}${TABS('Ceñida 1')}<div class="body" style="grid-template-columns:1fr 330px;gap:10px;padding:10px">
+      <div style="display:grid;gap:8px;align-content:start"><div class="map" style="height:300px">${SVGMAP(820, 300, { pressure: true, layline: true })}${LAYERS('Presión')}</div>${PLAYER}
+      <div class="card"><div class="h">Rendimiento del tramo</div><table><thead><tr><th class="n">Pos.</th><th>Barco</th><th class="n">Parcial</th><th class="n">Gap</th><th class="n">VMG</th><th class="n">SOG</th><th class="n">TWA</th><th class="n">Distancia</th><th class="n">Man.</th><th class="n">Pérdida</th><th>Layline</th><th class="n">Escora</th><th class="n">Cabeceo</th><th>Modo</th><th class="n">Datos</th></tr></thead><tbody>
+      <tr><td class="n">1</td><td>USA 169</td><td class="n">20:31</td><td class="n">—</td><td class="n est">4,92</td><td class="n">5,81</td><td class="n est">37°</td><td class="n">3.412 m</td><td class="n">4</td><td class="n">16 m</td><td class="est">OK</td><td class="n">15°</td><td class="n">1°</td><td class="est">VMG</td><td class="n">91 %</td></tr>
+      <tr class="me"><td class="n">12</td><td>ESP 1214</td><td class="n">21:18</td><td class="n">+47 s</td><td class="n est">4,71</td><td class="n">5,66</td><td class="n est">39°</td><td class="n">3.498 m</td><td class="n">5</td><td class="n">21 m</td><td class="est">Dcha +38 m</td><td class="n">14°</td><td class="n">2°</td><td class="est">VMG</td><td class="n">88 %</td></tr></tbody></table></div>
+      <div class="row"><div class="card grow"><div class="h">Viento en 10 cortes <span class="chip est">estimado</span></div><div class="spark">${spark(260, 60, [320, 322, 325, 327, 326, 328, 331, 330, 332, 331], 'var(--est)')}</div><div class="muted">TWD media 327° · TWS 12,1 kn · TWA objetivo 40°</div></div>
+      <div class="card grow"><div class="h">Fases de rolada</div><table><tbody><tr><td>0–40 %</td><td>progresiva dcha</td><td class="n">+6°</td><td>USA 169</td></tr><tr><td>40–100 %</td><td>estable</td><td class="n">+1°</td><td>flota</td></tr></tbody></table></div>
+      <div class="card grow"><div class="h">Barco fantasma</div><table><tbody><tr><td>Fantasma</td><td class="n">3.440 m</td></tr><tr class="me"><td>ESP 1214</td><td class="n">+58 m · −1,7 %</td></tr></tbody></table></div></div></div>
+      <div style="display:grid;gap:8px;align-content:start"><div class="card"><div class="h">Valores en +11:40</div><div class="kv"><div><i>TWD</i><b class="est">329°</b></div><div><i>TWS</i><b class="est">12,6 kn</b></div><div><i>Presión</i><b class="est">Dcha +1,2</b></div></div><table style="margin-top:6px"><thead><tr><th>#</th><th>Barco</th><th class="n">Δm</th><th class="n">SOG</th><th class="n">VMG</th><th class="n">TWA</th></tr></thead><tbody><tr><td>1</td><td>USA 169</td><td class="n">0</td><td class="n">5,9</td><td class="n est">4,9</td><td class="n est">36°</td></tr><tr class="me"><td>12</td><td>ESP 1214</td><td class="n">96</td><td class="n">5,7</td><td class="n est">4,7</td><td class="n est">39°</td></tr></tbody></table></div>
+      ${AI('GEOMETRÍA / DISTANCIA', 'Sobrepasasteis la layline derecha 38 m; USA 169 llegó sin sobrepasarla. Con la misma velocidad, esa distancia son unos 15 s…')}</div>
+    </div></div>`,
+  },
+  rendimiento: {
+    note: 'Una métrica elegible con los datos crudos en tenue y la tendencia destacada; el eje X marcado por tramos. La tabla de medias se ordena por cualquier columna.',
+    phone: `<div class="app">${TOP()}${TABS('Rendimiento')}<div class="body">
+      <div class="card"><div class="h"><span>VMG en ceñida · kn</span><span class="chip">Cambiar ▾</span></div><div class="spark" style="height:120px">${spark(300, 120, [4.4, 4.6, 4.8, 4.7, 4.9, 4.5, 4.6, 4.8, 4.9, 5.0, 4.7, 4.8])}</div><div class="muted">Ceñida 1 · Popa 1 · Ceñida 2 · Popa 2</div></div>
+      <div class="card"><div class="h">Medias de la regata</div><div class="tbl" style="margin:0"><table><thead><tr><th>Barco</th><th class="n">VMG ↑</th><th class="n">VMG ↓</th><th class="n">Virada</th></tr></thead><tbody>
+      <tr><td>USA 169</td><td class="n est">4,90</td><td class="n est">7,21</td><td class="n">3,1 m</td></tr><tr class="me"><td>ESP 1214</td><td class="n est">4,74</td><td class="n est">6,95</td><td class="n">4,4 m</td></tr></tbody></table></div></div>
+      ${AI('RENDIMIENTO', 'Vuestra VMG en ceñida estuvo 0,16 kn por debajo del ganador…')}
+    </div></div>`,
+    desk: `<div class="app">${TOP('Mundial J/70 · Cascais · Prueba 9 · 12 sep · 91 barcos · datos 73 %')}${TABS('Rendimiento')}<div class="body" style="grid-template-columns:1fr 330px;gap:10px;padding:10px">
+      <div style="display:grid;gap:8px;align-content:start"><div class="card"><div class="h"><span>VMG en ceñida · nudos</span><span class="row" style="gap:4px">${['VMG ↑', 'VMG ↓', 'SOG ↑', 'SOG ↓', 'TWA ↑', 'TWA ↓', 'Virada', 'Trasluchada', 'Escora ↑', 'Escora ↓', 'Cabeceo ↑', 'Cabeceo ↓'].map((m, i) => `<span class="chip" style="${i === 0 ? 'background:var(--ink);color:var(--panel)' : ''}">${m}</span>`).join('')}</span></div>
+      <div class="spark" style="height:250px">${spark(820, 250, [4.4, 4.6, 4.8, 4.7, 4.9, 4.5, 4.6, 4.8, 4.9, 5.0, 4.7, 4.8, 4.9, 4.6, 4.7])}</div><div class="muted">Ceñida 1 · Popa 1 · Ceñida 2 · Popa 2 — datos crudos en tenue, tendencia robusta destacada; huecos sin datos en blanco</div></div>
+      <div class="card"><div class="h">Medias de la regata (clic en una columna para ordenar)</div><table><thead><tr><th class="n">Pos.</th><th>Barco</th><th class="n">VMG ↑</th><th class="n">VMG ↓</th><th class="n">SOG ↑</th><th class="n">SOG ↓</th><th class="n">TWA ↑</th><th class="n">TWA ↓</th><th class="n">Virada</th><th class="n">Trasluchada</th><th class="n">Escora ↑</th><th class="n">Escora ↓</th><th class="n">Cabeceo ↑</th><th class="n">Cabeceo ↓</th></tr></thead><tbody>
+      <tr><td class="n">1</td><td>USA 169</td><td class="n est">4,90</td><td class="n est">7,21</td><td class="n">5,81</td><td class="n">8,40</td><td class="n est">37°</td><td class="n est">146°</td><td class="n">3,1 m</td><td class="n">9,8 m</td><td class="n">15°</td><td class="n">6°</td><td class="n">1°</td><td class="n">4°</td></tr>
+      <tr class="me"><td class="n">14</td><td>ESP 1214</td><td class="n est">4,74</td><td class="n est">6,95</td><td class="n">5,66</td><td class="n">8,22</td><td class="n est">39°</td><td class="n est">143°</td><td class="n">4,4 m</td><td class="n">12,6 m</td><td class="n">14°</td><td class="n">7°</td><td class="n">2°</td><td class="n">5°</td></tr></tbody></table></div></div>
+      <div style="display:grid;gap:8px;align-content:start">${AI('RENDIMIENTO', 'Vuestra VMG en ceñida estuvo 0,16 kn por debajo del ganador con un TWA 2° más abierto. En popa, la pérdida por trasluchada (12,6 m) fue la mayor diferencia…')}</div>
+    </div></div>`,
+  },
+  resumen: {
+    note: 'Todas las pruebas del campeonato para el barco de referencia frente a los barcos elegidos (por defecto, el top 5 de la general calculada).',
+    phone: `<div class="app"><div class="top"><div><div class="brand">Resumen del campeonato</div><div class="sub">Mundial J/70 2026 · 10 pruebas</div></div><span class="chip me">● ESP 1214</span></div><div class="body">
+      <div class="card"><div class="h">General <span class="chip">calculada</span></div><div class="kv"><div><i>Puesto</i><b class="me">24.º</b></div><div><i>Puntos</i><b>196</b></div><div><i>Descartes</i><b>1</b></div></div></div>
+      <div class="card"><div class="h">Puesto por prueba</div><div class="spark" style="height:80px">${spark(300, 80, [40, 59, 30, 28, 37, 8, 25, 20, 14, 18].map(v => -v), 'var(--me)', false)}</div></div>
+      <div class="card"><div class="h">Puntos fuertes y mejoras · IA</div><p style="margin:0;font-size:11px">1. Salidas: en el tercio de cabeza a +60 s en 6 de 10…</p></div>
+    </div></div>`,
+    desk: `<div class="app"><div class="top"><div><div class="brand">Resumen del campeonato</div><div class="sub">Mundial J/70 2026 · Cascais · 10 pruebas · general calculada con 1 descarte</div></div><div class="row" style="gap:4px"><span class="chip me">● ESP 1214</span><span class="chip">Comparar con: top 5 ▾</span></div></div><div class="body" style="grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px">
+      <div class="card" style="grid-column:span 2"><div class="h">Resultados por prueba</div><table><thead><tr><th>Barco</th>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<th class="n">${n}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+      <tr><td>POR 1846</td><td class="n">1</td><td class="n">3</td><td class="n">2</td><td class="n">5</td><td class="n">1</td><td class="n">4</td><td class="n">2</td><td class="n">6</td><td class="n">3</td><td class="n">2</td><td class="n">23</td></tr>
+      <tr class="me"><td>ESP 1214</td><td class="n">40</td><td class="n">59</td><td class="n est">30</td><td class="n est">28</td><td class="n">37</td><td class="n">8</td><td class="n est">25</td><td class="n est">20</td><td class="n">14</td><td class="n">18</td><td class="n">196</td></tr></tbody></table><div class="muted" style="margin-top:4px">En color «estimado»: pruebas reconstruidas desde la telemetría.</div></div>
+      <div class="card"><div class="h">Salidas acumuladas</div><div class="kv"><div><i>Margen medio</i><b>4,2 m</b></div><div><i>Top 10 a +60 s</i><b>4/10</b></div><div><i>OCS</i><b>0</b></div></div></div>
+      <div class="card"><div class="h">VMG ceñida por prueba <span class="chip est">estimado</span></div><div class="spark">${spark(340, 60, [4.5, 4.4, 4.7, 4.8, 4.6, 4.9, 4.7, 4.8, 4.74, 4.7])}</div></div>
+      <div class="card"><div class="h">Maniobras, laylines y puertas</div><div class="kv"><div><i>Virada</i><b>4,8 m</b></div><div><i>Layline OK</i><b>55 %</b></div><div><i>Puerta buena</i><b>6/9</b></div></div></div>
+      <div class="card"><div class="h">Según la intensidad del viento <span class="chip warn">necesita viento ref.</span></div><table><tbody><tr><td>&lt; 10 kn</td><td class="n">3 pruebas</td><td class="n">media 31.º</td></tr><tr><td>10–15 kn</td><td class="n">5 pruebas</td><td class="n">media 22.º</td></tr><tr><td>&gt; 15 kn</td><td class="n">2 pruebas</td><td class="n">media 29.º</td></tr></tbody></table></div>
+      <div class="card ai" style="grid-column:span 3"><div class="h"><span>Debrief del campeonato · IA</span><span class="chip">Regenerar</span></div><div class="row" style="gap:16px"><div class="grow"><div class="cat">3 PUNTOS FUERTES</div><p>Velocidad en ceñida en el top 15 en 7 de 10 pruebas…</p></div><div class="grow"><div class="cat">3 ÁREAS DE MEJORA</div><p>Laylines: 45 % sobrepasadas, con 31 m de media…</p></div><div class="grow"><div class="cat">PRIORIDADES DE ENTRENAMIENTO</div><p>1. Llamada de layline a 200 m…</p></div></div></div>
+    </div></div>`,
+  },
+};
+
+const phone = document.getElementById('phone'), desk = document.getElementById('desk'), wrapD = document.getElementById('deskwrap'), note = document.getElementById('mocknote');
+function fitDesk() { const s = wrapD.clientWidth / 1200; desk.style.transform = `scale(${s})`; wrapD.style.height = (760 * s) + 'px'; }
+function show(k) {
+  phone.innerHTML = M[k].phone; desk.innerHTML = M[k].desk; note.textContent = M[k].note;
+  document.querySelectorAll('.screens button').forEach(b => b.setAttribute('aria-selected', b.dataset.s === k));
+  fitDesk();
+}
+document.querySelectorAll('.screens button').forEach(b => b.addEventListener('click', () => show(b.dataset.s)));
+window.addEventListener('resize', fitDesk);
+show('campeonato');
+</script>
