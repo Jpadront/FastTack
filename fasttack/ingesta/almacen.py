@@ -42,6 +42,17 @@ create table if not exists ajuste_prueba (   -- lo que el usuario corrige a mano
     primary key (campeonato, clave)
 );
 create table if not exists preferencia (clave text primary key, valor text);
+create table if not exists debrief (       -- textos de IA ya generados (se reutilizan mientras no cambien las cifras)
+    campeonato text not null,
+    ambito text not null,           -- 'campeonato' o la clave de la prueba
+    barco text not null,
+    huella text not null,           -- huella de las cifras de las que sale el texto
+    texto text not null,
+    origen text not null,           -- 'claude-code' o 'manual'
+    avisos text,                    -- JSON: cifras del texto que no están en los datos
+    creado_en integer not null,
+    primary key (campeonato, ambito, barco)
+);
 """
 
 

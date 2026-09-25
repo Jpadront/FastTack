@@ -4,6 +4,7 @@
   import { COLOR_YO, PALETA, num, velaCorta } from '../prueba/datos.js';
   import Tabla from '../prueba/Tabla.svelte';
   import GraficoPruebas from './GraficoPruebas.svelte';
+  import Debrief from '../Debrief.svelte';
 
   let { campId, barco } = $props();
 
@@ -225,10 +226,11 @@
     {/if}
   </section>
 
-  <section class="tarjeta bloque ia">
-    <h3>Debrief del campeonato · IA</h3>
-    <p class="tenue">Llegará en el hito 6: 3 puntos fuertes, 3 áreas de mejora y prioridades de entrenamiento, redactados solo a partir de estas cifras.</p>
-  </section>
+  {#if res.pendientes.length || progreso}
+    <section class="tarjeta bloque"><h3>Debrief del campeonato · IA</h3><p class="tenue">Disponible cuando terminen de analizarse todas las pruebas.</p></section>
+  {:else if miFila}
+    <div class="bloque-ia"><Debrief {campId} ambito="campeonato" barco={ref} titulo={`Debrief del campeonato · ${vc(ref)} · IA`} /></div>
+  {/if}
 {/if}
 
 <style>
@@ -269,5 +271,5 @@
   .mini .n { text-align: right; }
   tr.yo td { background: color-mix(in srgb, var(--yo) 14%, transparent); font-weight: 600; }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .ia { border-left: 4px solid var(--linea); }
+  .bloque-ia { margin-top: 10px; }
 </style>

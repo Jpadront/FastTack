@@ -2,7 +2,7 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 5** — cargar un campeonato, ver sus pruebas, abrir el análisis de cada una (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos) y el **resumen del campeonato** (general calculada, evolución por prueba, salidas, maniobras, laylines, puertas y viento). Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **Fase 4 · hito 6** — cargar un campeonato, ver sus pruebas, abrir el análisis de cada una (mapa con reproductor y capas, valores instantáneos, pestañas por fase con tablas y gráficos), el **resumen del campeonato** y los **debriefs con IA** de cada prueba y del campeonato. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
 ## Instalación (una vez)
 
@@ -72,6 +72,16 @@ En la página del campeonato, **Resumen del campeonato →**. La primera vez ana
 - **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
 
 Si al abrir un campeonato ya guardado aparece «Hay una versión mejor de la detección…», pulsa **Actualizar**: vuelve a calcular pruebas y llegadas con la telemetría ya descargada y conserva tus ajustes.
+
+## Debrief con IA
+
+En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. La IA solo redacta: recibe las cifras del análisis y **cada cifra de su texto se comprueba** contra ellas; las que no aparecen se resaltan con un aviso.
+
+- **Generar con Claude Code**: si Claude Code está instalado en el ordenador donde corre FastTack (comando `claude`, con la sesión iniciada con tu cuenta), FastTack le pide el texto directamente. Tarda 30–60 s y usa tu plan de Claude, sin claves ni coste aparte.
+- **Con Claude.ai**: *Copiar las instrucciones* (llevan las cifras), pegarlas en una conversación nueva de claude.ai, y pegar la respuesta en FastTack. Sirve desde cualquier sitio, también desde el móvil.
+- El texto se guarda y se reutiliza. Si cambian las cifras (nueva versión del motor, viento de referencia…), avisa de que conviene regenerarlo.
+
+Para instalar Claude Code en el Mac: `npm install -g @anthropic-ai/claude-code` (o el instalador de la web de Claude Code) y ejecutar `claude` una vez para iniciar sesión.
 
 ## Desarrollo
 

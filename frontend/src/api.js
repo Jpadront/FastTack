@@ -27,6 +27,8 @@ export const api = {
   analisis: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/analisis`),
   pistas: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/pistas`),
   resumen: (c, descartes) => pedir('GET', `/api/campeonatos/${id(c)}/resumen${descartes != null ? '?descartes=' + descartes : ''}`),
+  debrief: (c, ambito, barco) => pedir('GET', `/api/campeonatos/${id(c)}/debrief?ambito=${encodeURIComponent(ambito)}&barco=${encodeURIComponent(barco)}`),
+  generarDebrief: (c, ambito, barco, texto) => pedir('POST', `/api/campeonatos/${id(c)}/debrief`, { ambito, barco, ...(texto != null ? { texto } : {}) }),
   preferencias: () => pedir('GET', '/api/preferencias'),
   fijarBarco: (barco) => pedir('PUT', '/api/preferencias', { barco }),
 };

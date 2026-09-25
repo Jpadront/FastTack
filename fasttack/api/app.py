@@ -17,6 +17,7 @@ from ..ingesta.campeonato import DivisionAmbigua, elegir_division
 from ..ingesta.racesense import ErrorRaceSense
 from ..ingesta.url import UrlNoValida, leer_url
 from .. import __version__, servicio
+from ..ia import debrief
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 BARCO_POR_DEFECTO = "ESP1214"
@@ -25,6 +26,12 @@ BARCO_POR_DEFECTO = "ESP1214"
 class PeticionCarga(BaseModel):
     url: str
     division: str | None = None
+
+
+class PeticionDebrief(BaseModel):
+    ambito: str                 # 'campeonato' o la clave de la prueba
+    barco: str                  # clave de la vela (ESP1214)
+    texto: str | None = None    # si viene, es la respuesta pegada a mano (no se llama a la IA)
 
 
 class AjustePrueba(BaseModel):
@@ -134,6 +141,36 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             return servicio.resumen_campeonato(alm, camp_id, descartes)
         except KeyError as e:
             raise HTTPException(404, "Campeonato no encontrado") from e
+
+    @app.get("/api/campeonatos/{camp_id:path}/debrief")
+    def debrief_(camp_id: str, ambito: str, barco: str):
+        datos = _datos_debrief(camp_id, ambito, barco)
+        d = debrief.leer(alm, camp_id, ambito, barco)
+        if d:  # se vuelve a comprobar con las cifras actuales (es inmediato)
+            d["avisos"] = debrief.no_verificadas(d["texto"], datos)
+        return {"debrief": d, "vigente": bool(d and d["huella"] == debrief.huella(datos)),
+                "instrucciones": debrief.instrucciones(datos), "claude_code": bool(debrief.comando_claude())}
+
+    @app.post("/api/campeonatos/{camp_id:path}/debrief")
+    def generar_debrief(camp_id: str, p: PeticionDebrief):
+        datos = _datos_debrief(camp_id, p.ambito, p.barco)
+        if p.texto is not None:
+            if not p.texto.strip():
+                raise HTTPException(422, "El texto está vacío")
+            return debrief.guardar(alm, camp_id, p.ambito, p.barco, datos, p.texto, "manual")
+        try:
+            texto = debrief.generar_claude_code(debrief.instrucciones(datos))
+        except debrief.IANoDisponible as e:
+            raise HTTPException(503, str(e)) from e
+        return debrief.guardar(alm, camp_id, p.ambito, p.barco, datos, texto, "claude-code")
+
+    def _datos_debrief(camp_id: str, ambito: str, barco: str) -> dict:
+        try:
+            return debrief.datos_de(alm, camp_id, ambito, barco)
+        except KeyError as e:
+            raise HTTPException(404, "Campeonato o prueba no encontrados") from e
+        except (ValueError, servicio.PruebaNoAnalizable) as e:
+            raise HTTPException(422, str(e)) from e
 
     @app.get("/api/campeonatos/{camp_id:path}")
     def detalle(camp_id: str):

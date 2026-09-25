@@ -8,6 +8,7 @@
   import Tabla from './Tabla.svelte';
   import GraficoViento from './GraficoViento.svelte';
   import GraficoRendimiento from './GraficoRendimiento.svelte';
+  import Debrief from '../Debrief.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -300,6 +301,8 @@
           { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fGrados(0) },
           { k: 'cobertura', titulo: 'Datos', num: true, fmt: (v) => (v == null ? '—' : num(v * 100, 0) + ' %') },
         ]} />
+    {:else if tab.tipo === 'debrief'}
+      <Debrief {campId} ambito={clave} barco={ref} titulo={`Debrief de la prueba ${p.numero ?? ''} · ${vc(ref)} · IA`} />
     {/if}
 
     {#if an.avisos.length}

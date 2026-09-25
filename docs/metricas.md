@@ -151,3 +151,12 @@ Comparada con los resultados oficiales publicados por el club organizador (100 b
 - **General**: 32 barcos en el puesto exacto, 83 de 100 a ±3 puestos, error medio 2,1. ESP 1214: 25.º con 264 puntos (oficial: 23.º con 259); puestos por prueba 40, 59, 16, 34, 37, 8, (61), 38, 14, 18 frente a 40, 56, 16, 34, 37, 8, (62), 37, 14, 17.
 - Las diferencias que quedan son casi todas decisiones del jurado (DSQ, DNS, PRP, RDG…), que no están en los datos y desplazan un puesto al resto de la flota.
 - **Mejora de la detección de llegadas** (ingesta versión 2): un cruce de la línea se acepta aunque haya un hueco de datos de hasta 90 s sobre ella, con la hora interpolada en el segmento. Antes se exigían muestras a ≤ 10 s y, con la cobertura de RaceSense, muchos barcos que terminaron quedaban sin llegada: en la prueba 4 el error medio pasó de 7,8 a 0,6 puestos (de 12 barcos sin detectar a 1) y la general de 75 a 83 barcos a ±3.
+
+
+## Debrief con IA (texto)
+
+- **Qué recibe la IA**: un JSON con las cifras del motor ya redondeadas como en la web (`fasttack/ia/hechos.py`). La unidad va en el nombre de cada campo (`_kn`, `_m`, `_s`, `_grados`, `_pct`) y las comparaciones con la flota vienen calculadas (`..._frente_a_la_mediana_kn`, `..._mediana_flota_...`, `..._top5_...`) para que la IA no haga cuentas.
+- **Reglas** (`fasttack/ia/debrief.py`): solo cifras de los datos, con su unidad; lo estimado no se presenta como medido; los huecos de telemetría son un límite del análisis, no un fallo del barco; causas solo como hipótesis; formato fijo (prueba: resumen, salida, ceñidas, popas, maniobras/laylines/puertas, 3 claves; campeonato: balance, 3 puntos fuertes, 3 áreas de mejora, prioridades de entrenamiento).
+- **Validación** (`fasttack/ia/validar.py`): cada número del texto, con su unidad, debe ser un redondeo (± media unidad de su último decimal) de una cifra de los datos con la misma unidad; los mm:ss se pasan a segundos. Se ignoran etiquetas (P3, Ceñida 2, top 10, velas), marcadores de lista y recuentos ≤ 3 sin unidad. Las cifras que no cuadran se resaltan; se vuelve a comprobar cada vez que se abre.
+- **Caché**: el texto se guarda con la huella (SHA-1) de sus cifras; si las cifras cambian, se avisa de que conviene regenerarlo.
+- **Prueba real** (Mundial, prueba 9 y campeonato, ESP 1214, Claude Code): 36 y 54 s; todas las cifras verificadas. Un texto pegado a mano con una VMG inventada (9,99 kn) queda marcado.
