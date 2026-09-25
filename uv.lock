@@ -82,7 +82,7 @@ wheels = [
 
 [[package]]
 name = "fasttack"
-version = "0.8.0"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -90,6 +90,7 @@ dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pyarrow" },
+    { name = "pygeomag" },
     { name = "qrcode" },
     { name = "uvicorn" },
 ]
@@ -105,6 +106,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pyarrow", specifier = ">=16" },
+    { name = "pygeomag", specifier = ">=1.1.0" },
     { name = "qrcode", specifier = ">=7.4" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
@@ -501,6 +503,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/d7/ad493864a7fb21c0c4df98f965e2db430cb25a9d7369b5778d5016c09fd9/pydantic_core-2.46.5-pp311-pypy311_pp73-musllinux_1_1_armv7l.whl", hash = "sha256:2d330aaba8621b1edcec8ae2c4050f63b84ccf6d98723a8f212e9684713abf0e", size = 2294560, upload-time = "2026-08-28T10:01:23.495Z" },
     { url = "https://files.pythonhosted.org/packages/02/8e/b41c84c913f29973a268e6c2b5bbf13c95adb9956c126d10da11ba3b2bef/pydantic_core-2.46.5-pp311-pypy311_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:b6acfb46a814762367fb7ba0828b0a17d441b92ce249a0e007474c9072662dda", size = 2317531, upload-time = "2026-08-28T10:01:26.334Z" },
     { url = "https://files.pythonhosted.org/packages/db/1d/068464f23075f66a8f1b806935e9cd9363ee446636ea70d2c22ee8659dbf/pydantic_core-2.46.5-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:d0a24b40877af2de4950252be9d21eaf7fb07660f3c2cae1f56c6b599ada5266", size = 2140686, upload-time = "2026-08-28T10:01:28.947Z" },
+]
+
+[[package]]
+name = "pygeomag"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/05/0479687afaf337f7e549b8d576a53de65c9b491ddd8e1e1a254f97c7aff8/pygeomag-1.1.0.tar.gz", hash = "sha256:c38943c43f7e0e771e25f101b2b94077f00307436760bbf5e79b84c3a41569d7", size = 237585, upload-time = "2024-12-21T17:42:03.245Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/af/4416ce7b7f2b924d32ae8834d6b76bde02980fca7619fbb26d171140c5b8/pygeomag-1.1.0-py3-none-any.whl", hash = "sha256:b08fc5de7ca545721e511f62a342d415a4d76e695fec28ef9ef255e994e6727b", size = 249073, upload-time = "2024-12-21T17:42:01.772Z" },
 ]
 
 [[package]]

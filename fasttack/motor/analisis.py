@@ -15,11 +15,12 @@ from .pistas import Pista, Proyeccion, pistas
 from . import recorrido as rec
 from . import salida as sal
 from . import corriente as corr
+from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.5.1"
+VERSION = "0.6.5"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -224,7 +225,18 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                    "sog_izq": _r(c.sog_izq), "sog_der": _r(c.sog_der),
                    "rumbos": [round(c.rumbos[0], 1), round(c.rumbos[1], 1)] if c.rumbos else None}
                   for k, c in enumerate(vt.cortes)]
+        # Escora óptima (solo ceñida): franjas de escora frente a la VMG relativa a la flota
+        opt = None
+        if ceñida:
+            opt = esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+                                                   {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
+            if opt:
+                for v, pct in esc_mod.en_rango_por_barco(opt).items():
+                    if v in filas:
+                        filas[v]["escora_en_rango_pct"] = pct
+                opt.pop("_por_barco")
         salida_tramos.append({
+            "escora_optima": opt,
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
             "desde": t["desde"], "hasta": t["hasta"], "t0": vt.t0, "t1": vt.t1,
             "rumbo_eje": round(t["eje"], 1), "largo_m": _r(t["largo_m"], 0),
@@ -299,13 +311,14 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                      "avance": t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360,
                      "barcos": {v: (f["t_entrada"], f["t_salida"]) for v, f in t["barcos"].items()}}
                     for t in salida_tramos]
-    c = corr.estimar(trazas, entrada_corr)
+    decl = corr.declinacion(proy.lat0, proy.lon0, senal)
+    c = corr.estimar(trazas, entrada_corr, decl)
     # por vuelta (ceñida + popa siguiente): la marea cambia durante la prueba
     vueltas_corr = []
     for k in range(0, len(entrada_corr) - 1):
         a, b = entrada_corr[k], entrada_corr[k + 1]
         if a["ceñida"] and not b["ceñida"]:
-            cv = corr.estimar(trazas, [a, b])
+            cv = corr.estimar(trazas, [a, b], decl)
             vueltas_corr.append({"vuelta": len(vueltas_corr) + 1, "desde_s": round((a["t0"] - senal) / 1000),
                                  "hasta_s": round((b["t1"] - senal) / 1000), **(cv.a_dict() if cv else {"confianza": None})})
     orden = sorted(llegadas, key=llegadas.get)
@@ -316,6 +329,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
     return {
         "recorrido_dudoso": dudoso,
         "corriente": (c.a_dict() | {"por_vuelta": vueltas_corr}) if c else None,
+        "brujulas": c.a_dict_brujulas() if c else {"declinacion_grados": round(decl, 1), "desvios_grados": {}},
         "version": VERSION,
         "senal": senal,
         "proyeccion": {"lat0": proy.lat0, "lon0": proy.lon0},

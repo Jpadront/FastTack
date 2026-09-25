@@ -55,7 +55,7 @@
       </tbody>
     </table>
   </div>
-  <p class="nota">* TWA y VMG: ángulo táctico GPS (COG frente a la TWD reconstruida), cada barco en su propio tramo (etiqueta gris si no es el del panel; «rodeo» = rodeando una baliza o en el offset). RaceSense no tiene sensor de viento. HDG tal cual el dispositivo.</p>
+  <p class="nota">* TWA y VMG: ángulo táctico GPS (COG frente a la TWD reconstruida), cada barco en su propio tramo (etiqueta gris si no es el del panel; «rodeo» = rodeando una baliza o en el offset). RaceSense no tiene sensor de viento. HDG: rumbo verdadero, corregido con el desvío de la brújula de cada barco y la declinación ({an.brujulas ? num(an.brujulas.declinacion_grados, 1) + '°' : 'sin estimar'}).</p>
 </section>
 
 <style>

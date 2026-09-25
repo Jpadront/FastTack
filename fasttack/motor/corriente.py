@@ -26,6 +26,25 @@ MIN_MUESTRAS = 10
 MARGEN_RODEO_MS = 20_000
 
 
+_GEOMAG = None
+
+
+def declinacion(lat: float, lon: float, ms: int) -> float:
+    """Declinación magnética (° E +) con el modelo magnético mundial WMM 2025 (válido 2025–2030)."""
+    global _GEOMAG
+    import datetime as dt
+    from pygeomag import GeoMag
+    if _GEOMAG is None:
+        _GEOMAG = GeoMag(coefficients_file="wmm/WMM_2025.COF")
+    d = dt.datetime.fromtimestamp(ms / 1000, tz=dt.timezone.utc)
+    inicio = dt.datetime(d.year, 1, 1, tzinfo=dt.timezone.utc)
+    año = d.year + (d - inicio).total_seconds() / (365.25 * 86400)
+    try:
+        return float(_GEOMAG.calculate(glat=lat, glon=lon, alt=0, time=año).d)
+    except Exception:  # noqa: BLE001 - fuera del periodo del modelo: sin corrección
+        return 0.0
+
+
 def _wrap(a):
     return (a + 180) % 360 - 180
 
@@ -48,6 +67,8 @@ class Corriente:
     transversal_velocidades_kn: float | None   # comprobación independiente
     confianza: str                    # 'alta', 'media' o 'baja'
     brujulas_descartadas: list = field(default_factory=list)
+    desvios: dict = field(default_factory=dict)   # vela → grados que hay que sumar a su HDG para el rumbo verdadero
+    declinacion_grados: float = 0.0
 
     @property
     def velocidad_kn(self) -> float:
@@ -66,6 +87,10 @@ class Corriente:
                 "residuo_grados": r(self.residuo_grados, 1),
                 "transversal_velocidades_kn": r(self.transversal_velocidades_kn),
                 "confianza": self.confianza, "brujulas_descartadas": self.brujulas_descartadas}
+
+    def a_dict_brujulas(self) -> dict:
+        return {"declinacion_grados": round(self.declinacion_grados, 1),
+                "desvios_grados": {v: round(d, 1) for v, d in sorted(self.desvios.items())}}
 
 
 def _observaciones(trazas: dict[str, Traza], tramos: list[dict]):
@@ -91,7 +116,7 @@ def _observaciones(trazas: dict[str, Traza], tramos: list[dict]):
     return obs
 
 
-def _resolver(obs):
+def _resolver(obs, desvio_medio: float = 0.0):
     velas = sorted({o[0] for o in obs})
     iv = {v: k for k, v in enumerate(velas)}
     X, y = [], []
@@ -103,9 +128,9 @@ def _resolver(obs):
         X.append(f)
         y.append(d)
     f = np.zeros(3 + len(velas))
-    f[3:] = 10.0          # suma de desvíos = 0 (la flota no tiene un desvío medio)
+    f[3:] = 10.0 / len(velas)   # desvío medio de la flota = declinación (la mayoría de Atlas van en magnético)
     X.append(f)
-    y.append(0.0)
+    y.append(10.0 * np.radians(desvio_medio))
     X, y = np.array(X), np.array(y)
     sol, *_ = np.linalg.lstsq(X, y, rcond=None)
     res = (y - X @ sol)[:-1]
@@ -139,12 +164,15 @@ def transversal_por_velocidades(trazas: dict[str, Traza], tramo: dict) -> float 
     return float(m @ _u(avance + 90))
 
 
-def estimar(trazas: dict[str, Traza], tramos: list[dict]) -> Corriente | None:
+def estimar(trazas: dict[str, Traza], tramos: list[dict], declinacion: float = 0.0) -> Corriente | None:
     """tramos: [{'ceñida': bool, 'avance': rumbo del avance (°), 'barcos': {vela: (t_entrada, t_salida)}}].
-    Una corriente constante para toda la prueba. None si no hay datos suficientes."""
+    Una corriente constante para toda la prueba. None si no hay datos suficientes.
+    declinacion (° E +): el desvío medio de la flota se fija en ella (un Atlas en magnético lee
+    rumbo verdadero − declinación, así que COG − HDG = declinación)."""
     if not any(t["ceñida"] for t in tramos) or not any(not t["ceñida"] for t in tramos):
         return None
     obs = _observaciones(trazas, tramos)
+    todas = list(obs)
     descartadas = []
     for _ in range(3):
         velas_ok = {o[0] for o in obs}
@@ -152,7 +180,7 @@ def estimar(trazas: dict[str, Traza], tramos: list[dict]) -> Corriente | None:
         obs = [o for o in obs if o[0] in con_ambos]
         if len(con_ambos) < MIN_BARCOS:
             return None
-        sol, res, velas = _resolver(obs)
+        sol, res, velas = _resolver(obs, declinacion)
         malos = {v for v, dlt in zip(velas, sol[3:]) if abs(dlt) > DESVIO_MAX}
         sigma = 1.4826 * np.median(np.abs(res - np.median(res)))
         atipicos = {k for k, r in enumerate(res) if abs(r) > 3 * max(sigma, np.radians(2))}
@@ -171,8 +199,16 @@ def estimar(trazas: dict[str, Traza], tramos: list[dict]) -> Corriente | None:
     else:
         dif = abs(otra - derecha)
         confianza = "alta" if dif <= 0.15 else "media" if dif <= 0.3 and np.sign(otra) == np.sign(derecha) else "baja"
+    # Desvío de cada brújula (también de las descartadas), con la corriente y el abatimiento ya fijos
+    desvios = {}
+    for v in {o[0] for o in todas}:
+        r = [o[3] - (lam * o[2] if o[1] else 0.0)
+             - (np.array([np.cos(np.radians(o[4])), -np.sin(np.radians(o[4]))]) @ c) / o[5]
+             for o in todas if o[0] == v]
+        desvios[v] = float(np.degrees(np.median(r)))
     return Corriente(este_kn=float(cx), norte_kn=float(cy), eje_grados=float(eje),
                      a_favor_kn=float(c @ _u(eje)), derecha_kn=derecha,
                      abatimiento_grados=float(np.degrees(lam)), barcos=len(velas),
                      residuo_grados=float(np.degrees(np.std(res))), transversal_velocidades_kn=otra,
-                     confianza=confianza, brujulas_descartadas=descartadas)
+                     confianza=confianza, brujulas_descartadas=descartadas, desvios=desvios,
+                     declinacion_grados=float(declinacion))

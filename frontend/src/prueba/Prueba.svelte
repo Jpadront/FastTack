@@ -9,6 +9,7 @@
   import GraficoViento from './GraficoViento.svelte';
   import GraficoRendimiento from './GraficoRendimiento.svelte';
   import Debrief from '../Debrief.svelte';
+  import EscoraOptima from './EscoraOptima.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -223,11 +224,15 @@
           { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
           { k: 'layline_txt', titulo: 'Layline', est: true },
           { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
+          ...(tr.tipo === 'ceñida' && tr.escora_optima ? [{ k: 'escora_en_rango_pct', titulo: 'En rango', num: true, est: true, ayuda: 'Tiempo con la escora en el rango óptimo del tramo', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') }] : []),
           { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
           { k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', PROFUNDO: 'profundo' })[v] || '—' },
           { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m · ${num(v, 1)} %`) },
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
+      {#if tr.tipo === 'ceñida' && tr.escora_optima}
+        <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
+      {/if}
       <GraficoViento tramo={tr} {T} senalMs={an.senal} />
       <div class="dos">
         <section class="tarjeta bloque">

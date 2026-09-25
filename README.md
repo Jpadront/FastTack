@@ -65,6 +65,8 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Offset 1, Popa 1, Puerta…, Llegada, Rendimiento, Debrief IA; la pestaña del offset incluye también el paso por la baliza de barlovento). Cada una lleva el reproductor a su momento.
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
 - **Corriente estimada**: flecha y valor en la esquina del mapa (la de la vuelta en curso) y detalle con su confianza en las pestañas de ceñida y popa.
+- **Escora óptima** (pestañas de ceñida): rango de escora con mejor VMG frente a los barcos de alrededor, cuánto se pierde por debajo o por encima, tu escora y la del top 5, y el % de tu tiempo dentro del rango (columna «En rango»).
+- **HDG corregido**: el rumbo de proa de cada barco sale en verdadero, con el desvío de su brújula y la declinación ya corregidos.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
 - **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
 - **Reproductor**: ▶, barra de tiempo, ×1/×4/×10/×30; hora local y tiempo desde la señal.
@@ -124,7 +126,7 @@ Detalles en [`docs/metricas.md`](docs/metricas.md).
 - **Huecos de telemetría** (RaceSense guarda ~50 % de las muestras): lo que pasa dentro de un hueco no se ve (maniobras, pérdidas); cada métrica lleva su calidad de datos.
 - **General calculada** sin decisiones del jurado (DSQ, redress…). Las llegadas reconstruidas son provisionales.
 - **Recorrido dudoso**: si las balizas estimadas no cuadran con la duración de la prueba, la prueba cuenta en la general pero sus métricas no entran en el resumen (en el Mundial, la prueba 4).
-- No se calcula la layline hacia la línea de llegada. HDG tal cual lo da el dispositivo (sin corregir la declinación). Sin PDF (fuera de v1).
+- No se calcula la layline hacia la línea de llegada. Sin PDF (fuera de v1).
 
 ## Desarrollo
 

@@ -63,3 +63,17 @@ def test_descarta_brujulas_estropeadas():
 def test_sin_popa_no_estima():
     trazas, tramos = flota(0.3, 0.0)
     assert estimar(trazas, tramos[:1]) is None
+
+
+def test_desvio_de_cada_brujula_y_declinacion():
+    desvios = [-1 + x for x in (0, 2, -2, 3, -3, 1, -1, 4, -4, 0, 2, -2, 25, 0)]   # uno montado 26° torcido
+    trazas, tramos = flota(0.2, 0.1, desvios=desvios)
+    c = estimar(trazas, tramos, declinacion=-1.0)
+    for b, d in enumerate(desvios):
+        assert abs(c.desvios[f"B{b}"] - d) < 1.5, (b, c.desvios[f"B{b}"], d)
+    assert "B12" in c.brujulas_descartadas
+
+
+def test_declinacion_cascais():
+    from fasttack.motor.corriente import declinacion
+    assert -1.6 < declinacion(38.66, -9.45, 1789215300000) < -0.5

@@ -153,6 +153,19 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
             "eficiencia_en_roladas_pct": _r(f.get("eficiencia_pct"), 1),
             "escora_grados": _r(f.get("escora")), "cabeceo_grados": _r(f.get("cabeceo")),
         }
+        o = t.get("escora_optima")
+        if o:
+            tr["escora_optima"] = {
+                "concluyente": o["concluyente"],
+                "rango_desde_grados": o["rango"][0], "rango_hasta_grados": o["rango"][1],
+                "mejor_franja_desde_grados": o["mejor"][0], "mejor_franja_hasta_grados": o["mejor"][1],
+                "por_debajo_de_grados": (o.get("debajo") or {}).get("hasta_grados"),
+                "perdida_por_debajo_pct": (o.get("debajo") or {}).get("perdida_pct"),
+                "por_encima_de_grados": (o.get("encima") or {}).get("desde_grados"),
+                "perdida_por_encima_pct": (o.get("encima") or {}).get("perdida_pct"),
+                "tiempo_del_barco_en_rango_pct": f.get("escora_en_rango_pct"),
+                "nota": "estimada: VMG relativa a la flota por franjas de 2° de escora; si no es concluyente, la escora no marcó diferencias",
+            }
         if f.get("puerta"):
             fin = next((c for c in an["controles"] if c["id"] == t["hasta"]), {})
             pz = fin.get("puerta")

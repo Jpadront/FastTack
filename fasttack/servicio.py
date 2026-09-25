@@ -103,6 +103,8 @@ def pistas_prueba(alm: Almacen, camp_id: str, clave: str) -> dict:
                           max(prueba["llegadas"].values()) + MARGEN_DESPUES_MS)
     proy = Proyeccion(an["proyeccion"]["lat0"], an["proyeccion"]["lon0"])
     trazas = construir(cols, proy)
+    brj = an.get("brujulas") or {}
+    desvios, decl = brj.get("desvios_grados", {}), brj.get("declinacion_grados", 0.0)
     barcos = {}
     for v, tr in trazas.items():
         i = _adelgazar(tr.ts, PASO_TRAZA_MS)
@@ -114,7 +116,9 @@ def pistas_prueba(alm: Almacen, camp_id: str, clave: str) -> dict:
             "y": np.round(tr.y[i] * 10).astype(int).tolist(),
             "sog": np.round(tr.sog[i] * 10).astype(int).tolist(),
             "cog": np.where(np.isnan(tr.cog[i]), -1, np.round(tr.cog[i])).astype(int).tolist(),
-            "hdg": np.round(tr.hdg[i]).astype(int).tolist(),
+            # rumbo verdadero: HDG del dispositivo + desvío de su brújula (magnético/verdadero y montaje);
+            # sin desvío estimado, solo la declinación (la mayoría de Atlas van en magnético)
+            "hdg": np.round((tr.hdg[i] + desvios.get(v, decl)) % 360).astype(int).tolist(),
             "roll": np.round(tr.roll[i]).astype(int).tolist(),
             "pitch": np.round(tr.pitch[i]).astype(int).tolist(),
         }

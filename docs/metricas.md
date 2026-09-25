@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.5.1** (corriente estimada). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.6.5** (corriente, HDG corregido y escora óptima). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -54,6 +54,21 @@ Sin corredera, la corriente se estima con toda la flota (`fasttack/motor/corrien
 - **Comprobación independiente (velocidades).** En ceñida un barco va igual de rápido por el agua en las dos amuras: la media de las velocidades sobre el fondo de las dos amuras, fuera del eje, es la corriente transversal. **Confianza**: alta si las dos componentes transversales difieren ≤ 0,15 kn; media si ≤ 0,3 kn con el mismo signo; baja en otro caso.
 - **Uso.** Las **laylines sobre el fondo** salen de los rumbos reales de la flota en cada amura (centros de los dos grupos de COG del corte), que ya incluyen la corriente; antes eran simétricas (TWD ± TWA). TWD y TWA siguen siendo **sobre el fondo** (la bisectriz de los COG): con la corriente transversal típica (0,1–0,3 kn) el sesgo es de 1–3°.
 - **Validación.** Flota sintética con corriente, abatimiento y desvíos conocidos (tests): se recupera con ±0,12 kn y se descarta la brújula estropeada. Mundial (8 pruebas analizadas): 0,09–0,35 kn con confianza alta en 6; 0,66 kn (media) y 0,84 kn (baja) en las pruebas 6 y 5. En las 7 pruebas comparadas, los dos métodos dan el mismo signo de corriente transversal. Cascais Vela P9: 0,26 kn hacia 79° (0,15 kn hacia sotavento y 0,21 kn hacia la derecha, confianza alta); Track to Tactics da 0,88 kn hacia 117° (0,73 y 0,48 kn): mismo sentido en las dos componentes, pero el triple de intensidad. Su método se llama «admin-reference», lo que sugiere una referencia externa (modelo de marea) y no la telemetría; nuestros dos métodos independientes coinciden en valores menores.
+
+## Rumbo de proa (HDG) corregido
+
+El HDG de cada Atlas puede estar en magnético o en verdadero y tener un error de montaje. El ajuste de la corriente estima un **desvío por barco** (COG − HDG que no explican la corriente ni el abatimiento). La media de la flota se fija en la **declinación magnética** del campo de regatas y la fecha (modelo magnético mundial WMM 2025, p. ej. −1,0° en Cascais en septiembre de 2026), porque la mayoría de los Atlas van en magnético. Para las brújulas descartadas (desvío > 15°), el desvío se calcula después con la corriente ya fija. **HDG corregido = HDG del dispositivo + desvío del barco** (rumbo verdadero); sin desvío estimado, solo se suma la declinación. En el Mundial, 15 de 96 barcos tienen desvíos > 5° (máx. 79°). La declinación también mejora la corriente transversal (antes se suponía desvío medio 0).
+
+## Escora óptima en ceñida (estimada)
+
+Para cada ceñida (`fasttack/motor/escora.py`):
+
+1. **Segmentos de 30 s** por barco, fuera de los rodeos (20 s) y de las maniobras (30 s antes, 15 s después), con ≥ 70 % de datos y rumbo estable. En cada uno: escora = mediana de |roll − desviación del sensor|; VMG media.
+2. **VMG relativa a los vecinos**: VMG del segmento / mediana de la VMG de los segmentos de otros barcos a < 300 m y ±30 s (≥ 3 barcos). Los vecinos tienen el mismo viento: se quitan la presión y las roladas, también las locales. Comparar con toda la flota daba un óptimo falso, porque quien pilla una racha escora más y va más rápido aunque la escora no sea la causa.
+3. **Franjas de 2°** (≥ 30 segmentos y ≥ 8 barcos). La mejor franja es la de mayor VMG relativa menos su error típico (una franja con pocos datos no gana por ruido). **Rango óptimo**: franjas contiguas a la mejor que pierden < 1 %. Una franja es **claramente peor** si pierde ≥ 1 % y más de 2 errores típicos; se da la pérdida de la más cercana por debajo y por encima del rango.
+4. **Concluyente** si alguna franja es claramente peor; si no, «la escora no marca diferencias» en ese tramo. Por barco: % del tiempo dentro del rango (solo si es concluyente).
+
+Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 20°): por eso se da un rango y no un valor único. Lo más claro y repetido es la **pérdida por escora baja**: por debajo de 10–14°, entre −2 % y −10 % de VMG frente a los vecinos. En el Mundial, la mejor franja es 16–18° en la mayoría de las ceñidas, y el top 5 navega dentro o al lado del rango. Es una asociación en la flota, no un experimento: la escora también depende del peso y del estilo de cada tripulación. Validado con datos sintéticos (óptimo conocido, sin efecto, pocos datos).
 
 ## Métricas por barco y tramo
 
