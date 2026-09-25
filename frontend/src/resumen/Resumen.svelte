@@ -5,6 +5,7 @@
   import Tabla from '../prueba/Tabla.svelte';
   import GraficoPruebas from './GraficoPruebas.svelte';
   import Debrief from '../Debrief.svelte';
+  import EscoraOptima from '../prueba/EscoraOptima.svelte';
 
   let { campId, barco } = $props();
 
@@ -189,6 +190,18 @@
       { k: 'escora_ceñida', titulo: 'Escora ↑', num: true, fmt: fG(0) }, { k: 'escora_popa', titulo: 'Escora ↓', num: true, fmt: fG(0) },
       { k: 'cabeceo_ceñida', titulo: 'Cabeceo ↑', num: true, fmt: fG(0) }, { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fG(0) },
     ]} />
+
+  {#if res.escora}
+    {@const e = res.escora}
+    {@const mio = e.barcos[ref]}
+    <div class="bloque-ia">
+      <EscoraOptima titulo="Escora óptima en ceñida · todo el campeonato" {ref} nombreRef={vc(ref)}
+        top5={general.filter((f) => f.vela !== ref).slice(0, 5).map((f) => f.vela)}
+        tramo={{ escora_optima: e.todas, barcos: Object.fromEntries(Object.entries(e.barcos).map(([v, x]) => [v, { escora: x.escora_mediana }])) }}
+        enRangoTexto={mio ? `${mio.en_rango} de ${mio.ceñidas} ceñidas con la escora mediana en el rango` : null}
+        nota={`Todas las ceñidas juntas (${e.todas.ceñidas} ceñidas, ${e.todas.segmentos} tramos de 30 s): vale si las pruebas fueron con un viento parecido. Si no, añade el viento de referencia de cada prueba y se separa por intensidad.${e.por_viento.length ? ' Por intensidad: ' + e.por_viento.map((x) => `${x.tramo}: ${x.rango[0]}–${x.rango[1]}° (${x.ceñidas} ceñidas)`).join(' · ') + '.' : ''} Top 5 = los 5 primeros de la general.`} />
+    </div>
+  {/if}
 
   <div class="dos">
     <Tabla titulo="Salidas acumuladas" {ref} {colores} filas={filasSalida} ordenInicial="top10_60"

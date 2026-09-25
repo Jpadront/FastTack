@@ -69,6 +69,8 @@ Para cada ceñida (`fasttack/motor/escora.py`):
 4. **VMG frente a SOG**: si por encima del rango la SOG sigue subiendo (≥ 1,5 puntos más que la VMG) pero la VMG baja, con más escora se va más rápido pero más abierto o con más abatimiento («sobreescora»); si bajan las dos, falta potencia. Ejemplo: Mundial P1, C1, a 20–22°: SOG 102,4 %, VMG 96,7 %.
 5. **Concluyente** si alguna franja es claramente peor; si no, «la escora no marca diferencias» en ese tramo. Por barco: % del tiempo dentro del rango (solo si es concluyente).
 
+**Campeonato** (Resumen): se juntan las franjas de todas las ceñidas (cada una ya relativa a sus vecinos), con media ponderada por segmentos y error típico combinado, y se aplica la misma regla. Si hay viento de referencia, también por intensidad (< 10, 10–15, > 15 kn; ≥ 2 ceñidas). Por barco: cuántas de sus ceñidas tuvieron la escora mediana dentro del rango. Mundial (18 ceñidas, 13.658 segmentos de 30 s; según el equipo, casi todas con 20–25 kn): mejor franja 16–18°, rango 14–20°, −1,2 % a 12–14° y −6,6 % a 8–10°; ESP 1214, 16 de 17 ceñidas en el rango (mediana 16,5°); top 5, mediana 15°.
+
 Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 20°): por eso se da un rango y no un valor único. Lo más claro y repetido es la **pérdida por escora baja**: por debajo de 10–14°, entre −2 % y −10 % de VMG frente a los vecinos. En el Mundial, la mejor franja es 16–18° en la mayoría de las ceñidas, y el top 5 navega dentro o al lado del rango. Es una asociación en la flota, no un experimento: la escora también depende del peso y del estilo de cada tripulación. Validado con datos sintéticos (óptimo conocido, sin efecto, pocos datos).
 
 ## Métricas por barco y tramo

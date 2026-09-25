@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import statistics
 
+from . import escora as esc_mod
+
 METRICAS_REND = ("vmg_ceñida", "vmg_popa", "sog_ceñida", "sog_popa", "twa_ceñida", "twa_popa",
                  "escora_ceñida", "escora_popa", "cabeceo_ceñida", "cabeceo_popa",
                  "perdida_virada_m", "perdida_trasluchada_m")
@@ -147,6 +149,39 @@ def totales(filas: list[dict | None], vientos: list[float | None]) -> dict:
     }
 
 
+def escora_campeonato(pruebas: list[dict], validos: dict[str, dict], inscritos: list[str]) -> dict | None:
+    """Escora óptima juntando todas las ceñidas del campeonato y, si hay viento de referencia, por
+    intensidad. Por barco: en cuántas ceñidas su escora mediana cayó dentro del rango."""
+    grupos, por_viento = [], {}
+    for p in pruebas:
+        an = validos.get(p["clave"])
+        if not an:
+            continue
+        for t in an["tramos"]:
+            o = t.get("escora_optima")
+            if t.get("tipo") == "ceñida" and o and all("error_pct" in f for f in o["franjas"]):
+                grupos.append(o["franjas"])
+                w = p.get("viento_kn")
+                if w is not None:
+                    nombre = next(n for n, dentro in TRAMOS_VIENTO if dentro(w))
+                    por_viento.setdefault(nombre, []).append(o["franjas"])
+    todas = esc_mod.combinar(grupos) if len(grupos) >= 2 else None
+    if not todas:
+        return None
+    lo, hi = todas["rango"]
+    en_rango = {}
+    for v in inscritos:
+        esc = [t["barcos"][v]["escora"] for an in validos.values() for t in an["tramos"]
+               if t.get("tipo") == "ceñida" and v in t["barcos"] and t["barcos"][v].get("escora") is not None]
+        if esc:
+            en_rango[v] = {"ceñidas": len(esc), "en_rango": sum(1 for e in esc if lo <= e < hi),
+                           "escora_mediana": round(float(statistics.median(esc)), 1)}
+    return {"todas": todas,
+            "por_viento": [{"tramo": n, **r} for n, _ in TRAMOS_VIENTO
+                           if n in por_viento and len(por_viento[n]) >= 2 and (r := esc_mod.combinar(por_viento[n]))],
+            "barcos": en_rango}
+
+
 def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict], descartes: int | None) -> dict:
     """pruebas: las que cuentan, en orden de numeración; analisis: {clave: análisis} de las ya calculadas."""
     d = descartes_por_defecto(len(pruebas)) if descartes is None else descartes
@@ -170,5 +205,6 @@ def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict]
                      "flota": x["flota"] if x else None} for p, x in zip(pruebas, pp)],
         "general": gen,
         "barcos": barcos,
+        "escora": escora_campeonato(pruebas, validos, inscritos),
         "pendientes": [p["clave"] for p in pruebas if p["clave"] not in analisis],
     }

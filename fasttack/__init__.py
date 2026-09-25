@@ -1,1 +1,1 @@
-__version__ = "0.9.0"  # HDG corregido y escora óptima
+__version__ = "0.9.1"  # escora óptima del campeonato

@@ -205,6 +205,23 @@ def _dif(f, p, m):
     return _r(a[m] - b[m], 2) if a.get(m) is not None and b.get(m) is not None else None
 
 
+def _escora_camp(res, v, top5):
+    e = res.get("escora")
+    if not e:
+        return None
+    t, b = e["todas"], e["barcos"]
+    mio = b.get(v) or {}
+    return {"ceñidas_juntas": t["ceñidas"], "concluyente": t["concluyente"],
+            "rango_desde_grados": t["rango"][0], "rango_hasta_grados": t["rango"][1],
+            "mejor_franja_desde_grados": t["mejor"][0], "mejor_franja_hasta_grados": t["mejor"][1],
+            "por_debajo_de_grados": (t.get("debajo") or {}).get("hasta_grados"),
+            "perdida_por_debajo_pct": (t.get("debajo") or {}).get("perdida_pct"),
+            "escora_mediana_del_barco_grados": mio.get("escora_mediana"),
+            "ceñidas_del_barco_con_escora_en_rango": mio.get("en_rango"), "ceñidas_del_barco": mio.get("ceñidas"),
+            "escora_mediana_top5_grados": _r(_mediana([(b.get(x) or {}).get("escora_mediana") for x in top5]), 1),
+            "nota": "todas las ceñidas del campeonato juntas; VMG relativa a los barcos vecinos por franja de 2° de escora"}
+
+
 def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None) -> dict:
     nombres = nombres or {}
     gen = res["general"]
@@ -291,6 +308,7 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                      "correctas_top5_pct": media_top5(lambda x: x["laylines"]["ok"] / (x["laylines"]["ok"] + x["laylines"]["sobrepasadas"]) * 100
                                                       if x["laylines"]["ok"] + x["laylines"]["sobrepasadas"] else None, 0)},
         "puertas": {"puertas_con_ventaja_clara": t["puertas"]["total"], "eligio_la_favorecida": t["puertas"]["buenas"]},
+        "escora_optima_en_ceñida": _escora_camp(res, v, top5),
         "segun_el_viento": [{"tramo_de_viento": x["tramo"], "pruebas": x["pruebas"], "puesto_medio": _r(x["puesto_medio"], 1),
                              "vmg_ceñida_kn": _r(x["vmg_ceñida"], 2), "vmg_popa_kn": _r(x["vmg_popa"], 2)}
                             for x in t["viento"] if x["pruebas"]],

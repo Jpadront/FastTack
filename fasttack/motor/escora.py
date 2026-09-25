@@ -91,17 +91,28 @@ def optima(segs: list[tuple]) -> dict | None:
             franjas.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": int(m.sum()), "barcos": len(set(velas[m])),
                             "vmg_rel_pct": round(float(np.mean(rel[m])), 1),
                             "sog_rel_pct": round(float(np.mean(rel_sog[m])), 1),
-                            "_se": float(np.std(rel[m]) / np.sqrt(m.sum()))})
+                            "error_pct": round(float(np.std(rel[m]) / np.sqrt(m.sum())), 2)})
+    r = _evaluar(franjas)
+    if r is None:
+        return None
+    return r | {"navegado": [int(np.percentile(h, 10)), int(np.percentile(h, 90))],
+                "segmentos": int(ok.sum()),
+                "_por_barco": {b: [float(e) for e in h[velas == b]] for b in set(velas)}}
+
+
+def _evaluar(franjas: list[dict]) -> dict | None:
+    """Mejor franja, rango óptimo y pérdidas a partir de las franjas (con su error típico)."""
     if len(franjas) < 2:
         return None
+    se = lambda f: f["error_pct"]
     # la mejor por su cota inferior (media − error típico): una franja con pocos datos no gana por ruido
-    k = max(range(len(franjas)), key=lambda j: franjas[j]["vmg_rel_pct"] - franjas[j]["_se"])
+    k = max(range(len(franjas)), key=lambda j: franjas[j]["vmg_rel_pct"] - se(franjas[j]))
     mejor = franjas[k]
 
     def peor(f):
         """Claramente peor que la mejor franja: ≥ 1 % y más de 2 errores típicos de la diferencia."""
         d = mejor["vmg_rel_pct"] - f["vmg_rel_pct"]
-        return d > max(1.0, 2 * float(np.hypot(mejor["_se"], f["_se"])))
+        return d > max(1.0, 2 * float(np.hypot(se(mejor), se(f))))
 
     def cerca(f):
         """Pierde menos de un 1 % frente a la mejor (dentro del ruido práctico)."""
@@ -117,8 +128,6 @@ def optima(segs: list[tuple]) -> dict | None:
     lo, hi = franjas[a]["desde"], franjas[b]["hasta"]
     debajo = [f for f in franjas if f["hasta"] <= lo and peor(f)]
     encima = [f for f in franjas if f["desde"] >= hi and peor(f)]
-    for f in franjas:
-        f.pop("_se")
     perdida = lambda f: round(mejor["vmg_rel_pct"] - f["vmg_rel_pct"], 1)
     return {
         "franjas": franjas,
@@ -131,10 +140,31 @@ def optima(segs: list[tuple]) -> dict | None:
         # con más escora que el rango: ¿más rápido pero más abierto? (SOG ≥ 1,5 puntos por encima de la VMG)
         "sobreescora": next(({"desde_grados": f["desde"], "sog_rel_pct": f["sog_rel_pct"], "vmg_rel_pct": f["vmg_rel_pct"]}
                              for f in franjas if f["desde"] >= hi and f["sog_rel_pct"] - f["vmg_rel_pct"] >= 1.5), None),
-        "navegado": [int(np.percentile(h, 10)), int(np.percentile(h, 90))],
-        "segmentos": int(ok.sum()),
-        "_por_barco": {b: [float(e) for e in h[velas == b]] for b in set(velas)},
     }
+
+
+def combinar(grupos: list[list[dict]]) -> dict | None:
+    """Junta las franjas de varias ceñidas (cada una ya relativa a sus vecinos): media ponderada por
+    segmentos y error típico combinado. Sirve para el campeonato o para una intensidad de viento."""
+    por = {}
+    for franjas in grupos:
+        for f in franjas:
+            por.setdefault(f["desde"], []).append(f)
+    out = []
+    for lo in sorted(por):
+        fs = por[lo]
+        n = sum(f["segmentos"] for f in fs)
+        if n < 2 * MIN_SEGMENTOS:
+            continue
+        w = lambda k: sum(f[k] * f["segmentos"] for f in fs) / n
+        out.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": n, "ceñidas": len(fs),
+                    "barcos": max(f["barcos"] for f in fs),
+                    "vmg_rel_pct": round(w("vmg_rel_pct"), 1), "sog_rel_pct": round(w("sog_rel_pct"), 1),
+                    "error_pct": round(float(np.sqrt(sum((f["segmentos"] * f["error_pct"]) ** 2 for f in fs)) / n), 2)})
+    r = _evaluar(out)
+    if r is None:
+        return None
+    return r | {"segmentos": sum(f["segmentos"] for f in out), "ceñidas": len(grupos)}
 
 
 def en_rango_por_barco(opt: dict) -> dict[str, float]:

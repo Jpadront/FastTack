@@ -3,7 +3,7 @@
   // rango óptimo sombreado, la escora mediana del barco de referencia y la del top 5.
   import { num, mediana, COLOR_YO } from './datos.js';
 
-  let { tramo, ref, top5 = [], nombreRef = '' } = $props();
+  let { tramo, ref, top5 = [], nombreRef = '', titulo = 'Escora óptima en ceñida', enRangoTexto = null, nota = '' } = $props();
   const o = $derived(tramo.escora_optima);
   const W0 = 520, H = 170, M = { l: 46, r: 12, t: 12, b: 30 };
   let W = $state(W0);
@@ -24,7 +24,7 @@
 </script>
 
 <section class="tarjeta bloque">
-  <h3>Escora óptima en ceñida <span class="est">estimada</span></h3>
+  <h3>{titulo} <span class="est">estimada</span></h3>
   {#if o.concluyente}
     <p class="titular">Rango óptimo <b>{o.rango[0]}–{o.rango[1]}°</b> (mejor franja {o.mejor[0]}–{o.mejor[1]}°).
       {#if o.debajo}Por debajo de {o.debajo.hasta_grados}°, <b>−{num(o.debajo.perdida_pct, 1)} %</b> de VMG frente a los vecinos.{/if}
@@ -33,7 +33,7 @@
     <p class="titular">En este tramo la escora <b>no marca diferencias</b> entre {o.rango[0]} y {o.rango[1]}° (la mejor franja, {o.mejor[0]}–{o.mejor[1]}°, no se distingue de las demás).</p>
   {/if}
   {#if o.sobreescora}<p class="titular">Por encima de {o.sobreescora.desde_grados}° se va más rápido (SOG {num(o.sobreescora.sog_rel_pct, 1)} %) pero se pierde altura: la VMG baja a {num(o.sobreescora.vmg_rel_pct, 1)} %.</p>{/if}
-  <p class="sub">{nombreRef}: escora mediana <b class="num">{mia == null ? '—' : num(mia, 0) + '°'}</b>{#if enRango != null}, {enRango} % del tiempo en el rango{/if}{#if franjaMia && franjaMia.vmg_rel_pct < mejorV} · su franja, {num(franjaMia.vmg_rel_pct - mejorV, 1)} % frente a la mejor{/if} · top 5: <b class="num">{esc5 == null ? '—' : num(esc5, 0) + '°'}</b></p>
+  <p class="sub">{nombreRef}: escora mediana <b class="num">{mia == null ? '—' : num(mia, 0) + '°'}</b>{#if enRangoTexto}, {enRangoTexto}{:else if enRango != null}, {enRango} % del tiempo en el rango{/if}{#if franjaMia && franjaMia.vmg_rel_pct < mejorV} · su franja, {num(franjaMia.vmg_rel_pct - mejorV, 1)} % frente a la mejor{/if} · top 5: <b class="num">{esc5 == null ? '—' : num(esc5, 0) + '°'}</b></p>
   <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span><span><i class="l-rango"></i>rango óptimo</span><span><i class="l-yo"></i>{nombreRef}</span><span><i class="l-top5"></i>top 5</span></div>
   <div bind:clientWidth={W}>
     <svg viewBox={`0 0 ${W} ${H}`} style:height={H + 'px'} role="img" aria-label="VMG relativa por franja de escora">
@@ -61,6 +61,7 @@
       {/if}
     </svg>
   </div>
+  {#if nota}<p class="nota">{nota}</p>{/if}
   <p class="nota">Cada punto: VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos (barcos en la misma amura a menos de 300 m en los mismos 30 s, con el mismo viento: así se quitan la presión y las roladas, también las locales). Tramos de 30 s en rumbo estable, sin rodeos ni maniobras. Si con más escora la SOG sube y la VMG baja, se va más rápido pero más abierto o con más abatimiento; si bajan las dos, falta potencia. Sombreado: rango sin franjas claramente peores que la mejor (≥ 1 % y más que el ruido). Es una asociación en la flota: la escora también depende del peso y del estilo de cada tripulación.</p>
 </section>
 

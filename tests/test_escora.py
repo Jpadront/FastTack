@@ -30,3 +30,11 @@ def test_sin_efecto_no_es_concluyente():
 
 def test_pocos_datos():
     assert optima(segs(0.01, n=30)) is None
+
+
+def test_combinar_ceñidas():
+    from fasttack.motor.escora import combinar
+    a, b = optima(segs(0.01)), optima(segs(0.01))
+    c = combinar([a["franjas"], b["franjas"]])
+    assert c["ceñidas"] == 2 and c["segmentos"] == a["segmentos"] + b["segmentos"]
+    assert c["rango"][0] <= 17 <= c["rango"][1]

@@ -81,6 +81,7 @@ En la página del campeonato, **Resumen del campeonato →**. La primera vez ana
 - **General calculada**: puntuación baja con los descartes que elijas (por defecto 1 a partir de 4 pruebas). No incluye decisiones del jurado, así que puede diferir algo de la oficial. «rec.» = llegadas reconstruidas.
 - **Comparar con**: tu barco solo, o frente al top 3/5/10 de la general.
 - **Gráficos por prueba**: puesto y la métrica que elijas (VMG, SOG, TWA, escora, cabeceo, pérdidas), con la mediana de la flota.
+- **Escora óptima del campeonato**: todas las ceñidas juntas (y por intensidad de viento si hay viento de referencia), con tu escora y la del top 5.
 - **Debrief del campeonato** al final (ver abajo).
 - **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
 
