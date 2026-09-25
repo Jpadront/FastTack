@@ -11,7 +11,7 @@ def segs(perdida_por_grado, optimo=17.0, n=900):
     for k in range(n):
         h = RNG.uniform(8, 24)
         vmg = 4.5 * (1 - perdida_por_grado * abs(h - optimo)) + RNG.normal(0, 0.05)
-        out.append((f"B{k % 20}", 1000 * k, h, vmg, RNG.uniform(0, 200), RNG.uniform(0, 200)))
+        out.append((f"B{k % 20}", 1000 * k, h, vmg, RNG.uniform(0, 200), RNG.uniform(0, 200), 1.0, vmg / 0.77))
     return out
 
 

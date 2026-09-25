@@ -4,7 +4,9 @@
    maniobras (30 s antes y 15 s después), con ≥ 70 % de datos y rumbo estable.
 2. En cada segmento: escora = mediana de |roll − desviación del sensor| y VMG media.
 3. VMG relativa = VMG del segmento / mediana de la VMG de sus vecinos: los segmentos de otros barcos
-   a menos de 300 m y ±30 s (al menos 3). Los vecinos tienen el mismo viento, así que se quitan la
+   en la misma amura a menos de 300 m y ±30 s (al menos 3). Igual con la SOG: si con más escora la
+   SOG sigue subiendo pero la VMG baja, el barco va más rápido pero pierde altura (abatimiento o
+   rumbo más abierto); si bajan las dos, le falta potencia. Los vecinos tienen el mismo viento, así que se quitan la
    presión y las roladas, también las locales: comparar con toda la flota daría ventaja a quien
    pilla una racha, que escora más y va más rápido aunque la escora no sea la causa.
 4. Se agrupa en franjas de escora de 2° (≥ 30 segmentos y ≥ 8 barcos por franja) y se busca la
@@ -33,7 +35,7 @@ MIN_SEGMENTOS, MIN_BARCOS = 30, 8
 
 def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], viento: VientoTramo,
               maniobras: dict[str, list[int]], offsets: dict[str, float]) -> list[tuple]:
-    """(vela, t centro, escora °, VMG kn, x, y) de cada segmento válido."""
+    """(vela, t centro, escora °, VMG kn, x, y, amura ±1, SOG kn) de cada segmento válido."""
     out = []
     for v, (e, s) in barcos.items():
         x = trazas.get(v)
@@ -49,9 +51,11 @@ def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], vien
                 i = i[~np.isnan(x.cog[i]) & (x.sog[i] > 2)]
                 if len(i) >= 8:
                     twd = viento.twd_en(x.ts[i])
-                    vmg = float(np.mean(x.sog[i] * np.cos(np.radians(x.cog[i] - twd))))
+                    rel = (x.cog[i] - twd + 540) % 360 - 180
+                    vmg = float(np.mean(x.sog[i] * np.cos(np.radians(rel))))
                     out.append((v, (a + b) / 2, float(np.median(np.abs(x.roll[i] - off))), vmg,
-                                float(np.mean(x.x[i])), float(np.mean(x.y[i]))))
+                                float(np.mean(x.x[i])), float(np.mean(x.y[i])), float(np.sign(np.median(rel))),
+                                float(np.mean(x.sog[i]))))
             a = b
     return out
 
@@ -65,13 +69,19 @@ def optima(segs: list[tuple]) -> dict | None:
     velas = np.array([s[0] for s in segs])
     x = np.array([s[4] for s in segs])
     y = np.array([s[5] for s in segs])
+    amura = np.array([s[6] for s in segs])
+    sog = np.array([s[7] for s in segs])
     ref = np.full(len(v), np.nan)
+    ref_sog = np.full(len(v), np.nan)
     for k in range(len(v)):
-        m = (np.abs(t - t[k]) <= VECINOS_MS) & (np.hypot(x - x[k], y - y[k]) <= VECINOS_M) & (velas != velas[k])
+        m = ((np.abs(t - t[k]) <= VECINOS_MS) & (np.hypot(x - x[k], y - y[k]) <= VECINOS_M)
+             & (velas != velas[k]) & (amura == amura[k]))
         if len(set(velas[m])) >= MIN_VECINOS:
             ref[k] = np.median(v[m])
+            ref_sog[k] = np.median(sog[m])
     ok = np.nan_to_num(ref) > 0.5
     rel = np.where(ok, v / np.where(ok, ref, 1) * 100, np.nan)
+    rel_sog = np.where(ok, sog / np.where(ok, ref_sog, 1) * 100, np.nan)
     if ok.sum() < 3 * MIN_SEGMENTOS:
         return None
     franjas = []
@@ -80,6 +90,7 @@ def optima(segs: list[tuple]) -> dict | None:
         if m.sum() >= MIN_SEGMENTOS and len(set(velas[m])) >= MIN_BARCOS:
             franjas.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": int(m.sum()), "barcos": len(set(velas[m])),
                             "vmg_rel_pct": round(float(np.mean(rel[m])), 1),
+                            "sog_rel_pct": round(float(np.mean(rel_sog[m])), 1),
                             "_se": float(np.std(rel[m]) / np.sqrt(m.sum()))})
     if len(franjas) < 2:
         return None
@@ -117,6 +128,9 @@ def optima(segs: list[tuple]) -> dict | None:
         # la franja peor más cercana al rango, por cada lado: «por debajo de 12°, −1,5 %»
         "debajo": {"hasta_grados": debajo[-1]["hasta"], "perdida_pct": perdida(debajo[-1])} if debajo else None,
         "encima": {"desde_grados": encima[0]["desde"], "perdida_pct": perdida(encima[0])} if encima else None,
+        # con más escora que el rango: ¿más rápido pero más abierto? (SOG ≥ 1,5 puntos por encima de la VMG)
+        "sobreescora": next(({"desde_grados": f["desde"], "sog_rel_pct": f["sog_rel_pct"], "vmg_rel_pct": f["vmg_rel_pct"]}
+                             for f in franjas if f["desde"] >= hi and f["sog_rel_pct"] - f["vmg_rel_pct"] >= 1.5), None),
         "navegado": [int(np.percentile(h, 10)), int(np.percentile(h, 90))],
         "segmentos": int(ok.sum()),
         "_por_barco": {b: [float(e) for e in h[velas == b]] for b in set(velas)},

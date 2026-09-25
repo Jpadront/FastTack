@@ -164,6 +164,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None) -> dict:
                 "por_encima_de_grados": (o.get("encima") or {}).get("desde_grados"),
                 "perdida_por_encima_pct": (o.get("encima") or {}).get("perdida_pct"),
                 "tiempo_del_barco_en_rango_pct": f.get("escora_en_rango_pct"),
+                "con_mas_escora_va_mas_rapido_pero_mas_abierto_desde_grados": (o.get("sobreescora") or {}).get("desde_grados"),
                 "nota": "estimada: VMG relativa a la flota por franjas de 2° de escora; si no es concluyente, la escora no marcó diferencias",
             }
         if f.get("puerta"):

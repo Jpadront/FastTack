@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.6.5** (corriente, HDG corregido y escora óptima). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.6.6** (corriente, HDG corregido y escora óptima). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -64,9 +64,10 @@ El HDG de cada Atlas puede estar en magnético o en verdadero y tener un error d
 Para cada ceñida (`fasttack/motor/escora.py`):
 
 1. **Segmentos de 30 s** por barco, fuera de los rodeos (20 s) y de las maniobras (30 s antes, 15 s después), con ≥ 70 % de datos y rumbo estable. En cada uno: escora = mediana de |roll − desviación del sensor|; VMG media.
-2. **VMG relativa a los vecinos**: VMG del segmento / mediana de la VMG de los segmentos de otros barcos a < 300 m y ±30 s (≥ 3 barcos). Los vecinos tienen el mismo viento: se quitan la presión y las roladas, también las locales. Comparar con toda la flota daba un óptimo falso, porque quien pilla una racha escora más y va más rápido aunque la escora no sea la causa.
+2. **VMG y SOG relativas a los vecinos**: VMG (y SOG) del segmento / mediana de las de los segmentos de otros barcos **en la misma amura** a < 300 m y ±30 s (≥ 3 barcos). Misma amura porque una rolada local favorece a una amura y perjudica a la otra. Los vecinos tienen el mismo viento: se quitan la presión y las roladas, también las locales. Comparar con toda la flota daba un óptimo falso, porque quien pilla una racha escora más y va más rápido aunque la escora no sea la causa.
 3. **Franjas de 2°** (≥ 30 segmentos y ≥ 8 barcos). La mejor franja es la de mayor VMG relativa menos su error típico (una franja con pocos datos no gana por ruido). **Rango óptimo**: franjas contiguas a la mejor que pierden < 1 %. Una franja es **claramente peor** si pierde ≥ 1 % y más de 2 errores típicos; se da la pérdida de la más cercana por debajo y por encima del rango.
-4. **Concluyente** si alguna franja es claramente peor; si no, «la escora no marca diferencias» en ese tramo. Por barco: % del tiempo dentro del rango (solo si es concluyente).
+4. **VMG frente a SOG**: si por encima del rango la SOG sigue subiendo (≥ 1,5 puntos más que la VMG) pero la VMG baja, con más escora se va más rápido pero más abierto o con más abatimiento («sobreescora»); si bajan las dos, falta potencia. Ejemplo: Mundial P1, C1, a 20–22°: SOG 102,4 %, VMG 96,7 %.
+5. **Concluyente** si alguna franja es claramente peor; si no, «la escora no marca diferencias» en ese tramo. Por barco: % del tiempo dentro del rango (solo si es concluyente).
 
 Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 20°): por eso se da un rango y no un valor único. Lo más claro y repetido es la **pérdida por escora baja**: por debajo de 10–14°, entre −2 % y −10 % de VMG frente a los vecinos. En el Mundial, la mejor franja es 16–18° en la mayoría de las ceñidas, y el top 5 navega dentro o al lado del rango. Es una asociación en la flota, no un experimento: la escora también depende del peso y del estilo de cada tripulación. Validado con datos sintéticos (óptimo conocido, sin efecto, pocos datos).
 
