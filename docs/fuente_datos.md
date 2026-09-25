@@ -107,6 +107,16 @@ Detalles importantes:
 
 - **No hay COG**: se calcula a partir de las posiciones sucesivas. **No hay viento**: ni TWD ni TWS, así que se reconstruyen a partir de la flota.
 - ✔ **Frecuencia de muestreo**: **no es 1 Hz fijo**. Barcos: Δt mediano 1,2 s (J/70) y 1,6 s (ILCA), p90 3,4–4,2 s y huecos > 5 s frecuentes (17 000 en la regata de J/70). Balizas: Δt mediano 0,5 s. Marcas de tiempo siempre múltiplo de 100 ms. Sin duplicados `(ts, sn)`. El análisis tiene que **remuestrear o interpolar** y tolerar huecos.
+- **(nuevo) Cobertura real**: la telemetría descargable **no está completa**. En las 6 pruebas de J/70 con llegadas oficiales, los huecos de más de 20 s suman casi la mitad del tiempo de regata. Cobertura mediana de la flota (tiempo de regata sin huecos > 20 s):
+
+  | Prueba (API) | 2 | 3 | 5 | 6 | 8 | 9 |
+  |---|---|---|---|---|---|---|
+  | Flota (mediana) | 53 % | 45 % | 52 % | 47 % | **73 %** | 53 % |
+  | ESP 1214 | 63 % | 47 % | 62 % | 43 % | **92 %** | 64 % |
+
+  - Afecta a toda la flota: en la mayoría de las pruebas solo 0–3 barcos superan el 90 %.
+  - Parece ser la transmisión en directo (LTE). La API tiene un `POST /batch-upload` («Offline batch-upload»), pero en estas pruebas no se ve que los registros completos se hayan subido después.
+  - Consecuencias: los análisis de maniobras y de velocidad necesitan tramos con datos, y cada gráfica tiene que mostrar los huecos en lugar de unir los puntos. **Pendiente**: preguntar a Vakaros o al equipo si los registros completos de cada Atlas se pueden exportar desde Vakaros Connect.
 - ✔ **Volumen** (**corregido**): `/telemetry/event` devuelve **todos los dispositivos de la división** en una sola serie ordenada por `ts`, así que se pagina por regata y no por dispositivo. Son unos 110 B por fila en JSON y gzip lo reduce unas 5,4 veces.
   - J/70 R2 (111 min, 109 dispositivos): 269 542 filas, 29,7 MB en JSON (unos 5,4 MB por la red), 3 peticiones de < 1 s.
   - ILCA Gold R1 (73 min, 63 dispositivos): 167 249 filas, 17,7 MB, 2 peticiones.
@@ -131,7 +141,7 @@ Detalles importantes:
 - ✔ En J/70, el sn 25687 es el extremo del comité en la salida (a 2 m de `startLine.rightEnd`), y también la puerta izquierda y la llegada izquierda. Hacia el minuto 60 se desplaza unos 490 m **a la vez que** 25639 (puerta y llegada derecha): se recoloca la puerta/llegada. Es decir, un mismo dispositivo cambia de función y de sitio durante la regata, y la posición se toma siempre en el instante de cada paso.
 - **(nuevo)** Las balizas transmiten **solo posición**: `sog`, `heading`, `roll`, `pitch` y `status` valen siempre 0.
 - **(nuevo)** Hay dispositivos `role=mark` que **no están en ningún recorrido**. Son embarcaciones de apoyo: neumáticas que se mueven 1–4 km (J/70: 16525, 21253, 24575, 25470; ILCA: 30835, 30911, 30966) y barcos fondeados junto al comité (J/70: 19800; ILCA: 28881 y 30894, a unos 43 m de `rightEnd`; 11011). Se excluyen del recorrido; como mucho, se muestran en una capa aparte.
-- **(nuevo)** Los recorridos (`/courses` y `/api/regatta`) son la **definición actual**, no una por regata. En J/70 R2 no hay telemetría de M1 ni M2 (sn 18759 y 19228), así que no transmitieron. **Regla: cuando una baliza no transmite, su posición se supone a partir de la flota**, en el punto donde los barcos la rodean (cambio de rumbo y de amura o trasluchada concentrados en el mismo sitio), y se recalcula si cambia a lo largo de la regata. Se marca como «estimada».
+- **(nuevo)** Los recorridos (`/courses` y `/api/regatta`) son la **definición actual**, no una por regata. En J/70, M1 y M2 (sn 18759 y 19228) **no transmitieron en ninguna prueba** (solo antes de salir, por la mañana), así que las balizas de barlovento se estiman siempre. **Regla: cuando una baliza no transmite, su posición se supone a partir de la flota**, en el punto donde los barcos la rodean (cambio de rumbo y de amura o trasluchada concentrados en el mismo sitio), y se recalcula si cambia a lo largo de la regata. Se marca como «estimada».
 - **Hay que inferir la secuencia de tramos** a partir de los barcos: el orden en que la flota rodea cada baliza (paso a menos de X m con cambio de rumbo) da el recorrido real de cada regata (vueltas, offset, puerta o baliza simple). Así se generan las pestañas dinámicas.
 - Las balizas pueden moverse durante la regata (cambios de recorrido): como se transmite su posición, se usa la posición en el instante de cada paso.
 

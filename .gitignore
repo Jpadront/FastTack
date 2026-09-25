@@ -1,3 +1,5 @@
 __pycache__/
 # Muestras en bruto de Vakaros: no se redistribuyen (ver docs/fuente_datos.md). Se regeneran con fase1_muestras.py.
 data/sample/*.json
+# Páginas generadas por prototipo/ con datos incrustados
+*.gen.html
