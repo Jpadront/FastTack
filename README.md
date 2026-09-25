@@ -2,7 +2,7 @@
 
 Análisis post-regata de J/70 con los datos de **Vakaros RaceSense** (dispositivos Atlas 2). Uso interno del equipo de ESP 1214 y su entrenador.
 
-> Estado: **Fase 4 · hito 3** — primera versión de principio a fin: cargar un campeonato, ver sus pruebas y abrir el análisis de cada una (mapa con reproductor, valores instantáneos, pestañas por fase con sus tablas). Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
+> Estado: **Fase 4 · hito 4** — cargar un campeonato, ver sus pruebas y abrir el análisis de cada una: mapa con reproductor y capas (presión, TWD, rol, SOG, laylines), valores instantáneos, pestañas por fase con sus tablas y gráficos de viento y de rendimiento. Fórmulas y validación en [`docs/metricas.md`](docs/metricas.md); plan en [`docs/plan_fase3.html`](docs/plan_fase3.html).
 
 ## Instalación (una vez)
 
@@ -55,6 +55,8 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - **Barcos en mapa y tabla**: solo el tuyo, top 5/10/15 de la prueba, toda la flota o *Elegir…* uno a uno. Cada barco tiene un color fijo; el tuyo, naranja.
 - **Pestañas**: se generan con el recorrido real (Salida, Ceñida 1, Baliza 1, Popa 1, Puerta…, Llegada, Rendimiento). Cada una lleva el reproductor a su momento.
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
+- **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
+- **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
 - **Reproductor**: ▶, barra de tiempo, ×1/×4/×10/×30; hora local y tiempo desde la señal.
 - Lo marcado con **\*** o «est.» es estimado con el viento reconstruido. «Datos» indica la calidad de la telemetría de cada barco en el tramo.
 

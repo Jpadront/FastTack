@@ -98,6 +98,9 @@ def test_fases_de_rolada():
               ("PROGRESIVA DERECHA", "PROGRESIVA IZQUIERDA", "ESTABLE"), circular=True)
     tipos = [x["tipo"] for x in f]
     assert "PROGRESIVA DERECHA" in tipos and tipos[-1] == "ESTABLE"
+    # fases contiguas que cubren el tramo entero
+    assert f[0]["desde_pct"] == 0 and f[-1]["hasta_pct"] == 100
+    assert all(a["hasta_pct"] == b["desde_pct"] for a, b in zip(f, f[1:]))
 
 
 def test_calibrar_tws_con_referencia():

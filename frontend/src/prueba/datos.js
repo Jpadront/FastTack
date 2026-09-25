@@ -4,7 +4,8 @@
 export const HUECO_S = 15; // más de esto sin datos: el barco se muestra como «sin datos»
 
 // Colores fijos por barco (el naranja queda reservado al barco de referencia).
-const PALETA = ['#2a78d6', '#1baf7a', '#c98500', '#d55181', '#008300', '#4a3aa7', '#e34948', '#0e8a9a'];
+// Validada con la guía de visualización (daltonismo y separación); cada traza lleva además su etiqueta.
+const PALETA = ['#2a78d6', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 export const COLOR_YO = '#e0622e';
 export function colorBarco(vela, ref) {
   if (vela === ref) return COLOR_YO;
@@ -154,10 +155,11 @@ export function tramoEn(an, T) {
 }
 
 // Valores instantáneos de todos los barcos en un tramo: avance a lo largo del eje, VMG, TWA…
+// VMG y TWA de cada barco se calculan con SU tramo en T (sus propios pasos por baliza): mientras
+// unos ya navegan la popa, otros siguen en la ceñida o en el offset.
 export function instantaneos(an, pistas, tramo, T) {
   const s = an.senal;
   const twd = twdEn(tramo, T, s);
-  const ceñida = tramo.tipo === 'ceñida';
   const eje = (tramo.rumbo_eje * Math.PI) / 180;
   const ux = Math.sin(eje), uy = Math.cos(eje);
   const filas = [];
@@ -166,15 +168,20 @@ export function instantaneos(an, pistas, tramo, T) {
     if (!f) continue;
     const e = estado(b, T);
     if (!e) continue;
-    const ref = ceñida ? twd : (twd + 180) % 360;
-    const vmg = e.cog != null && !e.sinDatos ? e.sog * Math.cos((dif(e.cog - ref) * Math.PI) / 180) : null;
-    const twa = e.cog != null && !e.sinDatos ? Math.abs(dif(e.cog - twd)) : null;
+    const suyo = tramoDeBarco(an, v, T);  // null: antes de la salida, en un rodeo/offset o ya llegado
+    let vmg = null, twa = null;
+    if (suyo && e.cog != null && !e.sinDatos) {
+      const w = suyo === tramo ? twd : twdEn(suyo, T, s);
+      const ref = suyo.tipo === 'ceñida' ? w : (w + 180) % 360;
+      vmg = e.sog * Math.cos((dif(e.cog - ref) * Math.PI) / 180);
+      twa = Math.abs(dif(e.cog - w));
+    }
     // Orden: primero los que ya han salido del tramo (por su hora de salida), después los que lo
     // navegan (por su avance a lo largo del eje) y al final los que aún no han entrado.
     const t_in = (f.t_entrada - s) / 1000, t_out = (f.t_salida - s) / 1000;
     const fase = T > t_out ? 0 : T >= t_in ? 1 : 2;
     const avance = e.x * ux + e.y * uy;
-    filas.push({ vela: v, fase, t_out, avance, dentro: fase === 1, sinDatos: e.sinDatos, sog: e.sinDatos ? null : e.sog, vmg, twa,
+    filas.push({ vela: v, fase, t_out, avance, dentro: fase === 1, suyo: suyo ? suyo.nombre : T < 0 ? 'presalida' : T > (an.clasificacion.find((c) => c.vela === v)?.t - s) / 1000 ? 'llegado' : 'rodeo', otro: T >= 0 && suyo !== tramo, sinDatos: e.sinDatos, sog: e.sinDatos ? null : e.sog, vmg, twa,
                  cog: e.sinDatos ? null : e.cog, hdg: e.sinDatos ? null : e.hdg });
   }
   filas.sort((a, b) => a.fase - b.fase || (a.fase === 0 ? a.t_out - b.t_out : b.avance - a.avance));
@@ -193,3 +200,107 @@ export const num = (v, d = 1) => (v == null ? '—' : Number(v).toLocaleString('
 
 // 'ESP1214' → 'ESP 1214' (texto corto para el mapa)
 export const velaCorta = (v, nombres = {}) => nombres[v]?.vela || v.replace(/^([A-Z]+)(\d)/, '$1 $2');
+
+
+// ---------------------------------------------------------------- hito 4: capas y gráficos
+
+export const DIVERGENTE = { favor: '#2a78d6', contra: '#e34948', neutro: '#8a969c' };
+// Rampa secuencial azul (claro → oscuro) para la SOG
+export const RAMPA_SOG = ['#b7d3f6', '#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281', '#0d366b'];
+
+// Tramo en el que navega un barco en t (según sus pasos por baliza)
+export function tramoDeBarco(an, v, tSeg) {
+  const ms = an.senal + tSeg * 1000;
+  for (const tr of an.tramos) {
+    const f = tr.barcos[v];
+    if (f && ms >= f.t_entrada && ms <= f.t_salida) return tr;
+  }
+  return null;
+}
+
+// Valores derivados por muestra de un barco (memorizados): tramo, TWD, rolada, VMG, TWA, escora
+const _memo = new WeakMap();
+export function derivados(an, pistas, v) {
+  const b = pistas.barcos[v];
+  if (!b) return null;
+  let porAn = _memo.get(an);
+  if (!porAn) { porAn = new Map(); _memo.set(an, porAn); }
+  if (porAn.has(v)) return porAn.get(v);
+  const n = b.t.length, off = an.offsets_escora?.[v] || 0;
+  const d = { tramo: new Int16Array(n).fill(-1), twd: new Float32Array(n).fill(NaN), rol: new Float32Array(n).fill(NaN),
+              vmg: new Float32Array(n).fill(NaN), twa: new Float32Array(n).fill(NaN), escora: new Float32Array(n), cabeceo: new Float32Array(n) };
+  const rangos = an.tramos.map((tr) => { const f = tr.barcos[v]; return f ? [(f.t_entrada - an.senal) / 1000, (f.t_salida - an.senal) / 1000] : null; });
+  for (let i = 0; i < n; i++) {
+    d.escora[i] = Math.abs(b.roll[i] - off);
+    d.cabeceo[i] = b.pitch ? b.pitch[i] : NaN;
+    const k = rangos.findIndex((r) => r && b.t[i] >= r[0] && b.t[i] <= r[1]);
+    if (k < 0) continue;
+    const tr = an.tramos[k];
+    d.tramo[i] = k;
+    const twd = twdEn(tr, b.t[i], an.senal);
+    d.twd[i] = twd;
+    if (b.cog[i] < 0) continue;
+    const ceñida = tr.tipo === 'ceñida';
+    const ref = ceñida ? twd : (twd + 180) % 360;
+    d.vmg[i] = b.sog[i] * Math.cos((dif(b.cog[i] - ref) * Math.PI) / 180);
+    d.twa[i] = Math.abs(dif(b.cog[i] - twd));
+    // Beneficio de la rolada: con TWA constante el rumbo gira con el viento. Ganancia de avance
+    // hacia la baliza respecto al rumbo que tendría con el viento medio del tramo.
+    const delta = dif(twd - tr.viento.twd_media);
+    const r = (a) => Math.cos((dif(a - tr.rumbo_eje) * Math.PI) / 180);
+    d.rol[i] = r(b.cog[i]) - r(b.cog[i] - delta);
+  }
+  porAn.set(v, d);
+  return d;
+}
+
+// Fase de rolada en curso (según el % del tramo)
+export function faseEn(tr, T, senalMs) {
+  const pct = ((T * 1000 + senalMs - tr.t0) / (tr.t1 - tr.t0)) * 100;
+  return tr.fases_rolada.find((f) => pct >= f.desde_pct && pct < f.hasta_pct) || null;
+}
+
+// Presión instantánea: SOG de cada barco del tramo frente a la mediana de la flota del tramo;
+// lado izquierdo/derecho (mirando a barlovento) por su posición lateral respecto al eje.
+export function presionEn(an, pistas, tr, T) {
+  const s = an.senal, ceñida = tr.tipo === 'ceñida';
+  const eje = (tr.rumbo_eje * Math.PI) / 180, ux = Math.sin(eje), uy = Math.cos(eje);
+  const pts = [];
+  for (const [v, f] of Object.entries(tr.barcos)) {
+    if (T < (f.t_entrada - s) / 1000 || T > (f.t_salida - s) / 1000) continue;
+    const e = estado(pistas.barcos[v] || { t: [] }, T);
+    if (!e || e.sinDatos) continue;
+    const e30 = estado(pistas.barcos[v], T - 30);
+    let lat = e.x * uy - e.y * ux; if (!ceñida) lat = -lat;  // derecha mirando a barlovento
+    pts.push({ vela: v, x: e.x, y: e.y, sog: e.sog, sog30: e30 && !e30.sinDatos ? e30.sog : null, lat });
+  }
+  if (pts.length < 4) return { pts: [], lr: null };
+  const med = mediana(pts.map((p) => p.sog));
+  pts.forEach((p) => { p.rel = p.sog / med; p.sube = p.sog30 != null && (p.sog - p.sog30) / med > 0.06; });
+  const latMed = mediana(pts.map((p) => p.lat));
+  const izq = pts.filter((p) => p.lat < latMed).map((p) => p.sog), der = pts.filter((p) => p.lat >= latMed).map((p) => p.sog);
+  const lr = izq.length >= 2 && der.length >= 2 ? mediana(izq) - mediana(der) : null;
+  return { pts, lr, med };
+}
+
+export function mediana(a) {
+  const x = [...a].sort((p, q) => p - q);
+  return x.length ? (x.length % 2 ? x[(x.length - 1) / 2] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2) : null;
+}
+
+// Laylines del tramo desde su baliza final (con Atlas o estimada): rectas con el TWA de la flota
+export function laylines(an, pistas, tr, T) {
+  const fin = an.controles.find((c) => c.id === tr.hasta);
+  if (!fin || !tr.viento.twa_flota) return [];
+  const twd = twdEn(tr, T, an.senal), ceñida = tr.tipo === 'ceñida';
+  const a = ceñida ? tr.viento.twa_flota : 180 - tr.viento.twa_flota;
+  const rumbos = ceñida ? [(twd + 180 - a + 360) % 360, (twd + 180 + a) % 360] : [(twd - a + 360) % 360, (twd + a) % 360];
+  const out = [];
+  for (const p of puntosControl(fin, pistas, T)) {
+    for (const r of rumbos) {
+      const rad = (r * Math.PI) / 180;
+      out.push([[p.x, p.y], [p.x + Math.sin(rad) * 2500, p.y + Math.cos(rad) * 2500]]);
+    }
+  }
+  return out;
+}

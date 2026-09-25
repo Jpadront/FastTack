@@ -1,11 +1,13 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import { api, horaLocal, clave as claveVela } from '../api.js';
-  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta } from './datos.js';
+  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta, tramoEn, twdEn, faseEn } from './datos.js';
   import Mapa from './Mapa.svelte';
   import Reproductor from './Reproductor.svelte';
   import Panel from './Panel.svelte';
   import Tabla from './Tabla.svelte';
+  import GraficoViento from './GraficoViento.svelte';
+  import GraficoRendimiento from './GraficoRendimiento.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -16,6 +18,7 @@
   let modo = $state('top5');
   let manual = $state(new Set());
   let verSelector = $state(false);
+  let capa = $state(null);
 
   const clavePref = `fasttack.sel.${campId}`;
   onMount(async () => {
@@ -55,6 +58,12 @@
   const colores = $derived(Object.fromEntries([...sel].map((v) => [v, colorBarco(v, ref)])));
   const posFinal = $derived(Object.fromEntries(clasif.map((v, k) => [v, k + 1])));
   const vc = (v) => velaCorta(v, nombres);
+  // Tramo en curso para las capas del mapa: el de la pestaña o el del reproductor
+  const trMapa = $derived(an ? (tab?.tipo === 'tramo' ? tab.tramo : tramoEn(an, T)) : null);
+  const twdAhora = $derived(trMapa ? twdEn(trMapa, T, an.senal) : null);
+  const faseAhora = $derived(trMapa ? faseEn(trMapa, T, an.senal) : null);
+  const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Rol'], ['sog', 'SOG']];
+  const lado = (v) => ({ IZQUIERDA: 'izquierda', DERECHA: 'derecha', flota: 'toda la flota' })[v] || '—';
   const desfase = $derived(camp?.tz_offset_ms || 0);
   const controlesTab = $derived.by(() => {
     if (!tab || !an) return null;
@@ -142,7 +151,18 @@
 
   <div class="rejilla">
     <div class="izq">
-      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} /></div>
+      <div class="capas">
+        <div class="modos" role="group" aria-label="Capa del mapa">
+          <button class:activo={capa === null} aria-pressed={capa === null} onclick={() => (capa = null)}>Colores de barco</button>
+          {#each CAPAS as [k, t]}<button class:activo={capa === k} aria-pressed={capa === k} onclick={() => (capa = capa === k ? null : k)}>{t}</button>{/each}
+        </div>
+        <div class="indic num">
+          <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
+          {#if faseAhora}<span>· {faseAhora.tipo.toLowerCase()}{faseAhora.primero && faseAhora.primero !== 'flota' ? ' (primero ' + lado(faseAhora.primero) + ')' : ''}</span>{/if}
+          <span class="tenue">· corriente no disponible</span>
+        </div>
+      </div>
+      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} /></div>
       <Reproductor bind:T ventana={vent} senalMs={an.senal} desfaseMs={desfase} />
     </div>
     <div class="der">
@@ -206,6 +226,7 @@
           { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m · ${num(v, 1)} %`) },
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
+      <GraficoViento tramo={tr} {T} senalMs={an.senal} />
       <div class="dos">
         <section class="tarjeta bloque">
           <h3>Viento en 10 cortes <span class="est">estimado</span></h3>
@@ -220,18 +241,26 @@
         </section>
         <section class="tarjeta bloque">
           <h3>Fases de rolada</h3>
-          <table class="mini"><thead><tr><th>Tramo</th><th>Tipo</th><th class="n">Δ</th></tr></thead>
-            <tbody>{#each tr.fases_rolada as f}<tr><td class="num">{f.desde_pct}–{f.hasta_pct} %</td><td>{f.tipo.toLowerCase()}</td><td class="n num">{f.delta > 0 ? '+' : ''}{num(f.delta, 1)}°</td></tr>{/each}</tbody></table>
+          <table class="mini"><thead><tr><th>Tramo</th><th>Tipo</th><th class="n">Δ</th><th>Primero</th></tr></thead>
+            <tbody>{#each tr.fases_rolada as f}<tr><td class="num">{f.desde_pct}–{f.hasta_pct} %</td><td>{f.tipo.toLowerCase()}</td><td class="n num">{f.delta > 0 ? '+' : ''}{num(f.delta, 1)}°</td><td>{lado(f.primero)}</td></tr>{/each}</tbody></table>
           <h3 class="h3b">Fases de presión</h3>
-          <table class="mini"><thead><tr><th>Tramo</th><th>Tipo</th><th class="n">Δ</th></tr></thead>
-            <tbody>{#each tr.fases_presion as f}<tr><td class="num">{f.desde_pct}–{f.hasta_pct} %</td><td>{f.tipo.toLowerCase()}</td><td class="n num">{f.delta > 0 ? '+' : ''}{num(f.delta, 2)} kn{tr.viento.tws_calibrada ? '' : ' SOG'}</td></tr>{/each}</tbody></table>
-          <p class="nota">Quién recibió primero cada rolada o racha llegará con la capa de presión.</p>
+          <table class="mini"><thead><tr><th>Tramo</th><th>Tipo</th><th class="n">Δ</th><th>Primero</th></tr></thead>
+            <tbody>{#each tr.fases_presion as f}<tr><td class="num">{f.desde_pct}–{f.hasta_pct} %</td><td>{f.tipo.toLowerCase()}</td><td class="n num">{f.delta > 0 ? '+' : ''}{num(f.delta, 2)} kn{tr.viento.tws_calibrada ? '' : ' SOG'}</td><td>{lado(f.primero)}</td></tr>{/each}</tbody></table>
+          <p class="nota">Primero: el lado del campo (mirando a barlovento) que recibió antes la rolada o el cambio de presión. «Toda la flota» si llegó a la vez. Estimado.</p>
         </section>
       </div>
     {:else if tab.tipo === 'baliza'}
       {#each tab.controles as c}
+        {#if c.puerta}
+          <section class="tarjeta resumen">
+            <div><i>Puerta favorecida <span class="est">est.</span></i><b>{lado(c.puerta.favorecida)} <small class="tenue">(mirando a sotavento)</small></b></div>
+            <div><i>Ventaja <span class="est">est.</span></i><b>{num(c.puerta.ventaja_m, 0)} m</b></div>
+            <div><i>TWD en el paso <span class="est">est.</span></i><b>{num(c.puerta.twd, 0)}°</b></div>
+            <div><i>Cómo se mide</i><b class="peq">metros a barlovento que gana la baliza favorecida con la TWD del paso</b></div>
+          </section>
+        {/if}
         <Tabla titulo={`Paso por ${c.nombre}${c.fuente === 'estimada' ? ' (baliza estimada)' : ''}`} {ref} {colores} filas={filasPaso(c.id)} ordenInicial="pos"
-          nota={c.tipo === 'sotavento' && c.sn.length === 2 ? 'Puerta: izquierda y derecha mirando a sotavento (como la ve el barco que llega). La ventaja de cada lado llegará con las laylines (hito 4).' : 'Zona: tiempo dentro de 3 esloras de la baliza.'}
+          nota={c.tipo === 'sotavento' && c.sn.length === 2 ? 'Puerta: izquierda y derecha mirando a sotavento (como la ve el barco que llega). La ventaja estimada de cada lado va arriba.' : 'Zona: tiempo dentro de 3 esloras de la baliza.'}
           columnas={[
             { k: 'vela', titulo: 'Barco', fmt: fBarco },
             { k: 'pos', titulo: 'Pos.', num: true },
@@ -251,8 +280,9 @@
           { k: 'gap', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
         ]} />
     {:else if tab.tipo === 'rendimiento'}
+      <GraficoRendimiento {an} {pistas} {sel} {ref} {T} {colores} {nombres} />
       <Tabla titulo="Medias de la prueba" {ref} {colores} filas={filasRend} ordenInicial="pos"
-        nota="Pulsa una columna para ordenar. Medias ponderadas por el tiempo de cada tramo con datos. El gráfico por métrica llegará en el hito 4."
+        nota="Pulsa una columna para ordenar. Medias ponderadas por el tiempo de cada tramo con datos. El gráfico de arriba muestra la evolución de cada métrica a lo largo de la prueba."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
           { k: 'pos', titulo: 'Pos.', num: true },
@@ -298,9 +328,12 @@
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
   .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 10px; align-items: start; }
   .izq { display: grid; gap: 8px; min-width: 0; }
+  .capas { display: flex; justify-content: space-between; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
+  .indic { font-size: 13px; color: var(--tinta-2); display: flex; gap: 4px; flex-wrap: wrap; }
+  .peq { font-size: 12px !important; font-weight: 500 !important; color: var(--tinta-3); }
   .mapabox { height: min(62vh, 560px); min-height: 300px; }
   @media (max-width: 900px) { .rejilla { grid-template-columns: minmax(0, 1fr); } .mapabox { height: 46vh; } }
-  .contenido { display: grid; gap: 10px; margin-top: 10px; }
+  .contenido { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
   .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 10px 12px; }
   .resumen div { display: grid; gap: 2px; }
   .resumen i { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); font-style: normal; }

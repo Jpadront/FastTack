@@ -16,9 +16,9 @@ from . import recorrido as rec
 from . import salida as sal
 from . import tramos as tm
 from .trazas import Traza, construir
-from .viento import calibrar_tws, fases, viento_tramo
+from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.2.0"
+VERSION = "0.4.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -117,7 +117,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         # TWD de partida: la del final del tramo anterior; en el primero, el rumbo del eje
         previo = tramos[-1]["viento"].cortes[-1].twd if tramos else None
         ref = previo if previo is not None else (eje_tramo if ceñida else (eje_tramo + 180) % 360)
-        vt = viento_tramo(trazas, en_tramo, t0, t1, ceñida, ref, limite_deg=30 if previo is not None else None)
+        vt = viento_tramo(trazas, en_tramo, t0, t1, ceñida, ref, limite_deg=30 if previo is not None else None,
+                          eje=eje_tramo)
         largo = float(distancia(*p_ini, *p_fin)) if p_ini and p_fin else None
         tramos.append({"id": f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
                        "ceñida": ceñida, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
@@ -196,20 +197,23 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
                 f["eficiencia_pct"] = round((fant - f["distancia_m"]) / fant * 100, 1)
             else:
                 f["vs_fantasma_m"] = f["eficiencia_pct"] = None
-        cortes = [{"pct": 5 + 10 * k, "t": c.t, "twd": round(c.twd, 1), "twa_flota": _r(c.twa_flota, 1),
-                   "sog_mediana": _r(c.sog_mediana), "tws": c.tws, "confianza": c.confianza, "fuente": c.fuente}
-                  for k, c in enumerate(vt.cortes)]
         presion = [c.tws for c in vt.cortes] if prueba.get("viento_kn") else [c.sog_mediana for c in vt.cortes]
+        fr = fases([c.twd for c in vt.cortes], 3.0, ("PROGRESIVA DERECHA", "PROGRESIVA IZQUIERDA", "ESTABLE"), circular=True)
+        quien_primero(fr, vt.cortes, "twd", True)
+        fp = fases(presion, 0.5 if prueba.get("viento_kn") else 0.2, ("SUBIENDO", "BAJANDO", "ESTABLE"))
+        quien_primero(fp, vt.cortes, "sog", False)
+        cortes = [{"pct": 5 + 10 * k, "t": c.t, "twd": round(c.twd, 1), "twa_flota": _r(c.twa_flota, 1),
+                   "sog_mediana": _r(c.sog_mediana), "tws": c.tws, "confianza": c.confianza, "fuente": c.fuente,
+                   "sog_izq": _r(c.sog_izq), "sog_der": _r(c.sog_der)}
+                  for k, c in enumerate(vt.cortes)]
         salida_tramos.append({
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
             "desde": t["desde"], "hasta": t["hasta"], "t0": vt.t0, "t1": vt.t1,
             "rumbo_eje": round(t["eje"], 1), "largo_m": _r(t["largo_m"], 0),
             "viento": {"twd_media": round(vt.twd_media, 1), "twa_flota": _r(twa_flota, 1), "cortes": cortes,
                        "tws_calibrada": bool(prueba.get("viento_kn"))},
-            "fases_rolada": fases([c.twd for c in vt.cortes], 3.0,
-                                  ("PROGRESIVA DERECHA", "PROGRESIVA IZQUIERDA", "ESTABLE"), circular=True),
-            "fases_presion": fases(presion, 0.5 if prueba.get("viento_kn") else 0.2,
-                                   ("SUBIENDO", "BAJANDO", "ESTABLE")),
+            "fases_rolada": fr,
+            "fases_presion": fp,
             "fantasma_m": fant,
             "barcos": filas,
             "maniobras": {v: [{"t": m.t, "tipo": m.tipo, "perdida_m": m.perdida_m} for m in ms]
@@ -248,6 +252,30 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         r["cobertura"] = _r(trazas[v].cobertura(senal, llegadas[v], HUECO_MEDIAS_MS), 2) if v in llegadas else None
         rendimiento[v] = r
 
+    # Puerta favorecida: la baliza más a barlovento según la TWD al acabar la popa (se navega
+    # menos hacia abajo y menos hacia arriba). Nombres mirando a sotavento, como RaceSense.
+    puertas = {}
+    for c in controles:
+        if not c.es_puerta or c.rodeo_mediano is None:
+            continue
+        popa = next((t for t in tramos if t["hasta"] == c.id), None)
+        if popa is None:
+            continue
+        twd = float(popa["viento"].cortes[-1].twd)
+        (s1, p1), (s2, p2) = c.puntos
+        x1, y1 = p1.en(np.array([c.rodeo_mediano]))
+        x2, y2 = p2.en(np.array([c.rodeo_mediano]))
+        if np.isnan(x1[0]) or np.isnan(x2[0]):
+            continue
+        barl_1, lat_1 = a_ejes(x1[0], y1[0], twd)
+        barl_2, lat_2 = a_ejes(x2[0], y2[0], twd)
+        mejor_1 = barl_1 > barl_2
+        # mirando a sotavento, la izquierda es la derecha mirando a barlovento (lat mayor)
+        lado_1 = "IZQUIERDA" if lat_1 > lat_2 else "DERECHA"
+        lado_2 = "DERECHA" if lado_1 == "IZQUIERDA" else "IZQUIERDA"
+        puertas[c.id] = {"favorecida": lado_1 if mejor_1 else lado_2, "ventaja_m": _r(abs(float(barl_1 - barl_2)), 1),
+                         "twd": round(twd, 1)}
+
     orden = sorted(llegadas, key=llegadas.get)
     return {
         "version": VERSION,
@@ -257,7 +285,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int]) -> dict:
         "eje": round(eje, 1),
         "controles": [{"id": c.id, "nombre": c.nombre, "tipo": c.tipo, "fuente": c.fuente,
                        "sn": [sn for sn, _ in c.puntos], "t_mediano": c.rodeo_mediano,
-                       "xy": _punto(c, c.rodeo_mediano or senal)} for c in controles],
+                       "xy": _punto(c, c.rodeo_mediano or senal), **({"puerta": puertas[c.id]} if c.id in puertas else {})}
+                      for c in controles],
         "pasos": {v: {cid: {"t": p.t, "entrada": p.entrada, "salida": p.salida, "puerta": p.puerta}
                       for cid, p in pv.items()} for v, pv in pasos.items()},
         "tramos": salida_tramos,

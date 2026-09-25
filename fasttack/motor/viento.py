@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .geo import dif, mediana_circular
+from .geo import a_ejes, dif, mediana_circular
 from .trazas import Traza
 
 N_CORTES = 10
@@ -31,6 +31,11 @@ class Corte:
     confianza: float         # 0–1
     fuente: str              # 'bisectriz' | 'arrastre'
     tws: float | None = None  # nudos, solo si hay viento de referencia
+    # Por lado del campo (mirando a barlovento), para saber quién recibe antes una rolada o racha
+    sog_izq: float | None = None
+    sog_der: float | None = None
+    twd_izq: float | None = None
+    twd_der: float | None = None
 
 
 @dataclass
@@ -65,7 +70,8 @@ def _dos_grupos(cog: np.ndarray, ref: float, ceñida: bool):
 
 
 def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]], t0: int, t1: int,
-                 ceñida: bool, ref: float, limite_deg: float | None = None) -> VientoTramo:
+                 ceñida: bool, ref: float, limite_deg: float | None = None,
+                 eje: float | None = None) -> VientoTramo:
     """`en_tramo`: barco → (entrada, salida) del tramo. `ref`: TWD de partida (la del tramo
     anterior o el rumbo del eje). Con `limite_deg`, un corte que se aparte más de eso de `ref`
     se descarta como dato insuficiente (en popa los grupos de COG son más frágiles)."""
@@ -74,7 +80,7 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
     previo = ref
     for k in range(N_CORTES):
         a, b = t0 + k * d, t0 + (k + 1) * d
-        cogs, sogs, barcos = [], [], set()
+        cogs, sogs, lats, barcos = [], [], [], set()
         for v, (e, s) in en_tramo.items():
             tr = trazas.get(v)
             if tr is None:
@@ -90,6 +96,9 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
             ok = ~np.isnan(c) & estable & (tr.sog[i] > (2.0 if ceñida else 3.0))
             if ok.any():
                 cogs.append(c[ok]); sogs.append(tr.sog[i][ok]); barcos.add(v)
+                if eje is not None:
+                    _, lat = a_ejes(tr.x[i][ok], tr.y[i][ok], eje)
+                    lats.append(lat if ceñida else -lat)  # derecha mirando a barlovento
         tc = int((a + b) / 2)
         if not cogs:
             vt.cortes.append(Corte(tc, previo, None, None, 0, 0.0, "arrastre"))
@@ -104,14 +113,27 @@ def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]],
             bis = (c1 + dif(c2 - c1) / 2) % 360
             twd = float(bis if ceñida else (bis + 180) % 360)
             valido = limite_deg is None or abs(float(dif(twd - ref))) <= limite_deg
+        lados = {}
+        if lats:
+            lat = np.concatenate(lats)
+            corte_lat = np.median(lat)
+            sog_all = np.concatenate(sogs)
+            for nombre, m in (("izq", lat < corte_lat), ("der", lat >= corte_lat)):
+                if m.sum() >= 10:
+                    lados[f"sog_{nombre}"] = float(np.median(sog_all[m]))
+                    a1, a2, m1, m2 = _dos_grupos(cog[m], previo, ceñida)
+                    sp = abs(float(dif(a2 - a1)))
+                    if min(m1, m2) >= 5 and (50 <= sp <= 130 if ceñida else 25 <= sp <= 150):
+                        bb = (a1 + dif(a2 - a1) / 2) % 360
+                        lados[f"twd_{nombre}"] = float(bb if ceñida else (bb + 180) % 360)
         if valido:
             twa = sep / 2 if ceñida else 180 - sep / 2
             equilibrio = min(n1, n2) / max(n1, n2)          # las dos amuras bien representadas
             cantidad = min(1.0, len(barcos) / 10)
-            vt.cortes.append(Corte(tc, twd, twa, sog_med, len(cog), round(0.5 * equilibrio + 0.5 * cantidad, 2), "bisectriz"))
+            vt.cortes.append(Corte(tc, twd, twa, sog_med, len(cog), round(0.5 * equilibrio + 0.5 * cantidad, 2), "bisectriz", **lados))
             previo = twd
         else:
-            vt.cortes.append(Corte(tc, previo, None, sog_med, len(cog), 0.2, "arrastre"))
+            vt.cortes.append(Corte(tc, previo, None, sog_med, len(cog), 0.2, "arrastre", **lados))
     # Cortes iniciales sin datos: toman la primera TWD válida
     primera = next((c.twd for c in vt.cortes if c.fuente == "bisectriz"), None)
     if primera is not None:
@@ -179,5 +201,36 @@ def fases(valores: list[float | None], umbral: float, etiquetas=("SUBIENDO", "BA
         else:
             fundidas.append(dict(f))
     # Oscilación: tres o más fases alternas de derecha/izquierda seguidas
-    return [{"desde_pct": f["desde"] * 10, "hasta_pct": (f["hasta"] + 1) * 10, "tipo": f["tipo"],
-             "delta": round(f["delta"], 2)} for f in fundidas]
+    # El cambio ocurre entre los centros de los cortes (corte k = k·10 + 5 %): fases contiguas,
+    # la primera desde el 0 % y la última hasta el 100 %.
+    n = len(fundidas)
+    return [{"desde_pct": 0 if k == 0 else f["desde"] * 10 + 5,
+             "hasta_pct": 100 if k == n - 1 else f["hasta"] * 10 + 5, "tipo": f["tipo"],
+             "delta": round(f["delta"], 2)} for k, f in enumerate(fundidas)]
+
+
+def quien_primero(fases_: list[dict], cortes: list[Corte], campo: str, circular: bool) -> None:
+    """Añade 'primero' a cada fase no estable: el lado del campo (mirando a barlovento) cuyo valor
+    se había movido más en el sentido de la fase en el primer corte de la fase. Si los dos lados se
+    mueven parecido (diferencia < 30 %) o faltan datos, 'flota'."""
+    for f in fases_:
+        f["primero"] = None
+        k0 = max(0, (f["desde_pct"] - 5) // 10)  # primer corte de la fase
+        if f["tipo"] in ("ESTABLE",):
+            continue
+        k1 = min(k0 + 1, len(cortes) - 1)
+        signo = 1 if f["delta"] > 0 else -1
+        mov = {}
+        for lado in ("izq", "der"):
+            a, b = getattr(cortes[k0], f"{campo}_{lado}"), getattr(cortes[k1], f"{campo}_{lado}")
+            if a is not None and b is not None:
+                d = float(dif(b - a)) if circular else b - a
+                mov[lado] = d * signo
+        if len(mov) < 2 or max(mov.values()) <= 0:
+            f["primero"] = "flota"
+            continue
+        izq, der = mov["izq"], mov["der"]
+        if abs(izq - der) < 0.3 * max(abs(izq), abs(der)):
+            f["primero"] = "flota"
+        else:
+            f["primero"] = "IZQUIERDA" if izq > der else "DERECHA"

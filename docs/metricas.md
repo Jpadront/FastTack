@@ -1,6 +1,6 @@
 # Métricas de FastTack: fórmulas y validación
 
-> Motor versión **0.2.0** (Fase 4 · hito 2). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
+> Motor versión **0.4.0** (Fase 4 · hito 4). Código en `fasttack/motor/`. Todas las cifras salen del cálculo; la IA (hito 6) solo las redacta.
 > Naturaleza de cada cifra: **directa** (viene de RaceSense), **calculada** (geometría y tiempos exactos) o **estimada** (depende del viento reconstruido o de una baliza estimada). La interfaz marca lo estimado.
 
 ## Convenciones
@@ -43,7 +43,8 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 - **TWA de la flota** = media separación entre los dos grupos (ceñida) o 180° − media separación (popa). Es también el **TWA objetivo** (no hay polar fiable).
 - **TWA de un barco** = |COG − TWD(t)|: ángulo táctico GPS (incluye abatimiento y corriente).
 - **Presión** = SOG mediano de la flota en el corte. **TWS** solo si hay **viento de referencia** (TWS en el disparo que introduce el equipo): en la primera ceñida TWS ∝ SOG mediano, anclado al primer corte; cada tramo siguiente se ancla al último corte del anterior y varía con su propio SOG. Sin referencia, la presión es relativa y la TWS se muestra «sin calibrar».
-- **Fases de rolada**: los cortes se agrupan por tendencia; una fase con cambio total < 3° es ESTABLE; si no, PROGRESIVA DERECHA (TWD aumenta) o IZQUIERDA. **Fases de presión**: igual con el umbral de 0,5 kn (TWS calibrada) o 0,2 kn de SOG mediano. «Quién la recibió primero» queda pendiente (necesita la presión local por barco, hito 4).
+- **Fases de rolada**: los cortes se agrupan por tendencia; una fase con cambio total < 3° es ESTABLE; si no, PROGRESIVA DERECHA (TWD aumenta) o IZQUIERDA. **Fases de presión**: igual con el umbral de 0,5 kn (TWS calibrada) o 0,2 kn de SOG mediano. **Quién la recibió primero**: en cada corte se parten las muestras por la mediana de su posición lateral respecto al eje del tramo (mirando a barlovento) y, en cada mitad con ≥ 10 muestras, se calculan el SOG mediano y la TWD por bisectriz (≥ 5 muestras por grupo). En el primer corte de una fase no estable se compara cuánto se ha movido cada lado en el sentido de la fase: el que más se ha movido la recibió primero; si la diferencia es < 30 % o faltan datos, «toda la flota».
+- **Puerta favorecida**: con la TWD del último corte de la popa que acaba en la puerta y la posición de las dos balizas en el rodeo mediano, la favorecida es la que queda más a barlovento (se navega menos en la popa y menos en la ceñida siguiente); **ventaja** = diferencia a lo largo del viento, en metros. Nombre izquierda/derecha mirando a sotavento, como RaceSense.
 
 ## Métricas por barco y tramo
 
@@ -77,6 +78,23 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 | Baliza 1 | calculada | posición y gap en su paso |
 | OCS | directa | lista del comité (`ocs` − exonerados − `clearedOcs`); «sobre la línea (GPS)» si el margen es positivo |
 | Sesgo de la línea | estimada | extremo más a barlovento según la TWD en el disparo; grados = asin(ventaja / largo de la línea); metros = ventaja a barlovento |
+
+## Capas del mapa y valores instantáneos (estimado)
+
+- **Cada barco en su tramo**: los valores instantáneos (VMG, TWA) se calculan con el tramo que navega cada barco según sus propios pasos por baliza, no el del líder ni el de la pestaña: mientras unos ya van de popa, otros siguen en la ceñida o en el offset. Entre la baliza y el offset (rodeo) no hay VMG. Las tablas por tramo y las medias ya usaban los tiempos de entrada y salida de cada barco.
+- **Fases de rolada y presión**: contiguas; cada cambio se sitúa entre los centros de los cortes (corte k = k·10 + 5 %), la primera fase desde el 0 % y la última hasta el 100 %.
+
+- **Presión instantánea**: mancha azul alrededor de cada barco del tramo cuyo SOG supera en > 2 % la mediana de la flota en ese instante (más intensa cuanto más la supera); un anillo marca los barcos cuyo SOG ha subido > 6 % de la mediana en los últimos 30 s. Es un indicador de presión, no una medida del viento: la SOG también depende del rumbo y del mar.
+- **Presión izquierda–derecha** (panel): SOG mediano de los barcos a la izquierda menos el de los barcos a la derecha de la mediana lateral (mirando a barlovento). «Equilibrada» si la diferencia es < 3 % de la mediana.
+- **TWD instantánea**: tinte del campo según la TWD del instante frente a la media del tramo (azul = rolada a la izquierda, rojo = a la derecha; saturado a ±10°).
+- **Laylines** (siempre, en el tramo en curso): rectas desde la baliza final del tramo con el TWA de la flota y la TWD del instante.
+- **Rol**: colorea la traza según la rolada del momento a favor (azul) o en contra (rojo) de la amura en que navega el barco. **SOG**: colorea la traza con una rampa azul entre el p5 y el p95 de la ventana visible.
+- **Corriente**: no disponible (se estimará más adelante).
+
+## Gráficos
+
+- **Evolución del viento** (pestañas de tramo): TWD y presión (o TWS calibrada) en los 10 cortes, en dos gráficos con un eje cada uno.
+- **Rendimiento**: VMG, SOG, TWA, escora y cabeceo en ceñida o en popa frente al tiempo desde la señal (medias de 5 s en tenue y mediana móvil de 60 s destacada; solo los tramos de ese tipo según los pasos por baliza de cada barco, sin los 20 s junto a cada rodeo) y pérdida de cada virada o trasluchada como puntos. Máximo 15 barcos.
 
 ## Rendimiento (toda la prueba)
 

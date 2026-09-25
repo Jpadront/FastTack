@@ -93,6 +93,7 @@ def pistas_prueba(alm: Almacen, camp_id: str, clave: str) -> dict:
             "cog": np.where(np.isnan(tr.cog[i]), -1, np.round(tr.cog[i])).astype(int).tolist(),
             "hdg": np.round(tr.hdg[i]).astype(int).tolist(),
             "roll": np.round(tr.roll[i]).astype(int).tolist(),
+            "pitch": np.round(tr.pitch[i]).astype(int).tolist(),
         }
     _, balizas = pistas(cols, proy)
     usadas = {sn for c in an["controles"] for sn in c["sn"] if sn is not None}
