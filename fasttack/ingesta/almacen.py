@@ -1,0 +1,135 @@
+"""Caché local: respuestas de RaceSense (JSON), telemetría (Parquet) y estado de la app (SQLite).
+
+Estructura en disco:
+    datos/fasttack.sqlite                      campeonatos, ajustes por prueba y preferencias
+    datos/racesense/{eventId}/*.json           respuestas de /api/regatta, racing-summary, courses…
+    datos/racesense/{eventId}/{división}/tel_{t0}_{t1}.parquet   trozos de telemetría
+    datos/racesense/{eventId}/{división}/tramos.json             qué intervalos están ya descargados
+Una prueba terminada se descarga una sola vez.
+"""
+from __future__ import annotations
+
+import json
+import sqlite3
+import threading
+import time
+from pathlib import Path
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from .. import config
+from .racesense import COLUMNAS, Cliente
+
+_ESQUEMA = """
+create table if not exists campeonato (
+    id text primary key,            -- eventId~división
+    event_id text not null,
+    division text not null,         -- nombre interno de la división ('Open', 'Gold')
+    url text,
+    nombre text, clase text, inicio integer, fin integer,
+    estado text, progreso text, error text,
+    cargado_en integer
+);
+create table if not exists ajuste_prueba (   -- lo que el usuario corrige a mano
+    campeonato text not null,
+    clave text not null,            -- hora de la señal (ms) como texto: estable entre recargas
+    numero integer,                 -- numeración propia (null = automática)
+    excluida integer,               -- 1 = no cuenta (entrenamiento, anulada…)
+    viento_kn real,                 -- viento de referencia: TWS en el disparo
+    viento_dir real,                -- y dirección (opcional)
+    primary key (campeonato, clave)
+);
+create table if not exists preferencia (clave text primary key, valor text);
+"""
+
+
+class Almacen:
+    def __init__(self, raiz: Path = config.DATOS, cliente: Cliente | None = None):
+        self.raiz = Path(raiz)
+        self.raiz.mkdir(parents=True, exist_ok=True)
+        self.cliente = cliente or Cliente()
+        self._lock = threading.Lock()
+        self.db = sqlite3.connect(self.raiz / "fasttack.sqlite", check_same_thread=False)
+        self.db.row_factory = sqlite3.Row
+        self.db.executescript(_ESQUEMA)
+
+    # ------------------------------------------------------------------ SQLite
+    def sql(self, q: str, args=()):
+        with self._lock:
+            cur = self.db.execute(q, args)
+            self.db.commit()
+            return cur.fetchall()
+
+    def preferencia(self, clave: str, defecto: str | None = None) -> str | None:
+        r = self.sql("select valor from preferencia where clave=?", (clave,))
+        return r[0]["valor"] if r else defecto
+
+    def fijar_preferencia(self, clave: str, valor: str):
+        self.sql("insert into preferencia values (?, ?) on conflict(clave) do update set valor=excluded.valor",
+                 (clave, valor))
+
+    # ------------------------------------------------------------------ JSON de RaceSense
+    def _dir(self, event_id: str, division: str | None = None) -> Path:
+        d = self.raiz / "racesense" / event_id
+        if division:
+            d = d / division.replace("/", "_")
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def json(self, event_id: str, nombre: str, obtener, refrescar: bool = False):
+        """Respuesta cacheada. `refrescar` vuelve a pedirla (p. ej. el documento de un evento en curso)."""
+        p = self._dir(event_id) / f"{nombre}.json"
+        if p.exists() and not refrescar:
+            return json.loads(p.read_text())
+        d = obtener()
+        p.write_text(json.dumps(d, ensure_ascii=False))
+        return d
+
+    # ------------------------------------------------------------------ telemetría
+    def telemetria(self, event_id: str, division: str, desde: int, hasta: int,
+                   progreso=None) -> dict[str, np.ndarray]:
+        """Telemetría de [desde, hasta]. Descarga solo los trozos que falten."""
+        d = self._dir(event_id, division)
+        idx_p = d / "tramos.json"
+        tramos = json.loads(idx_p.read_text()) if idx_p.exists() else []
+        for a, b in _huecos(desde, hasta, [(t["desde"], t["hasta"]) for t in tramos if t["definitivo"]]):
+            cols = self.cliente.telemetria(event_id, division, a, b, progreso)
+            nombre = f"tel_{a}_{b}.parquet"
+            pq.write_table(pa.table({c: cols[c] for c in COLUMNAS}), d / nombre, compression="zstd")
+            tramos = [t for t in tramos if not (t["desde"] == a and t["hasta"] == b)]
+            tramos.append({"desde": a, "hasta": b, "archivo": nombre,
+                           "definitivo": b < time.time() * 1000 - config.MARGEN_DIRECTO_MS})
+            idx_p.write_text(json.dumps(tramos))
+        partes = []
+        for t in tramos:
+            if t["hasta"] >= desde and t["desde"] <= hasta:
+                tab = pq.read_table(d / t["archivo"],
+                                    filters=[("ts", ">=", desde), ("ts", "<=", hasta)])
+                partes.append(tab)
+        if not partes:
+            return {c: np.array([], dtype=tp) for c, tp in COLUMNAS.items()}
+        tab = pa.concat_tables(partes)
+        cols = {c: tab.column(c).to_numpy(zero_copy_only=False) for c in COLUMNAS}
+        # Trozos contiguos comparten bordes: quitar duplicados (ts, sn) y ordenar.
+        clave = cols["ts"].astype(np.int64) * 65536 + cols["sn"].astype(np.int64)
+        _, unicos = np.unique(clave, return_index=True)
+        orden = unicos[np.argsort(cols["ts"][unicos], kind="stable")]
+        return {c: v[orden] for c, v in cols.items()}
+
+
+def _huecos(desde: int, hasta: int, cubiertos: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Partes de [desde, hasta] que no están en `cubiertos`."""
+    huecos, cursor = [], desde
+    for a, b in sorted(cubiertos):
+        if b < cursor or a > hasta:
+            continue
+        if a > cursor:
+            huecos.append((cursor, a))
+        cursor = max(cursor, b)
+        if cursor >= hasta:
+            break
+    if cursor < hasta:
+        huecos.append((cursor, hasta))
+    return huecos

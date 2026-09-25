@@ -1,0 +1,30 @@
+[project]
+name = "fasttack"
+version = "0.1.0"
+description = "Análisis post-regata de J/70 con datos de Vakaros RaceSense"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "pyarrow>=16",
+    "qrcode>=7.4",
+]
+
+[project.scripts]
+fasttack = "fasttack.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fasttack"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

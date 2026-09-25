@@ -1,4 +1,9 @@
 __pycache__/
+.venv/
+.pytest_cache/
+frontend/node_modules/
+# Caché local de RaceSense y estado de la app (se regenera)
+datos/
 # Muestras en bruto de Vakaros: no se redistribuyen (ver docs/fuente_datos.md). Se regeneran con fase1_muestras.py.
 data/sample/*.json
 # Páginas generadas por prototipo/ con datos incrustados

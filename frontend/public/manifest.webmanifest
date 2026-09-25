@@ -1,0 +1,11 @@
+{
+  "name": "FastTack",
+  "short_name": "FastTack",
+  "description": "Análisis post-regata de J/70 con datos de RaceSense",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef2f3",
+  "theme_color": "#10222b",
+  "icons": [{ "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

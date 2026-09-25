@@ -1,0 +1,45 @@
+/* Tokens de FastTack: carta náutica en claro y en oscuro. El naranja es siempre el barco de referencia. */
+:root {
+  color-scheme: light;
+  --fondo: #eef2f3; --panel: #f9fbfb; --agua: #dce7eb;
+  --tinta: #10222b; --tinta-2: #4b5e67; --tinta-3: #7d8f97;
+  --linea: #cad6db; --rejilla: #d8e2e6;
+  --yo: #e0622e; --baliza: #4a3aa7; --estimado: #6a5acd;
+  --ok: #1a7f4b; --aviso: #a86400; --error: #b3261e; --foco: #2a78d6;
+  --display: "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif;
+  --texto: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fondo: #0c171c; --panel: #112129; --agua: #0f2630;
+    --tinta: #e6eff2; --tinta-2: #a5b8c0; --tinta-3: #6f8891;
+    --linea: #23373f; --rejilla: #1b323c;
+    --yo: #f0743d; --baliza: #9085e9; --estimado: #a99cf0;
+    --ok: #3fb97a; --aviso: #e0a040; --error: #ef6b62; --foco: #3987e5;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--fondo); color: var(--tinta); font-family: var(--texto); font-size: 16px; line-height: 1.45;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.etiqueta { font-family: var(--display); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); font-weight: 600; }
+.chip { display: inline-block; font: 600 13px var(--display); padding: 1px 8px; border-radius: 10px; border: 1px solid var(--linea); white-space: nowrap; }
+.chip.oficial { color: var(--ok); border-color: currentColor; }
+.chip.reconstruida { color: var(--estimado); border-color: currentColor; border-style: dashed; }
+.chip.sin-llegadas { color: var(--tinta-3); }
+.boton { font: 600 16px var(--display); background: var(--tinta); color: var(--panel); border: 0; border-radius: 5px; padding: 9px 16px; }
+.boton:disabled { opacity: .5; cursor: default; }
+.boton.claro { background: transparent; color: var(--tinta); border: 1px solid var(--linea); }
+.campo { border: 1px solid var(--linea); border-radius: 5px; padding: 9px 10px; background: var(--panel); width: 100%; }
+.tarjeta { background: var(--panel); border: 1px solid var(--linea); border-radius: 6px; }
+.error { color: var(--error); }
+.tenue { color: var(--tinta-3); }
