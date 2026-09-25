@@ -51,6 +51,8 @@
   }
   function guardar() { try { localStorage.setItem(clavePref, JSON.stringify({ descartes, comparar })); } catch {} }
 
+  let ambitoIA = $state('campeonato');
+  const nombreDia = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const SECCIONES = [['r-general', 'General'], ['r-puestos', 'Puestos'], ['r-metrica', 'Por prueba'], ['r-medias', 'Medias'],
     ['r-escora', 'Escora'], ['r-salidas', 'Salidas y maniobras'], ['r-viento', 'Viento'], ['r-debrief', 'Debrief IA']];
   const pruebas = $derived(res ? res.pruebas.map((p) => `P${p.numero}`) : []);
@@ -253,10 +255,27 @@
   </section>
 
   <div id="r-debrief" class="ancla"></div>
-  {#if res.pendientes.length || progreso}
-    <section class="tarjeta bloque"><h3>Debrief del campeonato · IA</h3><p class="tenue">Disponible cuando terminen de analizarse todas las pruebas.</p></section>
-  {:else if miFila}
-    <div class="bloque-ia"><Debrief {campId} ambito="campeonato" barco={ref} titulo={`Debrief del campeonato · ${vc(ref)} · IA`} /></div>
+  {#if miFila}
+    <section class="tarjeta bloque selector-ia">
+      <h3>Debrief · IA</h3>
+      <div class="modos" role="group" aria-label="Qué debrief">
+        <button class:activo={ambitoIA === 'campeonato'} aria-pressed={ambitoIA === 'campeonato'} onclick={() => (ambitoIA = 'campeonato')}>Campeonato (hasta ahora)</button>
+        {#each res.dias as d}
+          <button class="dia" class:activo={ambitoIA === 'dia:' + d} aria-pressed={ambitoIA === 'dia:' + d} onclick={() => (ambitoIA = 'dia:' + d)}>{nombreDia(d)}</button>
+        {/each}
+      </div>
+      {#if ambitoIA === 'campeonato' && (res.pendientes.length || progreso)}
+        <p class="nota">Aún se están analizando {res.pendientes.length} prueba(s): el debrief usará las ya analizadas. Cuando terminen, te avisará para regenerarlo.</p>
+      {:else if ambitoIA === 'campeonato'}
+        <p class="nota">Con las {res.pruebas.length} pruebas disputadas hasta ahora; si hay pruebas nuevas, avisa para regenerarlo.</p>
+      {:else}
+        <p class="nota">Solo las pruebas de ese día ({res.pruebas.filter((p) => 'dia:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}), comparadas con el top 5 del día, y cómo quedas en la general al terminarlo.</p>
+      {/if}
+    </section>
+    {#key ambitoIA}
+      <div class="bloque-ia"><Debrief {campId} ambito={ambitoIA} barco={ref}
+        titulo={ambitoIA === 'campeonato' ? `Debrief del campeonato · ${vc(ref)} · IA` : `Debrief del ${nombreDia(ambitoIA.slice(4))} · ${vc(ref)} · IA`} /></div>
+    {/key}
   {/if}
 {/if}
 
@@ -299,6 +318,10 @@
   tr.yo td { background: color-mix(in srgb, var(--yo) 14%, transparent); font-weight: 600; }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .bloque-ia { margin-top: 10px; }
+  .selector-ia { margin-top: 10px; display: grid; gap: 6px; }
+  .selector-ia .modos { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .selector-ia .modos button { flex: none; }
+  .selector-ia .modos button.dia::first-letter { text-transform: uppercase; }
   .indice { position: sticky; top: var(--alto-barra, 45px); z-index: 20; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
     background: var(--fondo); padding: 6px 0; margin: 4px 0 2px; border-bottom: 1px solid var(--linea); }
   .indice::-webkit-scrollbar { display: none; }

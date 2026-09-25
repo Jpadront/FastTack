@@ -45,7 +45,22 @@ PRUEBA = COMUN + """
 Máximo 350 palabras.
 """
 
+DIA = COMUN + """
+## Balance del día
+(2–3 frases: resultado del día y cómo queda en la general)
+## Lo que funcionó
+(lista de 2–3 puntos)
+## Lo que hay que corregir
+(lista de 2–3 puntos)
+## Claves para mañana
+(lista numerada de 3 puntos accionables)
+
+Máximo 350 palabras.
+"""
+
 CAMPEONATO = COMUN + """
+Si «estado.campeonato_en_curso» es verdadero, el campeonato no ha terminado: habla de lo disputado hasta ahora y orienta las prioridades a las pruebas que quedan.
+
 ## Balance
 (2–3 frases)
 ## 3 puntos fuertes
@@ -64,7 +79,7 @@ class IANoDisponible(RuntimeError):
 
 
 def instrucciones(datos: dict) -> str:
-    base = CAMPEONATO if datos.get("tipo") == "debrief del campeonato" else PRUEBA
+    base = {"debrief del campeonato": CAMPEONATO, "debrief del día": DIA}.get(datos.get("tipo"), PRUEBA)
     base = base.replace("{clase}", datos.get("clase") or "vela")
     return base + "\nDATOS:\n```json\n" + json.dumps(datos, ensure_ascii=False, indent=1) + "\n```\n"
 
@@ -127,13 +142,37 @@ def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     if camp is None:
         raise KeyError(camp_id)
     nombres = {b["clave"]: b for b in camp["barcos"]}
+    en_curso = bool(camp.get("fin")) and camp["fin"] + 86_400_000 > time.time() * 1000
     if ambito == "campeonato":
+        # Con las pruebas disputadas y analizadas hasta ahora: no hace falta que el campeonato termine
         res = servicio.resumen_campeonato(alm, camp_id)
-        if res["pendientes"]:
-            raise ValueError("Faltan pruebas por analizar: abre antes el resumen del campeonato.")
         if barco not in res["barcos"]:
             raise ValueError("Este barco no tiene llegadas en el campeonato.")
-        return hechos_mod.de_campeonato(res, barco, camp.get("nombre") or "", nombres, camp.get("clase"))
+        h = hechos_mod.de_campeonato(res, barco, camp.get("nombre") or "", nombres, camp.get("clase"))
+        h["estado"] = {"campeonato_en_curso": en_curso, "pruebas_disputadas_hasta_ahora": len(res["pruebas"]),
+                       "pruebas_aun_sin_analizar": len(res["pendientes"])}
+        return h
+    if ambito.startswith("dia:"):
+        dia = ambito[4:]
+        res = servicio.resumen_campeonato(alm, camp_id, descartes=0, solo_dia=dia)
+        if res["pendientes"]:   # un día tiene pocas pruebas: se analizan aquí las que falten
+            for clave in res["pendientes"]:
+                try:
+                    servicio.analisis_prueba(alm, camp_id, clave)
+                except Exception:  # noqa: BLE001 - una prueba sin datos no impide el resto
+                    pass
+            res = servicio.resumen_campeonato(alm, camp_id, descartes=0, solo_dia=dia)
+        if not res["pruebas"]:
+            raise ValueError("No hay pruebas ese día.")
+        if barco not in res["barcos"]:
+            raise ValueError("Este barco no tiene llegadas ese día.")
+        hasta = servicio.resumen_campeonato(alm, camp_id, hasta_dia=dia)
+        h = hechos_mod.de_dia(res, hasta, barco, dia, camp.get("nombre") or "", nombres, camp.get("clase"))
+        # la escora óptima de un solo día tiene pocos datos: la del campeonato hasta ese día
+        h["escora_optima_en_ceñida"] = hechos_mod._escora_camp(hasta, barco, [x["vela"] for x in hasta["general"] if x["vela"] != barco][:5])
+        if h["escora_optima_en_ceñida"]:
+            h["escora_optima_en_ceñida"]["nota"] = "todas las ceñidas del campeonato hasta este día juntas (un día solo tiene pocos datos)"
+        return h
     an = servicio.analisis_prueba(alm, camp_id, ambito)
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:
         raise ValueError("Este barco no tiene datos en esta prueba.")

@@ -316,3 +316,32 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                             for x in t["viento"] if x["pruebas"]],
     }
     return _limpia(h)
+
+
+def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: dict | None = None,
+           clase: str | None = None) -> dict:
+    """Debrief de un día: las pruebas de ese día (con el top 5 del día como referencia) y cómo queda
+    el barco en la general calculada al terminar el día."""
+    import datetime as dt
+    h = de_campeonato(res, v, nombre_camp, nombres, clase)
+    h["tipo"] = "debrief del día"
+    d = dt.date.fromisoformat(dia)
+    h["dia"] = f"{['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][d.weekday()]} {d.day}"
+    dia_gen = h.pop("general_calculada")
+    h["resultado_del_dia"] = {"puntos_del_dia": dia_gen["puntos_totales"], "puesto_del_dia": dia_gen["puesto"],
+                              "barcos": dia_gen["barcos"], "pruebas_del_dia": len(res["pruebas"]),
+                              "nota": "puesto por la suma de puntos de las pruebas del día, sin descartes"}
+    h["top5_del_dia"] = h.pop("top5_de_la_general")
+    g = next((f for f in hasta["general"] if f["vela"] == v), None)
+    if g:
+        h["general_tras_el_dia"] = {"puesto": g["puesto"], "puntos_netos": g["neto"], "barcos": hasta["inscritos"],
+                                    "pruebas_hasta_hoy": len(hasta["pruebas"]), "descartes": hasta["descartes"]}
+    h.pop("segun_el_viento", None)
+    # nombres «del día» para que el texto no hable del campeonato
+    if "medias_del_campeonato" in h:
+        h["medias_del_dia"] = h.pop("medias_del_campeonato")
+        h["medias_del_dia"]["comparacion"] = "top5 = mediana de los 5 primeros del día (sin contar este barco)"
+    if h.get("escora_optima_en_ceñida"):
+        h["escora_optima_en_ceñida"]["nota"] = "todas las ceñidas del campeonato hasta hoy juntas (más datos que un solo día)"
+    h["nota"] = "salidas, laylines, puertas y medias se refieren solo a las pruebas de este día"
+    return h

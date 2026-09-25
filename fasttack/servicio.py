@@ -42,21 +42,39 @@ def _ruta_analisis(alm: Almacen, camp: dict, prueba: dict):
     return alm._dir(camp["event_id"], camp["division"]) / nombre
 
 
-def resumen_campeonato(alm: Almacen, camp_id: str, descartes: int | None = None) -> dict:
+def dia_de(ms: int, tz_ms: int) -> str:
+    """Día local (AAAA-MM-DD) de un instante, con el desfase horario del campeonato."""
+    import datetime as dt
+    return dt.datetime.fromtimestamp((ms + (tz_ms or 0)) / 1000, tz=dt.timezone.utc).strftime("%Y-%m-%d")
+
+
+def resumen_campeonato(alm: Almacen, camp_id: str, descartes: int | None = None,
+                       hasta_dia: str | None = None, solo_dia: str | None = None) -> dict:
     """General calculada y agregados de las pruebas que cuentan. Solo usa los análisis ya guardados;
-    las pruebas sin analizar salen en 'pendientes' (la web las pide una a una y vuelve a llamar)."""
+    las pruebas sin analizar salen en 'pendientes' (la web las pide una a una y vuelve a llamar).
+    solo_dia: solo las pruebas de ese día; hasta_dia: las de ese día y anteriores."""
     camp = camp_mod.leer(alm, camp_id)
     if camp is None:
         raise KeyError(camp_id)
+    tz = camp.get("tz_offset_ms") or 0
     pruebas = sorted((p for p in camp["pruebas"] if p["numero"] is not None and p["llegadas"]), key=lambda p: p["numero"])
+    # Inscritos: barcos con alguna llegada en todo el campeonato (RaceSense lista también dispositivos
+    # de prueba que no regatean); también para un día, porque la penalización es inscritos + 1
+    inscritos = [b["clave"] for b in camp["barcos"] if any(b["clave"] in p["llegadas"] for p in pruebas)]
+    if solo_dia:
+        pruebas = [p for p in pruebas if dia_de(p["senal"], tz) == solo_dia]
+    if hasta_dia:
+        pruebas = [p for p in pruebas if dia_de(p["senal"], tz) <= hasta_dia]
     hechos = {}
     for p in pruebas:
         ruta = _ruta_analisis(alm, camp, p)
         if ruta.exists():
             hechos[p["clave"]] = json.loads(ruta.read_text())
-    # Inscritos: barcos con alguna llegada (RaceSense lista también dispositivos de prueba que no regatean)
-    inscritos = [b["clave"] for b in camp["barcos"] if any(b["clave"] in p["llegadas"] for p in pruebas)]
     res = resumen.resumen(pruebas, inscritos, hechos, descartes)
+    for p, fila in zip(pruebas, res["pruebas"]):
+        fila["senal"] = p["senal"]
+        fila["dia"] = dia_de(p["senal"], tz)
+    res["dias"] = sorted({f["dia"] for f in res["pruebas"]})
     res["version"] = analisis.VERSION
     return res
 

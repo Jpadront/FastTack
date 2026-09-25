@@ -52,3 +52,8 @@ def test_sin_claude_code_error_claro(monkeypatch):
 def test_cifras_del_nombre_del_campo():
     datos = {"salidas": {"veces_en_el_top_10_a_60_s": 1}}
     assert no_verificadas("Solo 1 de 3 salidas en el top 10 a 60 s; a 90 s no hay dato.", datos) == ["90 s"]
+
+
+def test_instrucciones_del_dia():
+    t = debrief.instrucciones({"tipo": "debrief del día", "clase": "Snipe"})
+    assert "Claves para mañana" in t and "equipo de Snipe" in t

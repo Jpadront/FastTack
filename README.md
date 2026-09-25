@@ -104,6 +104,7 @@ En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. 
 - **Con Claude.ai**: *Copiar las instrucciones* (llevan las cifras), pegarlas en una conversación nueva de claude.ai, y pegar la respuesta en FastTack. Sirve desde cualquier sitio, también desde el móvil.
 - El texto se guarda y se reutiliza. Si cambian las cifras (nueva versión del motor, viento de referencia…), avisa de que conviene regenerarlo.
 
+- **Tres debriefs**: de cada prueba (pestaña *Debrief IA*); **de cada día** y **del campeonato** (al final del Resumen, con un selector). El del día usa solo las pruebas de ese día (resultado del día, top 5 del día) y cómo quedas en la general al terminarlo; acaba con las claves para mañana. El del campeonato usa las pruebas disputadas y analizadas hasta ese momento: no hace falta que el campeonato termine; cuando haya pruebas nuevas avisa para regenerarlo.
 - **Referencia: el top 5.** Las conclusiones salen de comparar con los 5 primeros de la prueba (o de la general, en el campeonato); la mediana de la flota queda como contexto.
 
 Para instalar Claude Code en el Mac (sin Node ni permisos de administrador):

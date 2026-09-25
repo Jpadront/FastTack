@@ -1,1 +1,1 @@
-__version__ = "0.11.0"  # cualquier clase con Atlas 2
+__version__ = "0.12.0"  # debrief por día
