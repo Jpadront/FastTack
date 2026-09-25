@@ -153,7 +153,7 @@ Detalles importantes:
 | Clasificación por regata | Sí (por hora de llegada) | `finishes[]`. Si faltan llegadas o la regata entera, se reconstruye desde la telemetría y se marca como «reconstruida» |
 | General con penalizaciones, retiradas y jurado | **No** | se calcula y se marca como calculada |
 | Viento (TWD y TWS) | **No** | se reconstruye (estimado) |
-| Corriente | **No** | se estima como la diferencia entre SOG/COG y la velocidad y el rumbo por el agua (estimado; con poca precisión sin corredera). En Cascais es importante y varía por zonas: se estima por zona y hora a partir de la flota |
+| Corriente | **No** | se estima como la diferencia entre SOG/COG y la velocidad y el rumbo por el agua (estimado; con poca precisión sin corredera). En Cascais es importante y varía por zonas: se estimará por zona y hora a partir de la flota (**pendiente para una fase de análisis posterior**) |
 | Nombre y función de cada baliza | Sí | `divisions[].courses[].achievements[]` (sn hex → 16 bits bajos) |
 | Secuencia del recorrido y vueltas | **No** | se infiere a partir de los pasos de la flota |
 
@@ -163,7 +163,15 @@ El 9 y el 11 de septiembre se navegaron **2 pruebas cada día** (confirmado por 
 
 - `/api/regatta` guarda la salida de la primera prueba (regatas 4 y 7), **sin ninguna llegada** y con listas OCS dudosas (31 y 26 barcos). Con la telemetría, en la señal solo había 14 y 9 barcos en el lado del recorrido; de ellos, 13 y 9 están en esas listas.
 - La segunda prueba de esos días **no existe** en `/api/regatta`.
-- La telemetría sí tiene las cuatro pruebas. `racing-summary` también marca el cambio: su regata 5 empieza el 09-09 a las 14:06 UTC y su regata 8 el 11-09 a las 13:37.
+- **La telemetría sí tiene las cuatro pruebas completas** y se descarga igual que cualquier otra: unos 1,1 millones de filas por día. Lo que falta son solo los metadatos del comité (salida, llegadas, OCS) en `/api/regatta`.
+- **Por qué el visor no las muestra.** Hay dos numeraciones desfasadas:
+  - la del documento del comité (`/api/regatta`, `raceNumber`);
+  - la del contador de los dispositivos (`race_number` y `racing-summary`).
+  El contador de los dispositivos pasa a la regata 5 el 09-09 a las 14:06 UTC, y esa ventana llega hasta el 10-09 a las 14:42. La regata 8 empieza el 11-09 a las 13:37 y llega hasta el 12-09 a las 13:50. El visor combina las dos fuentes y descarta una prueba de telemetría si coincide con una del documento. La 2.ª prueba de esos días queda absorbida y desaparece.
+  - El código del visor lo avisa en consola: «dropped in detection or hidden by an operator».
+  - No es una ocultación manual: `/api/race-hides/{eventId}?from&to` responde sin cambios para esos días.
+- El visor no tiene exportación (ni CSV, ni GPX, ni botón de descarga). La única vía son estas APIs.
+- **(nuevo)** Otros endpoints del visor, sin clave: `/api/race-hides`, `/api/course-overlay` (correcciones del recorrido hechas por el administrador) y `/api/boat-mutes` (barcos silenciados), todos con `/{eventId}?from=ms&to=ms`. En J/70 los tres están vacíos para el 9 y el 11. La ingesta debería leerlos.
 
 Reconstrucción con `fase1_reconstruir.py` (resultados en `data/sample/reconstruccion_j70.md`). Horas UTC; en Cascais la hora local es UTC+1.
 
