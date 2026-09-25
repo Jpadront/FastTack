@@ -16,7 +16,7 @@ from ..ingesta.almacen import Almacen
 from ..ingesta.campeonato import DivisionAmbigua, elegir_division
 from ..ingesta.racesense import ErrorRaceSense
 from ..ingesta.url import UrlNoValida, leer_url
-from .. import servicio
+from .. import __version__, servicio
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 BARCO_POR_DEFECTO = "ESP1214"
@@ -136,6 +136,10 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             raise HTTPException(404, "Campeonato no encontrado")
         return {**(c or {"id": camp_id}), **(dict(r[0]) if r else {})}
 
+    @app.get("/api/version")
+    def version():
+        return {"version": __version__}
+
     @app.get("/api/preferencias")
     def preferencias():
         return {"barco": alm.preferencia("barco", BARCO_POR_DEFECTO)}
@@ -155,9 +159,12 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             raise HTTPException(404, "Ruta de la API desconocida")
         f = (WEB / resto).resolve()
         if resto and f.is_file() and WEB in f.parents:
-            return FileResponse(f)
+            # assets/ lleva el hash en el nombre: se puede guardar para siempre
+            cache = "public, max-age=31536000, immutable" if "assets" in f.parts else "no-cache"
+            return FileResponse(f, headers={"Cache-Control": cache})
         if (WEB / "index.html").exists():
-            return FileResponse(WEB / "index.html")
+            # la página se revalida siempre: así una versión nueva se ve al recargar
+            return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-cache"})
         raise HTTPException(404, "La web no está compilada: ejecuta `npm run build` en frontend/.")
 
     return app

@@ -9,10 +9,12 @@
   // Rutas por hash: #/ · #/c/<campeonato> · #/c/<campeonato>/p/<clave de la prueba>
   let ruta = $state(location.hash);
   let barco = $state('ESP1214');
+  let version = $state('');
 
   onMount(async () => {
     window.addEventListener('hashchange', () => (ruta = location.hash));
     try { barco = (await api.preferencias()).barco; } catch {}
+    try { version = (await (await fetch('/api/version')).json()).version; } catch {}
   });
 
   const partes = $derived(ruta.startsWith('#/c/') ? ruta.slice(4).split('/p/') : []);
@@ -47,6 +49,7 @@
     <Inicio />
   {/if}
 </main>
+<footer class="pie-app">FastTack {version ? 'v' + version : ''}</footer>
 
 <style>
   .barra {
@@ -57,5 +60,6 @@
   .marca { font: 700 20px var(--display); color: var(--tinta); text-decoration: none; letter-spacing: .02em; }
   .barco { font: 600 15px var(--display); color: var(--yo); display: inline-flex; align-items: center; gap: 6px; }
   .punto { width: 9px; height: 9px; border-radius: 50%; background: var(--yo); }
+  .pie-app { text-align: center; font: 500 12px var(--mono); color: var(--tinta-3); padding: 8px 0 20px; }
   main { max-width: 1180px; margin: 0 auto; padding: 16px 16px 48px; }
 </style>

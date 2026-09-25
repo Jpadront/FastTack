@@ -27,10 +27,12 @@ def main():
 
     import uvicorn
 
+    from . import __version__
     from .api.app import crear_app
 
     host = "127.0.0.1" if a.solo_este_ordenador else "0.0.0.0"
-    print(f"\n  FastTack en este ordenador:  http://localhost:{a.puerto}")
+    print(f"\n  FastTack {__version__}")
+    print(f"  En este ordenador:  http://localhost:{a.puerto}")
     ip = None if a.solo_este_ordenador else ip_local()
     if ip:
         url = f"http://{ip}:{a.puerto}"
