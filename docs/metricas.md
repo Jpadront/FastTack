@@ -29,7 +29,7 @@ RaceSense repite a veces una muestra de un barco (misma posición, SOG y rumbo) 
 | baja | 25–45 % | medias (SOG, VMG, TWA, escora, cabeceo) marcadas como poco representativas; sin distancia navegada |
 | insuficiente | < 25 % | «datos insuficientes» |
 
-La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en línea recta y los subestima. La **pérdida en una maniobra** exige datos densos (ningún hueco > 4 s en −30…+30 s): si no, la maniobra se cuenta pero sin pérdida.
+La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en línea recta y los subestima. La **pérdida en una maniobra** exige datos densos (ningún hueco > 6 s desde 25 s antes hasta que el barco está acelerado): si no, la maniobra se cuenta pero sin pérdida.
 
 ## Recorrido y pasos por baliza (calculado; balizas sin Atlas: estimado)
 
@@ -99,6 +99,10 @@ Para cada ceñida (`fasttack/motor/escora.py`):
 
 Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 20°): por eso se da un rango y no un valor único. Lo más claro y repetido es la **pérdida por escora baja**: por debajo de 10–14°, entre −2 % y −10 % de VMG frente a los vecinos. En el Mundial, la mejor franja es 16–18° en la mayoría de las ceñidas, y el top 5 navega dentro o al lado del rango. Es una asociación en la flota, no un experimento: la escora también depende del peso y del estilo de cada tripulación. Validado con datos sintéticos (óptimo conocido, sin efecto, pocos datos).
 
+### Escora óptima en popa
+
+Igual que en ceñida, pero con la escora con signo: + a sotavento, − a barlovento (en popa se escora a barlovento a propósito con poco viento). Mundial P9, popa 1 (20–25 kn): rango óptimo 0–4°, escorar ≥ 6° a sotavento pierde un 3–5 % de VMG frente a los vecinos.
+
 ## Métricas por barco y tramo
 
 | Métrica | Naturaleza | Fórmula |
@@ -110,13 +114,34 @@ Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 2
 | TWA | estimada | media de \|COG − TWD(t)\| |
 | Distancia navegada | calculada | suma de los segmentos entre muestras (cobertura ≥ 50 %) |
 | Maniobras | estimada | cambios del lado del viento (COG respecto a TWD) mantenidos ≥ 15 s; las pegadas (< 20 s) a un rodeo no cuentan, salvo al inicio de la ceñida desde la salida |
-| Pérdida en maniobra (m) | estimada | VMG de referencia = media de −30…−10 s y de +20…+30 s; pérdida = referencia × 30 s − avance real entre −10 y +20 s (≥ 0) |
+| Pérdida en maniobra (m y s) | estimada | por fases (ver «Maniobras por fases»): lo que se habría avanzado sin maniobrar desde el inicio del giro hasta estar acelerado, menos lo que se avanzó; hasta la mitad del giro a la VMG de entrada y después a la VMG estable de la nueva amura. En segundos: metros / VMG media de las dos amuras |
 | Layline | estimada | desde la última maniobra antes de la baliza (o el inicio del tramo): el barco está fuera si la demora a la baliza queda fuera del cono entre los rumbos sobre el fondo de las dos amuras de la flota (con la corriente incluida; si no hay, TWD ± TWA de la flota); exceso = distancia en perpendicular a la layline de esa amura. Lado del campo mirando hacia donde se navega (en ceñida, a barlovento; en popa, a sotavento, como Track to Tactics y las puertas) y segundos navegados fuera de la layline. No se calcula hacia la línea de llegada |
 | Motivo del sobrepaso de layline | estimada | entre el cruce de la layline (sobre la amura anterior) y la última maniobra, con las posiciones de toda la flota cada 5 s (`fasttack/motor/trafico.py`): **no podía virar** si en ≥ 50 % de ese tiempo había un barco a menos de 3 esloras en el sector hacia el que tenía que girar; **tráfico en la layline** si al cruzarla ya había ≥ 3 barcos por ella delante (en la nueva amura, a menos de 3 esloras de la recta y más cerca de la baliza); si no, **cálculo**. Mundial P9: 55 de 90 sobrepasos de la ceñida 1 por cálculo y 28 porque no podía virar; en Cascais Vela (flota más compacta) predomina el tráfico |
 | Escora, cabeceo | directa | mediana de \|roll − desviación del sensor\| y de pitch; IQR. **Desviación del sensor** = media de la escora mediana en amura babor y en amura estribor (en ceñida); 0 si faltan datos de alguna |
 | Modo | estimada | frente a la mediana de la flota en el tramo. Ceñida: TWA < med − 1,5° y SOG < med → ALTURA; TWA > med + 1,5° y SOG > med → VELOCIDAD; si no, VMG. Popa: TWA > med + 3° y SOG < med → PROFUNDO; TWA < med − 3° y SOG > med → VELOCIDAD |
 | Barco fantasma | estimada | recorre el tramo con el TWA de la flota y siempre en la amura favorecida: en cada corte avanza largo/10 a lo largo del eje y navega (largo/10) / cos(α − \|δ\|), con δ = TWD del corte − rumbo del eje (en popa, con TWD + 180°) |
 | Eficiencia de roladas | estimada | (fantasma − distancia navegada) / fantasma |
+
+## Maniobras por fases (estimado)
+
+Cada virada o trasluchada (`tramos.analizar_maniobra`), con el rumbo de proa (COG si no hay brújula):
+- **Entrada** (25 a 8 s antes): rumbo, SOG y VMG estables en la amura de partida.
+- **Giro**: desde que la proa se separa > 6° del rumbo de entrada hasta que llega a menos de 6° del rumbo de la nueva amura, o lo pasa (salida más arribada/orzada).
+- **Aceleración**: desde el final del giro hasta que la SOG vuelve al 95 % de la estable de la nueva amura (25–45 s tras el giro) durante 4 s (como mucho 60 s; si no llega, «no llega»).
+- **Pérdida**: ver la tabla. Asignar a cada amura su propia VMG hace que una rolada o una racha no cuenten como pérdida de la maniobra (se cargan a la amura: táctica).
+- **Caída de velocidad**: SOG mínima frente a la de entrada.
+- **Ángulo de salida**: TWA media en los 10 s tras el giro, respecto a la TWA con la que el barco saca más VMG en el tramo (franjas de 2°, ≥ 30 s). Recién salidos, todos los barcos abaten y arriban para acelerar (el COG da un ángulo mayor que la proa), así que la referencia es cómo salen **los 5 primeros de la prueba**: en ceñida, más cerrado que ellos tarda en acelerar y más abierto pierde altura; en popa al revés, más profundo tarda en acelerar y más alto pierde profundidad (tolerancia ±3°). Sin flota (sesiones .vkx), frente a la salida habitual del propio barco en esa prueba.
+- No se miden: maniobras encadenadas sin tiempo de estabilizar (se mide solo con la VMG de entrada), giros de más de 115° (virar y arribar a un través, rodeos) o con una amura de VMG < 60 % de la otra.
+
+Validación: con la ventana fija anterior (−10…+20 s) un barco que tarda más de 20 s en acelerar no contaba esa parte. En el Mundial (P9, 100 barcos, rachas de 20–25 kn) se miden 347 de 1 375 maniobras (el resto caen en huecos de RaceSense): virada mediana 2 m (1,0 s), giro 9 s, aceleración 14 s, caída de SOG 33 %; trasluchada 3,4 m (1,5 s). En la sesión .vkx de ESP 1214 (2 Hz sin huecos) se miden todas: virada 3,6 m (2,2 s), giro 5 s, aceleración 14 s. Frente a Track to Tactics (Cascais Vela P9, pérdida por virada): ESP 1170 7,6 m frente a 5,6 m; «65» 2,8 m frente a 2,7 m. En la flota del Mundial la pérdida apenas cambia con el ángulo de salida (en 20–25 kn): por eso se compara con el top 5 y no con un ángulo «óptimo» absoluto.
+
+## Táctica por tramo (estimado)
+
+`fasttack/motor/tactica.py`, por barco y tramo (sin maniobras ni rodeos):
+- **Amura favorecida**: en cada instante, de las dos amuras posibles con la TWD de ese momento y el ángulo al viento del barco, la que apunta más cerca de la baliza. % del tiempo en ella y segundos en la otra (con la TWD a < 3° de la dirección de la baliza no cuenta).
+- **Maniobras a favor / en contra de la rolada**: pasan de la amura desfavorecida a la favorecida (virar en el rolón) o al revés (10–40 s antes y después).
+- **Lado del campo**: distancia lateral a la recta entre las balizas del tramo, mirando a barlovento; % a la derecha y separación máxima.
+- Validación (Mundial, 6 pruebas, 20 tramos): la correlación entre el % en la amura favorecida y el parcial del tramo va en el sentido esperado (más tiempo en la favorecida, parcial menor) en 14 de 20 tramos, pero es débil (mediana −0,17): la TWD de la flota no ve las roladas locales. Usar la TWD de cada lado del campo no la mejora. Es orientativa.
 
 ## Salida
 
@@ -132,6 +157,15 @@ Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 2
 | Baliza 1 | calculada | posición y gap en su paso |
 | OCS | directa | lista del comité (`ocs` − exonerados − `clearedOcs`); «sobre la línea (GPS)» si el margen es positivo |
 | Sesgo de la línea | estimada | extremo más a barlovento según la TWD en el disparo; grados = asin(ventaja / largo de la línea); metros = ventaja a barlovento |
+
+### Posicionamiento en la salida (estimado)
+
+Con las posiciones GPS de todos los barcos que salen, cada 2 s de −30 a +90 s (`salida.posicionamiento`, distancias en esloras de la clase):
+- **Llegada a la línea**: **pasado** si está en el lado del recorrido en la señal; **pronto** si 10 s antes estaba a menos de una eslora de la línea y en la señal su SOG es < 70 % de la mediana de la primera fila (a ≤ 2 esloras de la línea): tuvo que frenar; **tarde** si en la señal estaba a más de 2 esloras y cruza > 5 s después; si no, **a tiempo**.
+- **Hueco a sotavento / barlovento**: distancia lateral en la señal al barco más cercano a la par (±1,5 esloras a lo largo del rumbo) por cada lado; «libre» si no hay nadie a menos de 6.
+- **Aire sucio (primeros 90 s)**: tiempo con otro barco a ≤ 6 esloras en la dirección de la que llega el viento aparente (TWD girada 15° hacia proa, ±15°); quién y desde qué lado. **Planchado** si ≥ 30 % y el barco estaba a barlovento.
+- **Sotavento en posición segura (primeros 60 s)**: barco a sotavento a ≤ 1,5 esloras de lado y de 0 a 2 esloras delante: no deja arribar para acelerar (≥ 50 %).
+- Validación (Mundial, 5 pruebas, 247 salidas con datos): puesto mediano a los 60 s: a tiempo 18, tarde 29, pasado 51; aire limpio 22, en aire sucio 35,5, planchado desde barlovento 44,5. El hueco a sotavento y el sotavento en posición segura no separan tanto (22,5 frente a 22): se dan como contexto.
 
 ## Capas del mapa y valores instantáneos (estimado)
 

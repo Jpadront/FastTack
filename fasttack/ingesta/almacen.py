@@ -66,6 +66,10 @@ class Almacen:
         self.db = sqlite3.connect(self.raiz / "fasttack.sqlite", check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_ESQUEMA)
+        cols = {r[1] for r in self.db.execute("pragma table_info(campeonato)")}
+        if "alias" not in cols:   # nombre puesto por el usuario (v0.16)
+            self.db.execute("alter table campeonato add column alias text")
+            self.db.commit()
 
     # ------------------------------------------------------------------ SQLite
     def sql(self, q: str, args=()):

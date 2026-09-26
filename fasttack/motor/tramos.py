@@ -13,7 +13,7 @@ from .viento import VientoTramo
 MANIOBRA_MIN_MS = 15_000      # tiempo en la nueva amura para contar una maniobra
 MARGEN_RODEO_MS = 20_000      # maniobras pegadas a un rodeo son parte del rodeo
 VENTANA_ANTES_S, VENTANA_DESPUES_S = 30, 30   # pérdida en maniobra
-HUECO_MANIOBRA_MS = 4_000
+HUECO_MANIOBRA_MS = 6000
 
 
 @dataclass
@@ -23,6 +23,7 @@ class Maniobra:
     perdida_m: float | None   # None si hay huecos en la ventana
     x: float
     y: float
+    detalle: dict | None = None   # fases de la maniobra (analizar_maniobra)
 
 
 def lado(tr: Traza, i: np.ndarray, twd: np.ndarray, ceñida: bool) -> np.ndarray:
@@ -62,36 +63,217 @@ def maniobras(tr: Traza, t0: int, t1: int, viento: VientoTramo, margen_ini_ms: i
                 tm = int((tr.ts[idx[j]] + tr.ts[idx[j + 1]]) / 2)
                 if tm - t0 > margen_ini_ms and t1 - tm > MARGEN_RODEO_MS:
                     out.append(Maniobra(tm, "virada" if viento.ceñida else "trasluchada",
-                                        perdida(tr, tm, viento), float(tr.x[idx[j]]), float(tr.y[idx[j]])))
+                                        None, float(tr.x[idx[j]]), float(tr.y[idx[j]])))
             j = k - 1 if k - 1 > j else j + 1
         else:
             j += 1
+    objetivo = twa_objetivo(tr, t0, t1, viento, [m.t for m in out])
+    for k, m in enumerate(out):   # con la siguiente maniobra ya conocida (encadenadas)
+        m.detalle = analizar_maniobra(tr, m.t, viento, out[k + 1].t if k + 1 < len(out) else t1, objetivo)
+        m.perdida_m = m.detalle["perdida_m"] if m.detalle else None
     return out
 
 
-def perdida(tr: Traza, tm: int, viento: VientoTramo) -> float | None:
-    """Metros perdidos en una maniobra. Referencia = VMG media de antes (−30…−10 s) y de después
-    (+20…+30 s); pérdida = lo que se habría avanzado a esa VMG entre −10 y +20 s menos lo que se
-    avanzó de verdad. Usar también el «después» evita culpar a la maniobra de un cambio de
-    presión. Solo si no hay huecos de más de 4 s en −30…+30 s."""
-    a, b = tm - VENTANA_ANTES_S * 1000, tm + VENTANA_DESPUES_S * 1000
-    i = tr.tramo(a, b)
-    if len(i) < 10 or np.any(np.diff(tr.ts[i]) > HUECO_MANIOBRA_MS) or tr.ts[i[0]] - a > 3000 or b - tr.ts[i[-1]] > 3000:
+# Fases de una maniobra (ver docs/metricas.md, «Maniobras»)
+GIRO_UMBRAL_DEG = 6.0          # el giro empieza/acaba al separarse/llegar a menos de esto del rumbo estable
+ENTRADA_S = (-25, -8)          # rumbo, SOG y VMG de entrada (antes de que empiece a girar)
+ESTABLE_S = (25, 45)           # rumbo, SOG y VMG estables en la nueva amura (tras el giro)
+RECUPERADO_FRAC = 0.95         # acelerado: SOG ≥ 95 % de la estable de salida…
+RECUPERADO_S = 4               # …durante 4 s
+MAX_RECUPERACION_S = 60
+GIRO_MAX_DEG = 115             # más giro: viró y cambió de rumbo (p. ej. arribó a un través)
+CAMBIO_MODO = 0.6              # VMG de una amura < 60 % de la de la otra: no es una maniobra limpia
+
+
+SALIDA_S = 10                  # ángulo de salida: TWA media de los 10 s siguientes al giro
+SALIDA_TOLERANCIA_DEG = 3.0    # a menos de esto del objetivo, la salida es correcta
+FRANJA_TWA_DEG = 2.0
+FRANJA_MIN_S = 30
+
+
+def twa_objetivo(tr: Traza, t0: int, t1: int, viento: VientoTramo, maniobras_t: list[int]) -> float | None:
+    """TWA con la que el barco saca más VMG en el tramo: franjas de 2° de TWA (navegando estable, lejos
+    de maniobras y rodeos), la de mayor VMG media con al menos 30 s de datos."""
+    i = tr.tramo(t0 + MARGEN_RODEO_MS, t1 - MARGEN_RODEO_MS)
+    if len(i) < 20:
+        return None
+    ok = ~np.isnan(tr.cog[i]) & (tr.sog[i] > viento.sog_min)
+    for tm in maniobras_t:
+        ok &= np.abs(tr.ts[i] - tm) > 45_000
+    i = i[ok]
+    if len(i) < 20:
         return None
     twd = viento.twd_en(tr.ts[i])
+    twa = np.abs(dif(tr.cog[i] - twd))
     v = vmg(tr, i, twd, viento.ceñida)
-    t = (tr.ts[i] - tm) / 1000
-    antes, despues = t < -10, t > 20
-    if antes.sum() < 3 or despues.sum() < 3 or np.isnan(v[antes]).all() or np.isnan(v[despues]).all():
+    w = np.minimum(np.diff(tr.ts[i], append=tr.ts[i][-1]), HUECO_MS) / 1000
+    franja = np.floor(twa / FRANJA_TWA_DEG)
+    mejor, mejor_v = None, -np.inf
+    for f in np.unique(franja):
+        m = franja == f
+        if w[m].sum() < FRANJA_MIN_S:
+            continue
+        vm = float(np.sum(v[m] * w[m]) / w[m].sum())
+        if vm > mejor_v:
+            mejor, mejor_v = (f + 0.5) * FRANJA_TWA_DEG, vm
+    return mejor
+
+
+def _rumbo_medio(v):
+    r = np.radians(v[~np.isnan(v)])
+    return float(np.degrees(np.arctan2(np.sin(r).mean(), np.cos(r).mean())) % 360) if len(r) else None
+
+
+def analizar_maniobra(tr: Traza, tm: int, viento: VientoTramo, siguiente: int | None = None,
+                      objetivo_twa: float | None = None) -> dict | None:
+    """Fases de una virada o trasluchada y metros perdidos.
+
+    - Entrada (−25…−8 s): rumbo, SOG y VMG estables en la amura de partida.
+    - Giro: desde que el rumbo (proa; COG si no hay) se separa más de 6° del de entrada hasta que
+      llega a menos de 6° del rumbo estable de la nueva amura (+25…+45 s tras el centro del giro).
+    - Aceleración: desde el final del giro hasta que la SOG vuelve al 95 % de la estable de salida
+      durante 4 s (como mucho 60 s).
+    - Pérdida = lo que se habría avanzado sin maniobrar desde el inicio del giro hasta estar
+      acelerado, menos lo que se avanzó. Sin maniobrar = hasta la mitad del giro, a la VMG de
+      entrada; desde ahí, a la VMG estable de la nueva amura. Así una rolada o un cambio de presión
+      (una amura mejor que la otra) no se carga a la maniobra, sino a la amura.
+    - Ángulo de salida: TWA media en los 10 s siguientes al giro frente a la TWA con la que el barco
+      saca más VMG en el tramo (twa_objetivo). Recién salido de la maniobra todos abaten y arriban
+      para acelerar, así que la referencia es cómo sale el top 5 (ver `valorar_salidas`).
+    Si la maniobra siguiente llega antes de estabilizar, la referencia es solo la de entrada
+    («encadenada»). None si hay huecos de más de 4 s o faltan datos."""
+    fin_max = tm + (ESTABLE_S[1] + 5) * 1000
+    if siguiente is not None:
+        fin_max = min(fin_max, siguiente - 5_000)
+    a = tm + ENTRADA_S[0] * 1000 - 2_000
+    i = tr.tramo(a, max(fin_max, tm + 15_000))
+    if len(i) < 10:
         return None
-    base = (float(np.nanmean(v[antes])) + float(np.nanmean(v[despues]))) / 2
-    ventana = (t >= -10) & (t <= 20)
-    tv, vv = t[ventana], np.nan_to_num(v[ventana], nan=base)
+    ts = tr.ts[i]
+    if np.any(np.diff(ts) > HUECO_MANIOBRA_MS) or ts[0] - a > 3000:
+        return None
+    t = (ts - tm) / 1000
+    rumbo = np.where(np.isnan(tr.hdg[i]), tr.cog[i], tr.hdg[i])
+    twd = viento.twd_en(ts)
+    v = vmg(tr, i, twd, viento.ceñida)
+    sog = tr.sog[i]
+    ent = (t >= ENTRADA_S[0]) & (t <= ENTRADA_S[1])
+    est = (t >= ESTABLE_S[0]) & (t <= ESTABLE_S[1]) & (ts <= fin_max)
+    encadenada = est.sum() < 5
+    if ent.sum() < 5:
+        return None
+    r_ent = _rumbo_medio(rumbo[ent])
+    if encadenada:   # rumbo de la nueva amura: los últimos segundos disponibles
+        cola = (t > 10) & (ts <= fin_max)
+        if cola.sum() < 3:
+            return None
+        r_sal = _rumbo_medio(rumbo[cola])
+    else:
+        r_sal = _rumbo_medio(rumbo[est])
+    if r_ent is None or r_sal is None or abs(dif(r_sal - r_ent)) < 30:
+        return None
+    # inicio y fin del giro
+    fuera = np.abs(dif(rumbo - r_ent)) > GIRO_UMBRAL_DEG
+    cand = np.nonzero(fuera & (t > ENTRADA_S[1]) & (t < 10))[0]
+    if not len(cand):
+        return None
+    k0 = cand[0]
+    # fin del giro: llega a menos de 6° del rumbo de la nueva amura o lo pasa (sale más arribado/orzado)
+    total = float(dif(r_sal - r_ent))
+    avance = dif(rumbo - r_ent) * np.sign(total)
+    llegado = np.nonzero((avance >= abs(total) - GIRO_UMBRAL_DEG) & (np.arange(len(t)) > k0))[0]
+    if not len(llegado):
+        return None
+    k1 = llegado[0]
+    vmg_ent, sog_ent = float(np.nanmedian(v[ent])), float(np.median(sog[ent]))
+    if encadenada:
+        vmg_est, sog_est = vmg_ent, sog_ent
+    else:
+        vmg_est, sog_est = float(np.nanmedian(v[est])), float(np.median(sog[est]))
+    ref = (vmg_ent + vmg_est) / 2
+    if not np.isfinite(ref) or min(vmg_ent, vmg_est) <= 0.3:
+        return None
+    # No es una maniobra limpia (virar y arribar a un través, rodeo, maniobra de salida…): no se mide
+    if abs(total) > GIRO_MAX_DEG or min(vmg_ent, vmg_est) < CAMBIO_MODO * max(vmg_ent, vmg_est):
+        return None
+    # acelerado: SOG ≥ 95 % de la estable durante 4 s
+    objetivo = RECUPERADO_FRAC * sog_est
+    k2 = None
+    for k in range(k1, len(t)):
+        if t[k] - t[k1] > MAX_RECUPERACION_S:
+            break
+        m = (t >= t[k]) & (t <= t[k] + RECUPERADO_S)
+        if m.sum() >= 2 and t[m][-1] - t[k] >= RECUPERADO_S - 1 and np.all(sog[m] >= objetivo):
+            k2 = k
+            break
+    completa = k2 is not None
+    if k2 is None:
+        k2 = len(t) - 1
+    tramo_ = slice(k0, k2 + 1)
+    tv, vv = t[tramo_], np.nan_to_num(v[tramo_], nan=ref)
     if len(tv) < 2:
         return None
     avance = float(np.sum((vv[1:] + vv[:-1]) / 2 * np.diff(tv))) * KN
-    esperado = base * KN * (tv[-1] - tv[0])
-    return round(max(0.0, esperado - avance), 1)
+    medio = (t[k0] + t[k1]) / 2
+    esperado = (vmg_ent * (medio - tv[0]) + vmg_est * (tv[-1] - medio)) * KN
+    perdida_m = max(0.0, esperado - avance)
+    sal = (t >= t[k1]) & (t <= t[k1] + SALIDA_S)
+    twa_sal = float(np.nanmedian(np.abs(dif(tr.cog[i][sal] - twd[sal])))) if sal.sum() >= 3 else None
+    frente = round(twa_sal - objetivo_twa, 1) if twa_sal is not None and objetivo_twa is not None else None
+    sog_min = float(np.min(sog[k0:k2 + 1]))
+    return {
+        "perdida_m": round(float(perdida_m), 1),
+        "perdida_s": round(float(perdida_m / (ref * KN)), 1),                     # segundos a la VMG de referencia
+        "duracion_giro_s": round(float(t[k1] - t[k0]), 1),
+        "tiempo_aceleracion_s": round(float(t[k2] - t[k1]), 1) if completa else None,
+        "sog_entrada_kn": round(sog_ent, 2), "sog_minima_kn": round(sog_min, 2),
+        "sog_salida_estable_kn": round(sog_est, 2),
+        "caida_sog_pct": round((1 - sog_min / sog_ent) * 100) if sog_ent > 0 else None,
+        "vmg_entrada_kn": round(vmg_ent, 2), "vmg_salida_estable_kn": round(vmg_est, 2),
+        "angulo_girado_grados": round(abs(float(dif(r_sal - r_ent)))),
+        "twa_salida_grados": None if twa_sal is None else round(twa_sal, 1),
+        "twa_objetivo_grados": None if objetivo_twa is None else round(objetivo_twa, 1),
+        "salida_frente_al_objetivo_grados": frente,   # + = más abierta en ceñida / más profunda en popa
+        "encadenada": bool(encadenada), "acelerado": bool(completa),
+    }
+
+
+def valorar_salidas(maniobras: dict[str, list[Maniobra]], referencia: list[str]) -> dict:
+    """Ángulo de salida frente al del top 5 (mediana de sus salidas respecto a su propia TWA objetivo).
+    En ceñida, más cerrada que el top 5 tarda más en acelerar y más abierta pierde altura; en popa al
+    revés: más profunda tarda en acelerar y más alta pierde profundidad. Devuelve la referencia."""
+    ref_d = [m.detalle["salida_frente_al_objetivo_grados"] for v in referencia for m in maniobras.get(v, [])
+             if m.detalle and m.detalle.get("salida_frente_al_objetivo_grados") is not None]
+    con_datos = {v for v in referencia for m in maniobras.get(v, []) if m.detalle}
+    quien = "el top 5"
+    if len(ref_d) < 4 or len(con_datos) < 3:
+        # Sin flota (sesiones .vkx): frente a la salida habitual del barco en esta prueba
+        ref_d = [m.detalle["salida_frente_al_objetivo_grados"] for ms in maniobras.values() for m in ms
+                 if m.detalle and m.detalle.get("salida_frente_al_objetivo_grados") is not None]
+        if len(ref_d) < 4 or len(maniobras) >= 3:
+            return {}
+        quien, referencia = "su salida habitual", list(maniobras)
+    ref = float(np.median(ref_d))
+    ref5 = {k: [m.detalle[k] for v in referencia for m in maniobras.get(v, []) if m.detalle and m.detalle.get(k) is not None]
+            for k in ("perdida_s", "duracion_giro_s", "tiempo_aceleracion_s", "caida_sog_pct")}
+    for ms in maniobras.values():
+        for m in ms:
+            d = (m.detalle or {}).get("salida_frente_al_objetivo_grados")
+            if d is None:
+                continue
+            x = round(d - ref, 1)
+            m.detalle["salida_frente_al_top5_grados"] = x
+            ceñida = m.tipo == "virada"
+            if abs(x) <= SALIDA_TOLERANCIA_DEG:
+                m.detalle["salida"] = f"como {quien}"
+            elif ceñida:
+                m.detalle["salida"] = (f"más cerrada (alta) que {quien}: tarda más en acelerar" if x < 0
+                                       else f"más abierta (baja) que {quien}: pierde altura")
+            else:
+                m.detalle["salida"] = (f"más profunda que {quien}: tarda más en acelerar" if x > 0
+                                       else f"más alta que {quien}: pierde profundidad")
+    return {"referencia": quien, "salida_top5_frente_al_objetivo_grados": round(ref, 1), "maniobras_top5": len(ref_d),
+            **{f"{k}_top5": round(float(np.median(v)), 1) for k, v in ref5.items() if v}}
 
 
 def media_temporal(v: np.ndarray, ts: np.ndarray) -> float | None:

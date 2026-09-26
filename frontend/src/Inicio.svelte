@@ -12,6 +12,25 @@
 
   onMount(async () => { guardados = await api.campeonatos().catch(() => []); });
 
+  let editando = $state(null), nuevoNombre = $state('');
+  async function renombrar(c) {
+    try {
+      await api.renombrar(c.id, nuevoNombre);
+      guardados = await api.campeonatos();
+      editando = null;
+    } catch (err) { error = err.message; }
+  }
+  async function eliminar(c) {
+    const sesion = c.id.startsWith('vkx-');
+    if (!confirm(`¿Eliminar «${c.nombre || c.id}» de la lista?` + (sesion
+      ? ' Se borrarán los archivos .vkx subidos a esta sesión.'
+      : ' Los datos ya descargados de RaceSense se conservan: si lo vuelves a cargar, no se descargan otra vez.'))) return;
+    try {
+      await api.eliminar(c.id);
+      guardados = guardados.filter((x) => x.id !== c.id);
+    } catch (err) { error = err.message; }
+  }
+
   async function cargar(e) {
     e.preventDefault();
     error = '';
@@ -42,6 +61,7 @@
 <div class="columnas">
 <section class="guardados">
   <h2>Tus campeonatos</h2>
+  {#if error && !url}<p class="error" role="alert">{error}</p>{/if}
   {#if guardados.length}
     <ul>
       {#each guardados as c}
@@ -54,7 +74,17 @@
             <div class="accesos">
               <a class="acceso" href={`#/c/${encodeURIComponent(c.id)}`}>Pruebas</a>
               <a class="acceso" href={`#/c/${encodeURIComponent(c.id)}/resumen`}>Resumen</a>
+              <button class="icono" title="Cambiar el nombre" aria-label={`Cambiar el nombre de ${c.nombre || c.id}`} onclick={() => { editando = c.id; nuevoNombre = c.nombre || ''; }}>✎</button>
+              <button class="icono" title="Eliminar de la lista" aria-label={`Eliminar ${c.nombre || c.id}`} onclick={() => eliminar(c)}>🗑</button>
             </div>
+            {#if editando === c.id}
+              <form class="renombrar" onsubmit={(e) => { e.preventDefault(); renombrar(c); }}>
+                <input class="campo" bind:value={nuevoNombre} aria-label="Nuevo nombre" placeholder={c.nombre_original || ''}>
+                <button class="boton">Guardar</button>
+                <button type="button" class="boton claro" onclick={() => (editando = null)}>Cancelar</button>
+              </form>
+              {#if c.nombre_original && c.nombre_original !== c.nombre}<p class="tenue original">Nombre original: {c.nombre_original} (déjalo vacío para recuperarlo)</p>{/if}
+            {/if}
           </div>
         </li>
       {/each}
@@ -108,7 +138,13 @@
   .ficha:hover { border-color: var(--tinta-3); }
   .nombre { display: grid; gap: 2px; color: var(--tinta); text-decoration: none; font-size: 17px; }
   .nombre .tenue { font-size: 14px; }
-  .accesos { display: flex; gap: 6px; }
+  .accesos { display: flex; gap: 6px; align-items: center; }
+  .icono { background: none; border: 0; padding: 3px 6px; font-size: 15px; color: var(--tinta-3); cursor: pointer; border-radius: 8px; }
+  .icono:hover { color: var(--tinta); background: color-mix(in srgb, var(--foco) 8%, transparent); }
+  .renombrar { display: flex; gap: 6px; width: 100%; margin: 0; }
+  .renombrar .campo { flex: 1; min-width: 0; padding: 5px 8px; }
+  .renombrar .boton { padding: 5px 12px; font-size: 14px; }
+  .original { font-size: 13px; width: 100%; }
   .acceso { font: 600 14px var(--display); color: var(--foco); text-decoration: none; border: 1px solid color-mix(in srgb, var(--foco) 40%, transparent);
     border-radius: 14px; padding: 3px 12px; }
   .acceso:hover { background: color-mix(in srgb, var(--foco) 10%, transparent); }

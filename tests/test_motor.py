@@ -32,7 +32,7 @@ def barco_ciñendo(nombre, tws_sog=6.0, twa=40.0, bordos_s=120, dur_s=900, dt=1.
             y.append(y[-1] + d * math.cos(math.radians(rumbo_)))
     x, y = np.array(x), np.array(y)
     n = len(ts)
-    return Traza(nombre, ts, x, y, np.array(sog), np.zeros(n), np.zeros(n), np.zeros(n), cog(ts, x, y))
+    return Traza(nombre, ts, x, y, np.array(sog), np.full(n, np.nan), np.zeros(n), np.zeros(n), cog(ts, x, y))  # sin brújula: COG
 
 
 def viento_fijo(ceñida=True, twd=TWD):

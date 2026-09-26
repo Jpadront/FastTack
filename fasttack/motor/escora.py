@@ -1,4 +1,7 @@
-"""Escora óptima en ceñida (estimada), a partir de toda la flota.
+"""Escora óptima en ceñida y en popa (estimada), a partir de toda la flota.
+
+En popa la escora lleva signo: + = a sotavento, − = a barlovento (en popa se escora a barlovento a
+propósito con poco viento, para equilibrar el timón y abrir el spi). En ceñida, siempre a sotavento.
 
 1. Cada ceñida se corta en segmentos de 30 s por barco, fuera de los rodeos (20 s) y de las
    maniobras (30 s antes y 15 s después), con ≥ 70 % de datos y rumbo estable.
@@ -35,6 +38,7 @@ MIN_SEGMENTOS, MIN_BARCOS = 30, 8
 
 def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], viento: VientoTramo,
               maniobras: dict[str, list[int]], offsets: dict[str, float]) -> list[tuple]:
+    ceñida = viento.ceñida
     """(vela, t centro, escora °, VMG kn, x, y, amura ±1, SOG kn) de cada segmento válido."""
     out = []
     for v, (e, s) in barcos.items():
@@ -51,9 +55,14 @@ def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], vien
                 i = i[~np.isnan(x.cog[i]) & (x.sog[i] > viento.sog_min)]
                 if len(i) >= 8:
                     twd = viento.twd_en(x.ts[i])
-                    rel = (x.cog[i] - twd + 540) % 360 - 180
+                    al_viento = (x.cog[i] - twd + 540) % 360 - 180             # + = viento por babor
+                    rel = al_viento if ceñida else (al_viento + 360) % 360 - 180
                     vmg = float(np.mean(x.sog[i] * np.cos(np.radians(rel))))
-                    out.append((v, (a + b) / 2, float(np.median(np.abs(x.roll[i] - off))), vmg,
+                    if ceñida:
+                        esc = float(np.median(np.abs(x.roll[i] - off)))
+                    else:   # a sotavento (+) o a barlovento (−): viento por babor → sotavento = estribor (roll +)
+                        esc = float(np.median((x.roll[i] - off) * np.sign(al_viento)))
+                    out.append((v, (a + b) / 2, esc, vmg,
                                 float(np.mean(x.x[i])), float(np.mean(x.y[i])), float(np.sign(np.median(rel))),
                                 float(np.mean(x.sog[i]))))
             a = b

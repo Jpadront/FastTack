@@ -28,11 +28,12 @@ Reglas estrictas:
 - Cuando hables de un tramo, nómbralo siempre con su nombre concreto y la prueba («Popa 2 de la prueba 3»). Si la cifra es una media de varios tramos («vmg_media_de_las_popas…»), dilo así («media de las dos popas»); no la atribuyas a un tramo.
 - Cita las cifras tal cual o redondeadas, con coma decimal y un espacio antes de la unidad (4,06 kn; 87 m; 54 s; 10,5°; 66 %). Los tiempos, en segundos o como mm:ss. La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
 - La corriente es ESTIMADA y tiene un nivel de confianza: si es baja, no la uses para explicar resultados. Úsala para explicar laylines o la ventaja de un lado solo si la confianza es alta o media.
-- Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO (no hay anemómetro): no lo presentes como medido.
+- Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO por FastTack a partir del GPS de los barcos (no hay anemómetro): no lo presentes como medido ni lo atribuyas a RaceSense. Basta con decirlo una vez.
 - Los huecos de telemetría y la calidad de datos son limitaciones de RaceSense, no errores de la tripulación: menciónalos solo como límite del análisis.
 - Si un dato falta o la calidad de datos es baja, dilo en lugar de interpretarlo. No inventes causas que los datos no muestren; si propones una causa, preséntala como hipótesis.
 - Izquierda/derecha son lados del campo, mirando a barlovento (en las puertas, mirando a sotavento, como indica el dato). No los traduzcas a babor/estribor ni a amuras.
 - Si los DATOS traen «sesion_propia» con un solo barco, no hay flota ni top 5: no hables de puestos ni de la flota; compara entre pruebas y entre tramos del propio barco (evolución, regularidad, ceñida frente a popa) y recuerda que llegadas y balizas son estimadas.
+- En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
 
@@ -62,6 +63,29 @@ DIA = COMUN + """
 Máximo 350 palabras.
 """
 
+COACH = COMUN + """
+Eres el entrenador del equipo. Este es el debrief de coach de un día: tramo a tramo de cada prueba, con lo mejor y lo peor de la jornada. Habla de táctica (lado del campo, amura favorecida, maniobras a favor o en contra de la rolada, laylines, puertas), de cómo se aprovecharon los cambios de viento (roladas y presión de cada tramo) y de cada rol a bordo.
+- «mejores_tramos» y «peores_tramos» ya vienen ordenados por el motor: úsalos tal cual para lo mejor y lo peor.
+- Roles: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (preséntalo así, no como un hecho medido): táctico → lado, amura favorecida, maniobras respecto a la rolada, laylines, puertas y salida; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora frente a la óptima (ceñida y popa) y aceleración tras las maniobras; proa → maniobras (giro, maniobras encadenadas) y rodeos.
+- En las maniobras usa el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y salir más abierto pierde altura; en popa al revés: más profundo tarda en acelerar y más alto pierde profundidad.
+- Un tramo sin métricas (calidad baja o sin datos) no se valora: dilo en una línea.
+
+## Resumen de la jornada
+(2–3 frases)
+## Tramo a tramo
+(un subapartado «### Prueba N» por prueba; dentro, una línea por tramo que empiece por su nombre en negrita, con 1–3 frases: táctica y roladas, velocidad y escora, maniobras)
+## Lo mejor de la jornada
+(lista de 2–3 puntos, cada uno con su tramo)
+## Lo peor de la jornada
+(lista de 2–3 puntos, cada uno con su tramo)
+## Por roles
+(una línea por rol: qué mantener y qué corregir)
+## Prioridades para el próximo día
+(lista numerada de 3 puntos)
+
+Máximo 900 palabras.
+"""
+
 CAMPEONATO = COMUN + """
 Si «estado.campeonato_en_curso» es verdadero, el campeonato no ha terminado: habla de lo disputado hasta ahora y orienta las prioridades a las pruebas que quedan.
 
@@ -83,7 +107,8 @@ class IANoDisponible(RuntimeError):
 
 
 def instrucciones(datos: dict) -> str:
-    base = {"debrief del campeonato": CAMPEONATO, "debrief del día": DIA}.get(datos.get("tipo"), PRUEBA)
+    base = {"debrief del campeonato": CAMPEONATO, "debrief del día": DIA,
+            "debrief de coach del día": COACH}.get(datos.get("tipo"), PRUEBA)
     base = base.replace("{clase}", datos.get("clase") or "vela")
     return base + "\nDATOS:\n```json\n" + json.dumps(datos, ensure_ascii=False, indent=1) + "\n```\n"
 
@@ -167,6 +192,34 @@ def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     return h
 
 
+def _valorar_tramos(h: dict):
+    """Debrief de coach: los 2 mejores y los 2 peores tramos del día. Criterio: VMG frente al top 5 de
+    la prueba; sin flota, frente a la media del propio barco en ese tipo de tramo ese día."""
+    h["tipo"] = "debrief de coach del día"
+    tramos = [(f["prueba"], t) for f in h["pruebas"] for t in f.get("tramos", [])
+              if t.get("vmg_kn") is not None and t.get("calidad_de_datos") in ("alta", "media", "baja")]
+    for tipo in ("ceñida", "popa"):
+        vs = [t["vmg_kn"] for _, t in tramos if t.get("tipo") == tipo]
+        if vs:
+            media = sum(vs) / len(vs)
+            for _, t in tramos:
+                if t.get("tipo") == tipo:
+                    t["vmg_frente_a_tu_media_del_dia_kn"] = round(t["vmg_kn"] - media, 2)
+    con_top5 = [x for x in tramos if x[1].get("vmg_frente_al_top5_kn") is not None]
+    if len(con_top5) >= 3:
+        clave, criterio = "vmg_frente_al_top5_kn", "VMG frente al top 5 de la prueba"
+        lista = con_top5
+    else:
+        clave, criterio = "vmg_frente_a_tu_media_del_dia_kn", "VMG frente a la media del barco en ese tipo de tramo ese día"
+        lista = tramos
+    orden = sorted(lista, key=lambda x: x[1][clave], reverse=True)
+    fila = lambda x: {"prueba": x[0], "tramo": x[1]["nombre"], clave: x[1][clave]}
+    n = min(2, len(orden) // 2)
+    h["mejores_tramos"] = [fila(x) for x in orden[:n]]
+    h["peores_tramos"] = [fila(x) for x in orden[::-1][:n]]
+    h["criterio_mejores_y_peores"] = criterio
+
+
 def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     from .. import servicio
     from ..ingesta import campeonato as camp_mod
@@ -184,6 +237,9 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
         h["estado"] = {"campeonato_en_curso": en_curso, "pruebas_disputadas_hasta_ahora": len(res["pruebas"]),
                        "pruebas_aun_sin_analizar": len(res["pendientes"])}
         return h
+    coach = ambito.startswith("coach:")
+    if coach:
+        ambito = "dia:" + ambito[6:]
     if ambito.startswith("dia:"):
         dia = ambito[4:]
         res = servicio.resumen_campeonato(alm, camp_id, descartes=0, solo_dia=dia)
@@ -210,11 +266,16 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
                 continue
             if an.get("recorrido_dudoso"):
                 continue
-            fila["tramos"] = hechos_mod.tramos_compactos(hechos_mod.de_prueba(an, barco, nombres, camp.get("clase")))
+            dp = hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))
+            fila["tramos"] = hechos_mod.tramos_compactos(dp, coach=coach)
+            if coach and dp.get("salida"):
+                fila["salida"] = dp["salida"]
         # la escora óptima de un solo día tiene pocos datos: la del campeonato hasta ese día
         h["escora_optima_en_ceñida"] = hechos_mod._escora_camp(hasta, barco, [x["vela"] for x in hasta["general"] if x["vela"] != barco][:5])
         if h["escora_optima_en_ceñida"]:
             h["escora_optima_en_ceñida"]["nota"] = "todas las ceñidas del campeonato hasta este día juntas (un día solo tiene pocos datos)"
+        if coach:
+            _valorar_tramos(h)
         return h
     an = servicio.analisis_prueba(alm, camp_id, ambito)
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:

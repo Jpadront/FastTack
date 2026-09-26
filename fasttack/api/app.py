@@ -52,6 +52,10 @@ class PeticionSesion(BaseModel):
 MAX_VKX = 200 * 1024 * 1024
 
 
+class CambioCampeonato(BaseModel):
+    nombre: str | None = None   # vacío = volver al nombre original
+
+
 class Preferencias(BaseModel):
     barco: str
 
@@ -136,8 +140,8 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
     @app.get("/api/campeonatos")
     def lista():
         return [dict(r) for r in alm.sql(
-            "select id, nombre, clase, division, inicio, fin, estado, progreso, error, cargado_en "
-            "from campeonato order by coalesce(inicio, 0) desc")]
+            "select id, coalesce(nullif(alias, ''), nombre) as nombre, nombre as nombre_original, clase, division, "
+            "inicio, fin, estado, progreso, error, cargado_en from campeonato order by coalesce(inicio, 0) desc")]
 
     @app.get("/api/campeonatos/{camp_id:path}/estado")
     def estado(camp_id: str):
@@ -219,10 +223,38 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
     @app.get("/api/campeonatos/{camp_id:path}")
     def detalle(camp_id: str):
         c = camp_mod.leer(alm, camp_id)
-        r = alm.sql("select estado, progreso, error, url from campeonato where id=?", (camp_id,))
+        r = alm.sql("select estado, progreso, error, url, alias from campeonato where id=?", (camp_id,))
         if not c and not r:
             raise HTTPException(404, "Campeonato no encontrado")
-        return {**(c or {"id": camp_id}), **(dict(r[0]) if r else {})}
+        extra = dict(r[0]) if r else {}
+        alias = extra.pop("alias", None)
+        out = {**(c or {"id": camp_id}), **extra}
+        if alias:
+            out["nombre_original"], out["nombre"] = out.get("nombre"), alias
+        return out
+
+    @app.patch("/api/campeonatos/{camp_id:path}")
+    def renombrar(camp_id: str, p: CambioCampeonato):
+        if not alm.sql("select 1 from campeonato where id=?", (camp_id,)):
+            raise HTTPException(404, "Campeonato no encontrado")
+        alm.sql("update campeonato set alias=? where id=?", ((p.nombre or "").strip() or None, camp_id))
+        return detalle(camp_id)
+
+    @app.delete("/api/campeonatos/{camp_id:path}")
+    def eliminar(camp_id: str):
+        """Lo quita de la lista con sus ajustes y debriefs. Los archivos .vkx de una sesión se borran;
+        la telemetría ya descargada de RaceSense se conserva (si se vuelve a cargar, no se descarga otra vez)."""
+        if camp_id in tareas:
+            raise HTTPException(409, "Se está cargando: espera a que termine.")
+        if not alm.sql("select 1 from campeonato where id=?", (camp_id,)):
+            raise HTTPException(404, "Campeonato no encontrado")
+        for tabla in ("ajuste_prueba", "debrief"):
+            alm.sql(f"delete from {tabla} where campeonato=?", (camp_id,))
+        alm.sql("delete from campeonato where id=?", (camp_id,))
+        if sesion_mod.es_sesion(camp_id):
+            import shutil
+            shutil.rmtree(alm.ruta(camp_id), ignore_errors=True)
+        return {"eliminado": camp_id}
 
     @app.get("/api/version")
     def version():

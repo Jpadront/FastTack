@@ -51,6 +51,50 @@ def _limpia(d):
     return d
 
 
+def _tactica(tac, top5):
+    """Cómo se jugaron las roladas y el lado del campo (motor/tactica.py), con el top 5."""
+    if not tac:
+        return None
+    t5 = [x for x in top5 if x]
+    out = {
+        "amura_favorecida_pct": tac.get("amura_favorecida_pct"),
+        "amura_favorecida_significa": "tiempo navegando en la amura que apuntaba más a la baliza con la rolada de cada momento",
+        "tiempo_en_la_amura_desfavorecida_s": tac.get("tiempo_en_amura_desfavorecida_s"),
+        "maniobras_a_favor_de_la_rolada": tac.get("maniobras_a_favor_de_la_rolada"),
+        "maniobras_en_contra_de_la_rolada": tac.get("maniobras_en_contra_de_la_rolada"),
+        "lado_del_campo": tac.get("lado"), "tiempo_a_la_derecha_pct": tac.get("derecha_pct"),
+        "separacion_maxima_del_eje_m": tac.get("separacion_maxima_m"),
+    }
+    if len(t5) >= 2:
+        out["top5_amura_favorecida_mediana_pct"] = _r(_mediana([x.get("amura_favorecida_pct") for x in t5]))
+        out["top5_tiempo_a_la_derecha_mediano_pct"] = _r(_mediana([x.get("derecha_pct") for x in t5]))
+        lados = [x.get("lado") for x in t5 if x.get("lado")]
+        out["top5_lados"] = {l: lados.count(l) for l in ("izquierda", "centro", "derecha") if lados.count(l)}
+    return out
+
+
+def _maniobras(f, t, an, v):
+    """Fases de las maniobras del tramo (medianas) frente al top 5 de la prueba."""
+    d = f.get("maniobras_detalle")
+    if not d:
+        return None
+    tipo = "virada" if t["tipo"] == "ceñida" else "trasluchada"
+    ref = (an.get("maniobras_top5") or {}).get(tipo) or {}
+    salidas = [m["detalle"].get("salida") for m in t["maniobras"].get(v, []) if m.get("detalle") and m["detalle"].get("salida")]
+    out = {"tipo": tipo, "medidas": len([m for m in t["maniobras"].get(v, []) if m.get("detalle")]),
+           "perdida_mediana_s": d.get("perdida_s"), "duracion_del_giro_mediana_s": d.get("duracion_giro_s"),
+           "tiempo_en_acelerar_mediano_s": d.get("tiempo_aceleracion_s"), "caida_de_velocidad_mediana_pct": _r(d.get("caida_sog_pct")),
+           "sog_entrada_mediana_kn": d.get("sog_entrada_kn"), "sog_minima_mediana_kn": d.get("sog_minima_kn"),
+           "angulo_de_salida_frente_al_top5_grados": d.get("salida_frente_al_top5_grados"),
+           "angulo_de_salida_significa": ("+ = sale más abierto (baja, pierde altura), − = más cerrado (alta, tarda en acelerar)"
+                                          if tipo == "virada" else "+ = sale más profundo (tarda en acelerar), − = más alto (pierde profundidad)"),
+           "salidas": {x: salidas.count(x) for x in sorted(set(salidas))} or None,
+           "top5_perdida_mediana_s": ref.get("perdida_s_top5"), "top5_duracion_del_giro_mediana_s": ref.get("duracion_giro_s_top5"),
+           "top5_tiempo_en_acelerar_mediano_s": ref.get("tiempo_aceleracion_s_top5"),
+           "top5_caida_de_velocidad_mediana_pct": _r(ref.get("caida_sog_pct_top5"))}
+    return out
+
+
 def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None = None) -> dict:
     nombres = nombres or {}
     p = an["prueba"]
@@ -108,6 +152,26 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "sesgo_de_la_linea_grados": _r(s["sesgo"]["grados"], 1), "ventaja_del_extremo_m": _r(s["sesgo"]["metros"]),
             "twd_en_el_disparo_grados": _r(s.get("twd_disparo")),
         }
+        d = b.get("diagnostico")
+        if d:
+            h["salida"]["posicionamiento"] = {
+                "llegada_a_la_linea": d.get("llegada"),
+                "distancia_a_la_linea_10_s_antes_m": _r(b.get("margen_menos_10_m"), 1),
+                "distancia_a_la_linea_30_s_antes_m": _r(b.get("margen_menos_30_m"), 1),
+                "sog_en_el_disparo_primera_fila_mediana_kn": s.get("sog_primera_fila"),
+                "hueco_a_sotavento": d.get("hueco_a_sotavento"),
+                "hueco_a_sotavento_esloras": b.get("hueco_sotavento_esloras"),
+                "barco_a_sotavento": _vela(b["vecino_sotavento"], nombres) if b.get("vecino_sotavento") else None,
+                "hueco_a_barlovento_esloras": b.get("hueco_barlovento_esloras"),
+                "barco_a_barlovento": _vela(b["vecino_barlovento"], nombres) if b.get("vecino_barlovento") else None,
+                "primeros_90_s": d.get("primeros_90_s"),
+                "aire_sucio_primeros_90_s_pct": b.get("aire_sucio_pct"),
+                "aire_sucio_de": _vela(b["aire_sucio_de"], nombres) if b.get("aire_sucio_de") and (b.get("aire_sucio_pct") or 0) > 0 else None,
+                "aire_sucio_llegaba_desde": b.get("aire_sucio_lado") if (b.get("aire_sucio_pct") or 0) > 0 else None,
+                "barco_a_sotavento_en_posicion_segura_primeros_60_s_pct": b.get("sotavento_seguro_pct"),
+                "nota": ("estimado con las posiciones GPS de la flota: aire sucio = otro barco a ≤ 6 esloras de donde le llega el "
+                         "viento aparente; posición segura = barco a sotavento a ≤ 1,5 esloras de lado y hasta 2 delante"),
+            }
         s5 = [s["barcos"][x] for x in top5 if (s["barcos"].get(x) or {}).get("en_salida")]
         h["salida"]["top5"] = {"con_datos_en_el_disparo": len(s5),
                                "margen_a_la_linea_mediana_m": _r(_mediana([x.get("margen_m") for x in s5]), 1),
@@ -168,6 +232,9 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "frente_al_barco_fantasma_m": _r(f.get("vs_fantasma_m")),
             "eficiencia_en_roladas_pct": _r(f.get("eficiencia_pct"), 1),
             "escora_grados": _r(f.get("escora")), "cabeceo_grados": _r(f.get("cabeceo")),
+            "escora_con_signo_grados": _r(f.get("escora_sotavento"), 1),
+            "tactica": _tactica(f.get("tactica"), [t["barcos"][x].get("tactica") for x in top5 if t["barcos"].get(x)]),
+            "maniobras_detalle": _maniobras(f, t, an, v),
         }
         o = t.get("escora_optima")
         if o:
@@ -181,7 +248,9 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
                 "perdida_por_encima_pct": (o.get("encima") or {}).get("perdida_pct"),
                 "tiempo_del_barco_en_rango_pct": f.get("escora_en_rango_pct"),
                 "con_mas_escora_va_mas_rapido_pero_mas_abierto_desde_grados": (o.get("sobreescora") or {}).get("desde_grados"),
-                "nota": "estimada: VMG relativa a la flota por franjas de 2° de escora; si no es concluyente, la escora no marcó diferencias",
+                "nota": ("estimada: VMG relativa a la flota por franjas de 2° de escora; si no es concluyente, la escora no marcó diferencias"
+                         + ("; en popa la escora lleva signo: + a sotavento, − a barlovento (compárala con escora_con_signo_grados)"
+                            if t["tipo"] == "popa" else "")),
             }
         if f.get("puerta"):
             fin = next((c for c in an["controles"] if c["id"] == t["hasta"]), {})
@@ -364,18 +433,21 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
     return h
 
 
-def tramos_compactos(dp: dict) -> list[dict]:
+def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
     """Desglose por tramo de una prueba (de «de_prueba») con lo esencial, para el debrief del día."""
     claves = ("nombre", "tipo", "puesto_al_final", "puestos_ganados", "detras_del_primero_s", "calidad_de_datos",
               "vmg_kn", "vmg_frente_al_top5_kn", "vmg_frente_a_la_mediana_kn", "sog_frente_al_top5_kn",
               "twa_grados", "maniobras", "perdida_en_maniobras_m", "layline", "puerta", "modo")
+    claves_coach = ("sog_kn", "sog_frente_al_top5_kn", "sog_mediana_flota_kn", "twa_mediana_flota_grados", "escora_grados",
+                    "escora_con_signo_grados", "escora_optima", "tactica", "maniobras_detalle", "viento", "parcial_s",
+                    "frente_al_barco_fantasma_m", "top5")
     out = []
     for t in dp.get("tramos", []):
         if t.get("sin_datos_del_barco"):
             out.append({"nombre": t["nombre"], "sin_datos_del_barco": True})
             continue
-        f = {k: t[k] for k in claves if k in t}
-        if "top5" in t:
+        f = {k: t[k] for k in claves + (claves_coach if coach else ()) if k in t}
+        if "top5" in t and not coach:
             f["vmg_top5_kn"] = t["top5"].get("vmg_mediana_kn")
         out.append(f)
     return out

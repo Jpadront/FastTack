@@ -16,12 +16,13 @@ from . import recorrido as rec
 from . import salida as sal
 from . import corriente as corr
 from . import trafico as traf
+from . import tactica as tac
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.9.0"
+VERSION = "0.12.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -148,7 +149,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         largo = float(distancia(*p_ini, *p_fin)) if p_ini and p_fin else None
         tramos.append({"id": f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
                        "ceñida": ceñida, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
-                       "eje": eje_tramo, "largo_m": largo, "lider": lider})
+                       "eje": eje_tramo, "largo_m": largo, "lider": lider, "p_ini": p_ini})
     calibrar_tws([t["viento"] for t in tramos], prueba.get("viento_kn"))
 
     # ---------------------------------------------------------------- maniobras y offset de escora
@@ -157,6 +158,16 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         for v, (e, s) in t["en_tramo"].items():
             man_por_tramo[t["id"]][v] = tm.maniobras(trazas[v], e, s, t["viento"],
                                                      0 if t["desde"] == "salida" else tm.MARGEN_RODEO_MS)
+    # Ángulo de salida de las maniobras frente al top 5 de la prueba (por tipo)
+    top5_prueba = sorted(llegadas, key=llegadas.get)[:5]
+    ref_maniobras = {}
+    for tipo_c in (True, False):
+        por_barco = {}
+        for t in tramos:
+            if t["ceñida"] == tipo_c:
+                for v, ms in man_por_tramo[t["id"]].items():
+                    por_barco.setdefault(v, []).extend(ms)
+        ref_maniobras["virada" if tipo_c else "trasluchada"] = tm.valorar_salidas(por_barco, top5_prueba)
     offsets = {v: tm.offset_escora(tr, [(e, s, t["viento"]) for t in tramos for vv, (e, s) in t["en_tramo"].items() if vv == v])
                for v, tr in trazas.items()}
 
@@ -179,6 +190,13 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             f["maniobras"] = len(mans)
             f["perdida_m"] = round(sum(perdidas), 1) if perdidas else (0.0 if not mans else None)
             f["perdidas_medidas"] = len(perdidas)
+            dets = [m.detalle for m in mans if m.detalle]
+            if dets:
+                med = lambda k: (round(float(np.median([d[k] for d in dets if d.get(k) is not None])), 1)
+                                 if any(d.get(k) is not None for d in dets) else None)
+                f["maniobras_detalle"] = {k: med(k) for k in ("perdida_s", "duracion_giro_s", "tiempo_aceleracion_s",
+                                                               "caida_sog_pct", "sog_entrada_kn", "sog_minima_kn",
+                                                               "salida_frente_al_top5_grados")}
             if cob >= COBERTURA_MIN and len(i) > 5:
                 twd = vt.twd_en(tr.ts[i])
                 ref = twd if ceñida else (twd + 180) % 360
@@ -190,10 +208,16 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 esc = np.abs(tr.roll[i] - offsets[v])
                 f["escora"] = _r(np.median(esc), 1)
                 f["escora_iqr"] = _r(np.subtract(*np.percentile(esc, [75, 25])), 1)
+                if not ceñida:   # en popa, con signo: + = a sotavento, − = a barlovento
+                    al_viento = dif(tr.cog[i] - twd)
+                    ok_s = ~np.isnan(al_viento)
+                    f["escora_sotavento"] = _r(np.median((tr.roll[i][ok_s] - offsets[v]) * np.sign(al_viento[ok_s])), 1) if ok_s.any() else None
                 f["cabeceo"] = _r(np.median(tr.pitch[i]), 1)
                 f["cabeceo_iqr"] = _r(np.subtract(*np.percentile(tr.pitch[i], [75, 25])), 1)
             else:
                 f.update({k: None for k in ("sog", "vmg", "twa", "distancia_m", "escora", "escora_iqr", "cabeceo", "cabeceo_iqr")})
+                if not ceñida:
+                    f["escora_sotavento"] = None
             fin_ctrl = next(c for c in controles if c.id == t["hasta"])
             paso_fin = pasos[v].get(t["hasta"])
             marca = None
@@ -216,6 +240,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 lay["trafico"] = traf.analizar(rejilla, v, marca, centro, semi, t_desde, lay["_tp"], zona)
             lay.pop("_cono", None)
             lay.pop("_tp", None)
+            f["tactica"] = tac.tramo(tr, e, s, vt, ceñida, marca if marca is not None else _punto(fin_ctrl, s),
+                                     t["p_ini"], t["eje"], mans)
             f["puerta"] = paso_fin.puerta if paso_fin else None
             filas[v] = f
         # posiciones y gaps al final del tramo
@@ -247,7 +273,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                   for k, c in enumerate(vt.cortes)]
         # Escora óptima (solo ceñida): franjas de escora frente a la VMG relativa a la flota
         opt = None
-        if ceñida:
+        if True:   # ceñida y popa (en popa, escora con signo: − = a barlovento)
             opt = esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
                                                    {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
             if opt:
@@ -266,7 +292,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             "fases_presion": fp,
             "fantasma_m": fant,
             "barcos": filas,
-            "maniobras": {v: [{"t": m.t, "tipo": m.tipo, "perdida_m": m.perdida_m} for m in ms]
+            "maniobras": {v: [{"t": m.t, "tipo": m.tipo, "perdida_m": m.perdida_m, **({"detalle": m.detalle} if m.detalle else {})} for m in ms]
                           for v, ms in man_por_tramo[t["id"]].items()},
         })
 
@@ -279,7 +305,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         man_c1 = man_por_tramo[c1["id"]]
         salida = sal.analizar(trazas, pin, comite, senal, eje, c1["viento"],
                               _punto(b1, b1.rodeo_mediano) if b1 else None, pasos_b1, man_c1,
-                              prueba.get("ocs", []), prueba.get("ocs_fiable", True))
+                              prueba.get("ocs", []), prueba.get("ocs_fiable", True), zona / 3)
         salida["tws_disparo"] = prueba.get("viento_kn")
 
     # ---------------------------------------------------------------- rendimiento (toda la prueba)
@@ -348,6 +374,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                          "(balizas estimadas mal situadas). Las llegadas valen; las métricas por tramo, no.")
     return {
         "recorrido_dudoso": dudoso,
+        "maniobras_top5": ref_maniobras,
         "corriente": (c.a_dict() | {"por_vuelta": vueltas_corr}) if c else None,
         "brujulas": c.a_dict_brujulas() if c else {"declinacion_grados": round(decl, 1), "desvios_grados": {}},
         "version": VERSION,

@@ -4,7 +4,11 @@
   // rango óptimo sombreado, la escora mediana del barco de referencia y la del top 5.
   import { num, mediana, COLOR_YO } from './datos.js';
 
-  let { tramo, ref, top5 = [], nombreRef = '', titulo = 'Escora óptima en ceñida', enRangoTexto = null, nota = '' } = $props();
+  let { tramo, ref, top5 = [], nombreRef = '', titulo = null, enRangoTexto = null, nota = '' } = $props();
+  // En popa la escora lleva signo (+ a sotavento, − a barlovento): el campo del barco es otro
+  const popa = $derived(tramo.tipo === 'popa');
+  const campo = $derived(popa ? 'escora_sotavento' : 'escora');
+  const tituloV = $derived(titulo ?? (popa ? 'Escora óptima en popa' : 'Escora óptima en ceñida'));
   const o = $derived(tramo.escora_optima);
   const W0 = 520, H = 170, M = { l: 46, r: 12, t: 12, b: 30 };
   let W = $state(W0);
@@ -15,9 +19,9 @@
   const yLo = $derived(Math.min(...yTodos, 99) - 1), yHi = $derived(Math.max(...yTodos, 100) + 1);
   const X = (e) => M.l + ((e - xLo) / (xHi - xLo)) * (W - M.l - M.r);
   const Y = (v) => H - M.b - ((v - yLo) / (yHi - yLo)) * (H - M.t - M.b);
-  const mia = $derived(tramo.barcos[ref]?.escora ?? null);
+  const mia = $derived(tramo.barcos[ref]?.[campo] ?? null);
   const enRango = $derived(tramo.barcos[ref]?.escora_en_rango_pct ?? null);
-  const esc5 = $derived(mediana(top5.map((v) => tramo.barcos[v]?.escora).filter((x) => x != null)));
+  const esc5 = $derived(mediana(top5.map((v) => tramo.barcos[v]?.[campo]).filter((x) => x != null)));
   const franjaMia = $derived(mia == null ? null : fr.find((f) => mia >= f.desde && mia < f.hasta));
   const mejorV = $derived(Math.max(...yVals));
   let hover = $state(null);
@@ -25,7 +29,8 @@
 </script>
 
 <section class="tarjeta bloque">
-  <h3>{titulo} <span class="est">estimada</span></h3>
+  <h3>{tituloV} <span class="est">estimada</span></h3>
+  {#if popa}<p class="sub">En popa, escora con signo: <b>+</b> a sotavento, <b>−</b> a barlovento.</p>{/if}
   {#if o.concluyente}
     <p class="titular">Rango óptimo <b>{o.rango[0]}–{o.rango[1]}°</b> (mejor franja {o.mejor[0]}–{o.mejor[1]}°).
       {#if o.debajo}Por debajo de {o.debajo.hasta_grados}°, <b>−{num(o.debajo.perdida_pct, 1)} %</b> de VMG frente a los vecinos.{/if}

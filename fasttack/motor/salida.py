@@ -28,9 +28,133 @@ def sesgo(pin_xy, com_xy, twd: float) -> dict:
             "metros": round(abs(ventaja_pin), 1), "largo_linea_m": round(largo, 1)}
 
 
+# Posicionamiento en la salida (estimado; distancias en esloras de la clase)
+SUCIO_ESLORAS = 6            # la sombra de viento de un barco llega hasta ~6 esloras
+SUCIO_GRADOS = 15            # y abarca ±15° alrededor del viento aparente
+AWA_GIRO = 15                # el viento aparente en ceñida viene ~15° más a proa que el real
+HUECO_LIBRE_ESLORAS = 6
+PRIMERA_FILA_ESLORAS = 2
+PASO_S = 2
+SEGURO_LADO_ESLORAS, SEGURO_DELANTE_ESLORAS = 1.5, 2.0
+
+
+def _estado(tr: Traza, t: int):
+    """(x, y, cog, sog) en t; None si hay hueco."""
+    xy = tr.en(t)
+    if xy is None:
+        return None
+    j = int(np.clip(np.searchsorted(tr.ts, t), 0, len(tr.ts) - 1))
+    c = tr.cog[j]
+    return (xy[0], xy[1], None if np.isnan(c) else float(c), tr.en(t, "sog"))
+
+
+def posicionamiento(trazas: dict[str, Traza], salen: set, senal: int, twd: float, firmada, eslora: float) -> dict:
+    """Para cada barco que sale: cómo llegó a la línea, qué barcos tenía al lado en la señal y si
+    navegó en aire sucio (o con un barco a sotavento en posición segura) los primeros 90 s.
+
+    - Lados: a sotavento/barlovento según la amura del barco en cada momento. «Delante» = a lo largo
+      de su rumbo.
+    - Aire sucio: otro barco a ≤ 6 esloras en la dirección de la que le llega el viento aparente
+      (TWD girada 15° hacia su proa, ±15°).
+    - Sotavento en posición segura: un barco a sotavento a ≤ 1,5 esloras de lado y de 0 a 2 esloras delante,
+      que le quita el viento limpio al arribar (no le deja navegar más abierto para acelerar)."""
+    velas = [v for v in trazas if v in salen]
+    tiempos = list(range(senal - 30_000, senal + 90_001, PASO_S * 1000))
+    est = {v: [_estado(trazas[v], t) for t in tiempos] for v in velas}
+    k0 = tiempos.index(senal)
+    out = {}
+    for v in velas:
+        sucio, seguro, total, culpables = 0, 0, 0, {}
+        vecinos = {"sotavento": None, "barlovento": None}
+        for k in range(k0, len(tiempos)):
+            a = est[v][k]
+            if a is None or a[2] is None:
+                continue
+            ax, ay, ac, _ = a
+            lado = 1.0 if dif(ac - twd) > 0 else -1.0          # + = viento por babor
+            awd = (twd + lado * AWA_GIRO) % 360               # de dónde le llega el viento aparente
+            total += 1
+            en_sucio = en_seguro = False
+            for w in velas:
+                if w == v or est[w][k] is None:
+                    continue
+                bx, by = est[w][k][0], est[w][k][1]
+                dx, dy = bx - ax, by - ay
+                d = math.hypot(dx, dy)
+                if d > HUECO_LIBRE_ESLORAS * eslora or d < 1e-6:
+                    continue
+                marc = math.degrees(math.atan2(dx, dy)) % 360
+                delante, costado = a_ejes(dx, dy, ac)          # costado + = a estribor
+                a_sotavento = costado * lado > 0                # viento por babor → sotavento = estribor
+                if d <= SUCIO_ESLORAS * eslora and abs(dif(marc - awd)) <= SUCIO_GRADOS:
+                    en_sucio = True
+                    culpables[w] = culpables.get(w, 0) + 1
+                if a_sotavento and abs(costado) <= SEGURO_LADO_ESLORAS * eslora and 0 <= delante <= SEGURO_DELANTE_ESLORAS * eslora:
+                    en_seguro = True
+                if k == k0 and abs(delante) <= 1.5 * eslora:  # vecinos en la señal, a la par
+                    lado_v = "sotavento" if a_sotavento else "barlovento"
+                    if vecinos[lado_v] is None or abs(costado) < vecinos[lado_v][1]:
+                        vecinos[lado_v] = (w, abs(costado))
+            sucio += en_sucio
+            seguro += en_seguro and k <= k0 + 60 // PASO_S
+        # aproximación: distancia a la línea a −30 y −10 s, tiempo casi parado cerca de ella
+        def margen(dt):
+            e = est[v][tiempos.index(senal + dt * 1000)]
+            return None if e is None else float(firmada(e[0], e[1]))
+        cerca_lento = sum(1 for k in range(0, k0) if est[v][k] is not None and est[v][k][3] is not None
+                          and abs(float(firmada(est[v][k][0], est[v][k][1]))) <= 2 * eslora)
+        culpable = max(culpables, key=culpables.get) if culpables else None
+        cul = None
+        if culpable:
+            a, b = est[v][k0], est[culpable][k0]
+            if a is not None and b is not None and a[2] is not None:
+                _, cst = a_ejes(b[0] - a[0], b[1] - a[1], a[2])
+                lado = 1.0 if dif(a[2] - twd) > 0 else -1.0
+                cul = "barlovento" if cst * lado < 0 else "sotavento"
+        out[v] = {
+            "margen_menos_30_m": None if margen(-30) is None else round(margen(-30), 1),
+            "margen_menos_10_m": None if margen(-10) is None else round(margen(-10), 1),
+            "s_cerca_de_la_linea_antes": cerca_lento * PASO_S,
+            "hueco_sotavento_esloras": (None if vecinos["sotavento"] is None else round(vecinos["sotavento"][1] / eslora, 1)),
+            "vecino_sotavento": vecinos["sotavento"][0] if vecinos["sotavento"] else None,
+            "hueco_barlovento_esloras": (None if vecinos["barlovento"] is None else round(vecinos["barlovento"][1] / eslora, 1)),
+            "vecino_barlovento": vecinos["barlovento"][0] if vecinos["barlovento"] else None,
+            "aire_sucio_pct": round(sucio / total * 100) if total else None,
+            "aire_sucio_de": culpable, "aire_sucio_lado": cul,
+            "sotavento_seguro_pct": round(seguro / min(total, 60 // PASO_S + 1) * 100) if total else None,
+        }
+    return out
+
+
+def valorar(f: dict, ref_sog: float | None, eslora: float) -> dict:
+    """Diagnóstico de la salida a partir de las cifras (sin interpretar más allá de ellas)."""
+    diag = {}
+    m, sog = f.get("margen_m"), f.get("sog_disparo")
+    m10 = f.get("margen_menos_10_m")
+    if f.get("sobre_linea_gps") or f.get("ocs") not in (None, "NO"):
+        diag["llegada"] = "pasado: sobre la línea en la señal"
+    elif m10 is not None and m10 > -eslora and sog is not None and ref_sog and sog < 0.7 * ref_sog:
+        diag["llegada"] = "pronto: a menos de una eslora de la línea 10 s antes y lento en la señal (tuvo que frenar)"
+    elif m is not None and m < -PRIMERA_FILA_ESLORAS * eslora and (f.get("cruce_s") or 0) > 5:
+        diag["llegada"] = "tarde: lejos de la línea en la señal"
+    elif m is not None:
+        diag["llegada"] = "a tiempo"
+    h = f.get("hueco_sotavento_esloras")
+    diag["hueco_a_sotavento"] = ("libre (nadie a menos de 6 esloras a la par)" if h is None and f.get("en_salida")
+                                 else "sin hueco" if h is not None and h < 1.5 else "justo" if h is not None and h < 3 else "suficiente" if h is not None else None)
+    if (f.get("aire_sucio_pct") or 0) >= 30:
+        diag["primeros_90_s"] = ("planchado por un barco a barlovento" if f.get("aire_sucio_lado") == "barlovento"
+                                 else "en aire sucio de un barco a sotavento/delante")
+    elif (f.get("sotavento_seguro_pct") or 0) >= 50:
+        diag["primeros_90_s"] = "con un barco a sotavento en posición segura: no pudo arribar para acelerar"
+    else:
+        diag["primeros_90_s"] = "aire limpio"
+    return diag
+
+
 def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, eje: float,
              viento1: VientoTramo, b1_xy, pasos_b1: dict[str, int], maniobras: dict[str, list[Maniobra]],
-             ocs: list[str], ocs_fiable: bool) -> dict:
+             ocs: list[str], ocs_fiable: bool, eslora: float = 6.93) -> dict:
     pin_xy, com_xy = _linea(pin, comite, senal)
     cp = np.array([pin_xy[0] - com_xy[0], pin_xy[1] - com_xy[1]])
     largo2 = float(cp @ cp) or 1.0
@@ -83,6 +207,15 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
     for v, f in barcos.items():
         f["en_salida"] = v in salen
 
+    # Posicionamiento: aproximación, vecinos en la señal y aire sucio los primeros 90 s
+    pos = posicionamiento(trazas, salen, senal, twd, firmada, eslora)
+    fila1 = [f["sog_disparo"] for f in barcos.values() if f.get("en_salida") and f["sog_disparo"] is not None
+             and f["margen_m"] is not None and -PRIMERA_FILA_ESLORAS * eslora <= f["margen_m"] <= 0]
+    ref_sog = float(np.median(fila1)) if len(fila1) >= 3 else None
+    for v, p in pos.items():
+        barcos[v].update(p)
+        barcos[v]["diagnostico"] = valorar(barcos[v], ref_sog, eslora)
+
     # Posición y distancia al primero a +60 y +180 s: avance hacia la baliza 1 a lo largo del eje
     for seg in (60, 180):
         dist = {}
@@ -106,5 +239,7 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
         "sesgo": sesgo(pin_xy, com_xy, twd),
         "twd_disparo": round(twd, 1),
         "rumbo_linea": round(float(rumbo(cp[0], cp[1])), 1),
+        "sog_primera_fila": None if ref_sog is None else round(ref_sog, 2),
+        "eslora_m": eslora,
         "barcos": barcos,
     }
