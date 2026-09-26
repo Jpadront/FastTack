@@ -42,54 +42,43 @@ Reglas estrictas:
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
 
-PRUEBA = COMUN + """
-## Resumen
-(2–3 frases: resultado y lo que más lo explica)
-## Salida
-## Ceñidas
-## Popas
-## Maniobras, laylines y puertas
-## 3 claves para la próxima prueba
-(lista numerada de 3 puntos accionables)
-
-Máximo 350 palabras.
+# Guía común de los debriefs de mejora (prueba, día y campeonato): qué entrenar, no una crónica
+MEJORA = """
+Eres el entrenador del equipo. El objetivo es mejorar: céntrate en lo que más tiempo costó y en lo que hay que entrenar, no en contarlo todo. Sé breve y concreto.
+- Ordena por impacto con «donde_se_perdio_la_prueba» (segundos frente al top 5 por salida, velocidad, maniobras y táctica y resto) y, en el día, con «mejores_tramos» y «peores_tramos» (vienen ordenados por el motor).
+- Cada punto nombra su tramo y prueba concretos y la causa que muestran los datos (salida y posicionamiento, velocidad y escora frente a la óptima, maniobras con giro, aceleración y ángulo de salida, táctica con roladas, amura favorecida, lado y laylines).
+- Roles: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (no como un hecho medido): táctico → salida, lado, roladas, laylines y puertas; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora y aceleración tras las maniobras; proa → maniobras y rodeos.
+- En las maniobras, el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa al revés: más profundo tarda en acelerar y más alto pierde profundidad.
+- Si hay «reglaje_apuntado», relaciónalo solo como hipótesis.
 """
 
-DIA = COMUN + """
-## Balance del día
-(2–3 frases: resultado del día y cómo queda en la general)
+PRUEBA = COMUN + MEJORA + """
+## La prueba en dos frases
+(resultado y qué lo explica)
+## Lo que más costó
+(lista de 2–3 puntos, del que más al que menos, cada uno con su tramo y su causa)
 ## Lo que funcionó
-(lista de 2–3 puntos)
-## Lo que hay que corregir
-(lista de 2–3 puntos)
-## Claves para mañana
-(lista numerada de 3 puntos accionables)
+(lista de 1–2 puntos)
+## Qué trabajar
+(lista numerada de 3 prioridades concretas, cada una con el rol responsable entre paréntesis)
 
 Máximo 350 palabras.
 """
 
-COACH = COMUN + """
-Eres el entrenador del equipo. Este es el debrief de coach de un día: tramo a tramo de cada prueba, con lo mejor y lo peor de la jornada. Habla de táctica (lado del campo, amura favorecida, maniobras a favor o en contra de la rolada, laylines, puertas), de cómo se aprovecharon los cambios de viento (roladas y presión de cada tramo) y de cada rol a bordo.
-- «mejores_tramos» y «peores_tramos» ya vienen ordenados por el motor: úsalos tal cual para lo mejor y lo peor.
-- Roles: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (preséntalo así, no como un hecho medido): táctico → lado, amura favorecida, maniobras respecto a la rolada, laylines, puertas y salida; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora frente a la óptima (ceñida y popa) y aceleración tras las maniobras; proa → maniobras (giro, maniobras encadenadas) y rodeos.
-- En las maniobras usa el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y salir más abierto pierde altura; en popa al revés: más profundo tarda en acelerar y más alto pierde profundidad.
-- Un tramo sin métricas (calidad baja o sin datos) no se valora: dilo en una línea.
+DIA = COMUN + MEJORA + """
+## La jornada en dos frases
+(resultado del día y qué lo explica)
+## Lo que más costó
+(lista de 2–4 puntos, del que más al que menos, cada uno con su tramo y prueba y su causa)
+## Lo que funcionó
+(lista de 2 puntos, con su tramo y prueba)
+## Qué trabajar
+(lista numerada de 3 prioridades concretas para el próximo día; cada una con el rol responsable entre paréntesis)
 
-## Resumen de la jornada
-(2–3 frases)
-## Tramo a tramo
-(un subapartado «### Prueba N» por prueba; dentro, una línea por tramo que empiece por su nombre en negrita, con 1–3 frases: táctica y roladas, velocidad y escora, maniobras)
-## Lo mejor de la jornada
-(lista de 2–3 puntos, cada uno con su tramo)
-## Lo peor de la jornada
-(lista de 2–3 puntos, cada uno con su tramo)
-## Por roles
-(una línea por rol: qué mantener y qué corregir)
-## Prioridades para el próximo día
-(lista numerada de 3 puntos)
-
-Máximo 900 palabras.
+Máximo 450 palabras.
 """
+
+COACH = DIA   # compatibilidad: el antiguo «debrief de coach del día» es ahora el debrief del día
 
 CRONICA = COMUN + """
 Esto es la crónica de la prueba: qué pasó en el campo, para entenderla. No es un debrief del barco: cuenta la prueba (salida, cada tramo, llegada) con los barcos que la marcaron, qué lado o qué decisión pagó y por qué según los datos (roladas, presión, viento en la línea, puertas, sets), y en una línea por tramo dónde quedó el barco de referencia. No des consejos ni «claves».
@@ -103,19 +92,18 @@ Esto es la crónica de la prueba: qué pasó en el campo, para entenderla. No es
 Máximo 450 palabras.
 """
 
-CAMPEONATO = COMUN + """
+CAMPEONATO = COMUN + MEJORA + """
 Si «estado.campeonato_en_curso» es verdadero, el campeonato no ha terminado: habla de lo disputado hasta ahora y orienta las prioridades a las pruebas que quedan.
 
-## Balance
-(2–3 frases)
-## 3 puntos fuertes
-(lista numerada)
-## 3 áreas de mejora
-(lista numerada)
-## Prioridades de entrenamiento
-(lista numerada de 3 a 5 ejercicios o hábitos concretos, ordenados por impacto)
+## El campeonato en dos frases
+## Lo que más costó
+(lista de 2–4 puntos, del que más al que menos, con las pruebas en que se vio)
+## Lo que funcionó
+(lista de 2 puntos)
+## Qué entrenar
+(lista numerada de 3 a 5 ejercicios o hábitos concretos, ordenados por impacto, cada uno con el rol responsable entre paréntesis)
 
-Máximo 400 palabras.
+Máximo 450 palabras.
 """
 
 
@@ -212,7 +200,7 @@ def datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
 def _valorar_tramos(h: dict):
     """Debrief de coach: los 2 mejores y los 2 peores tramos del día. Criterio: VMG frente al top 5 de
     la prueba; sin flota, frente a la media del propio barco en ese tipo de tramo ese día."""
-    h["tipo"] = "debrief de coach del día"
+    h["tipo"] = "debrief del día"
     tramos = [(f["prueba"], t) for f in h["pruebas"] for t in f.get("tramos", [])
               if t.get("vmg_kn") is not None and t.get("calidad_de_datos") in ("alta", "media", "baja")]
     for tipo in ("ceñida", "popa"):
@@ -254,8 +242,8 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
         h["estado"] = {"campeonato_en_curso": en_curso, "pruebas_disputadas_hasta_ahora": len(res["pruebas"]),
                        "pruebas_aun_sin_analizar": len(res["pendientes"])}
         return h
-    coach = ambito.startswith("coach:")
-    if coach:
+    coach = ambito.startswith(("coach:", "dia:"))   # un solo debrief del día, con el detalle por tramo
+    if ambito.startswith("coach:"):
         ambito = "dia:" + ambito[6:]
     if ambito.startswith("dia:"):
         dia = ambito[4:]
@@ -303,6 +291,20 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:
         raise ValueError("Este barco no tiene datos en esta prueba.")
     h = hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))
+    try:   # viento y corriente del modelo meteorológico, si cuadra con la flota
+        m = servicio.meteo_prueba(alm, camp_id, ambito, solo_cache=True)
+        mm = {}
+        if (m.get("viento") or {}).get("coincide"):
+            mm["viento_modelo_kn"] = m["viento"]["kn"]
+            mm["viento_modelo_rachas_kn"] = m["viento"].get("rachas_kn")
+            mm["viento_modelo_desde_grados"] = m["viento"]["desde_grados"]
+        if m.get("corriente"):
+            mm["corriente_modelo_kn"] = m["corriente"]["kn"]
+            mm["corriente_modelo_hacia_grados"] = m["corriente"]["hacia_grados"]
+        if mm:
+            h["meteo_modelo"] = mm | {"nota": "modelo meteorológico (Open-Meteo), viento a 10 m promediado a las horas de la prueba: referencia, no medido en el campo"}
+    except Exception:  # noqa: BLE001 - sin red o sin datos: el debrief sigue sin ellos
+        pass
     reg = next((p.get("reglaje") for p in camp["pruebas"] if p["clave"] == ambito), None)
     if reg:
         h["reglaje_apuntado"] = reg

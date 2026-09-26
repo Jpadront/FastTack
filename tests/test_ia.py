@@ -27,8 +27,8 @@ def test_huella_estable_y_sensible_a_los_datos():
 
 
 def test_instrucciones_segun_el_ambito():
-    assert "3 claves para la próxima prueba" in debrief.instrucciones({"tipo": "debrief de una prueba"})
-    assert "Prioridades de entrenamiento" in debrief.instrucciones({"tipo": "debrief del campeonato"})
+    assert "Qué trabajar" in debrief.instrucciones({"tipo": "debrief de una prueba"})
+    assert "Qué entrenar" in debrief.instrucciones({"tipo": "debrief del campeonato"})
 
 
 def test_generar_con_claude_code_usa_el_comando(tmp_path, monkeypatch):
@@ -56,7 +56,7 @@ def test_cifras_del_nombre_del_campo():
 
 def test_instrucciones_del_dia():
     t = debrief.instrucciones({"tipo": "debrief del día", "clase": "Snipe"})
-    assert "Claves para mañana" in t and "equipo de Snipe" in t
+    assert "Lo que más costó" in t and "equipo de Snipe" in t
 
 
 def test_validador_punto_de_miles():

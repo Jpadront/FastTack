@@ -1,1 +1,1 @@
-__version__ = "0.19.0"  # reglaje por prueba y temporada
+__version__ = "0.20.0"  # meteo de referencia (Open-Meteo) y un solo debrief orientado a mejorar

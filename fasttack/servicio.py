@@ -153,3 +153,27 @@ def pistas_prueba(alm: Almacen, camp_id: str, clave: str) -> dict:
     res = {"senal": senal, "proyeccion": an["proyeccion"], "barcos": barcos, "balizas": marcas}
     ruta.write_text(json.dumps(res, separators=(",", ":")))
     return res
+
+
+def meteo_prueba(alm: Almacen, camp_id: str, clave: str, solo_cache: bool = False) -> dict:
+    """Viento y corriente del modelo (Open-Meteo) en el campo de regatas durante la prueba."""
+    from .ingesta import meteo
+    camp, prueba = _cargar(alm, camp_id, clave)
+    an = analisis_prueba(alm, camp_id, clave)
+    hasta = max(prueba["llegadas"].values())
+    m = meteo.en_ventana(alm.raiz, an["proyeccion"]["lat0"], an["proyeccion"]["lon0"], prueba["senal"], hasta, solo_cache)
+    # ¿cuadra con el viento que reconstruye la flota? Si la dirección no coincide, el modelo no vale aquí
+    import math
+    twds = [t["viento"]["twd_media"] for t in an["tramos"]]
+    if twds:
+        s_ = sum(math.sin(math.radians(x)) for x in twds)
+        c_ = sum(math.cos(math.radians(x)) for x in twds)
+        twd = math.degrees(math.atan2(s_, c_)) % 360
+        m["twd_flota_grados"] = round(twd)
+        if m.get("viento"):
+            d = abs((m["viento"]["desde_grados"] - twd + 180) % 360 - 180)
+            m["viento"]["diferencia_con_la_flota_grados"] = round(d)
+            m["viento"]["coincide"] = d <= 25
+    if an.get("corriente"):
+        m["corriente_estimada"] = {k: an["corriente"][k] for k in ("velocidad_kn", "hacia_grados", "confianza")}
+    return m

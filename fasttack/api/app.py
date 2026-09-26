@@ -199,6 +199,18 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         except ErrorRaceSense as e:
             raise HTTPException(502, str(e)) from e
 
+    @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/meteo")
+    def meteo_(camp_id: str, clave: str):
+        from ..ingesta.meteo import ErrorMeteo
+        try:
+            return servicio.meteo_prueba(alm, camp_id, clave)
+        except KeyError as e:
+            raise HTTPException(404, "Prueba no encontrada") from e
+        except servicio.PruebaNoAnalizable as e:
+            raise HTTPException(422, str(e)) from e
+        except ErrorMeteo as e:
+            raise HTTPException(502, str(e)) from e
+
     @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/analisis")
     def analisis(camp_id: str, clave: str, recalcular: bool = False):
         try:

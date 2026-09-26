@@ -27,6 +27,7 @@ export const api = {
   estado: (c) => pedir('GET', `/api/campeonatos/${id(c)}/estado`),
   ajustar: (c, clave, cambios) => pedir('PATCH', `/api/campeonatos/${id(c)}/pruebas/${clave}`, cambios),
   analisis: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/analisis`),
+  meteo: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/meteo`),
   pistas: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/pistas`),
   resumen: (c, descartes) => pedir('GET', `/api/campeonatos/${id(c)}/resumen${descartes != null ? '?descartes=' + descartes : ''}`),
   debrief: (c, ambito, barco) => pedir('GET', `/api/campeonatos/${id(c)}/debrief?ambito=${encodeURIComponent(ambito)}&barco=${encodeURIComponent(barco)}`),

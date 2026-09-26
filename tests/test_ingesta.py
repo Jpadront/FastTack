@@ -66,3 +66,24 @@ def test_quitar_muestras_congeladas():
     # una baliza fondeada repite posición y no se toca
     cols["role"] = np.array(["mark"] * 6, dtype=object)
     assert len(quitar_congeladas(cols)["ts"]) == 6
+
+
+def test_meteo_media_de_la_prueba(tmp_path, monkeypatch):
+    """Viento y corriente del modelo promediados a las horas de la prueba (sin red: respuestas fijas)."""
+    from fasttack.ingesta import meteo
+    horas = [f"2026-09-12T{h:02d}:00" for h in range(24)]
+
+    def falso(url, params):
+        if "marine" in url:
+            return {"hourly": {"time": horas, "ocean_current_velocity": [1.852] * 24, "ocean_current_direction": [90] * 24}}
+        return {"hourly": {"time": horas, "wind_speed_10m": [10.0 + h for h in range(24)],
+                           "wind_direction_10m": [350] * 12 + [10] * 12, "wind_gusts_10m": [20.0] * 24}}
+    monkeypatch.setattr(meteo, "_pedir", falso)
+    import datetime as dt
+    t = lambda h: int(dt.datetime(2026, 9, 12, h, tzinfo=dt.timezone.utc).timestamp() * 1000)
+    m = meteo.en_ventana(tmp_path, 38.7, -9.4, t(11), t(13))
+    assert m["horas"] == ["11:00", "12:00", "13:00"]
+    assert m["viento"]["kn"] == 22.0 and m["viento"]["rachas_kn"] == 20.0
+    assert m["viento"]["desde_grados"] in (0, 360) or abs(m["viento"]["desde_grados"] - 3) < 5   # media circular 350°/10°
+    assert m["corriente"] == {"kn": 1.0, "hacia_grados": 90, "max_kn": 1.0}
+    assert (tmp_path / "meteo").exists()

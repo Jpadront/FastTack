@@ -37,10 +37,21 @@
       pistas = decodificarPistas(await api.pistas(campId, clave));
       cargando = '';
       T = -60;
+      api.meteo(campId, clave).then((m) => (meteo = m)).catch((e) => (meteoError = e.message));
     } catch (e) {
       error = e.message; cargando = '';
     }
   });
+  // Viento y corriente del modelo (Open-Meteo) como referencia
+  let meteo = $state(null), meteoError = $state(''), aplicando = $state(false);
+  async function usarVientoModelo() {
+    aplicando = true;
+    try {
+      await api.ajustar(campId, clave, { viento_kn: meteo.viento.kn });
+      an = await api.analisis(campId, clave);   // con el viento de referencia cambia el análisis (TWS en nudos)
+    } catch (e) { error = e.message; }
+    aplicando = false;
+  }
 
   const ref = $derived(claveVela(barco));
   const nombres = $derived(Object.fromEntries((camp?.barcos || []).map((b) => [b.clave, b])));
@@ -134,6 +145,20 @@
         {#if !p.viento_kn}<span class="chip">viento sin calibrar</span>{:else}<span class="chip">viento ref. {num(p.viento_kn, 1)} kn</span>{/if}
         <span class="tenue">· motor {an.version}</span>
       </p>
+      {#if meteo}
+        <p class="meteo">
+          <span class="etiqueta">Modelo meteo</span>
+          {#if meteo.viento}
+            <span class:tachado={meteo.viento.coincide === false}>viento <b class="num">{num(meteo.viento.kn, 0)} kn</b> de {meteo.viento.desde_grados}° <span class="tenue num">({num(meteo.viento.min_kn, 0)}–{num(meteo.viento.max_kn, 0)}{meteo.viento.rachas_kn ? `, rachas ${num(meteo.viento.rachas_kn, 0)}` : ''})</span></span>
+            {#if meteo.viento.coincide === false}<span class="aviso-meteo">no coincide con la dirección de la flota ({meteo.twd_flota_grados}°, {meteo.viento.diferencia_con_la_flota_grados}° de diferencia): no lo uses como referencia</span>
+            {:else if !p.viento_kn || Math.abs(p.viento_kn - meteo.viento.kn) > 0.4}<button class="enlace" disabled={aplicando} onclick={usarVientoModelo}>{aplicando ? 'Aplicando…' : `Usar ${num(meteo.viento.kn, 0)} kn como viento de referencia`}</button>{/if}
+          {:else}<span class="tenue" title={meteo.aviso || ''}>sin viento del modelo{meteo.aviso?.includes('limit') ? ' (límite diario de Open-Meteo: se reintentará)' : ''}</span>{/if}
+          {#if meteo.corriente}· corriente <b class="num">{num(meteo.corriente.kn, 1)} kn</b> hacia {meteo.corriente.hacia_grados}°{#if meteo.corriente_estimada}<span class="tenue"> (estimada con la flota: {num(meteo.corriente_estimada.velocidad_kn, 1)} kn hacia {num(meteo.corriente_estimada.hacia_grados, 0)}°)</span>{/if}{/if}
+          <span class="tenue">· Open-Meteo, {meteo.horas[0]}–{meteo.horas[meteo.horas.length - 1]} UTC; viento a 10 m del modelo, puede diferir del del campo</span>
+        </p>
+      {:else if meteoError}
+        <p class="meteo tenue">Modelo meteo no disponible: {meteoError}</p>
+      {/if}
     </div>
     <div class="seleccion">
       <span class="etiqueta">Barcos en mapa y tabla</span>
@@ -400,6 +425,11 @@
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
   .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 10px; align-items: start; }
   .izq { display: grid; gap: 8px; min-width: 0; }
+  .meteo { font-size: 14px; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+  .meteo .etiqueta { margin-right: 2px; }
+  .aviso-meteo { color: #b35c00; }
+  .tachado { text-decoration: line-through; opacity: .7; }
+  .meteo .enlace { background: none; border: 0; padding: 0; color: var(--foco); text-decoration: underline; cursor: pointer; font-size: 14px; }
   .zonas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .zona { display: grid; gap: 2px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--tinta) 3%, transparent); }
   .zona.mia { outline: 2px solid color-mix(in srgb, var(--yo) 60%, transparent); }

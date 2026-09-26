@@ -64,6 +64,10 @@ En la lista de pruebas:
 
 En la página del campeonato, **Tus archivos .vkx**: añade el registro de tu Atlas de cada día y tu barco se analiza con sus datos completos (RaceSense pierde muchas muestras); el resto de la flota sigue siendo la de RaceSense. Se puede quitar cuando quieras.
 
+### Viento y corriente de referencia (modelo)
+
+En la cabecera de cada prueba, el viento (a 10 m, con rachas) y la corriente del modelo meteorológico de Open-Meteo (gratis, sin clave) a las horas de la prueba, junto a la corriente que estimamos con la flota. Botón **Usar como viento de referencia** para calibrar la intensidad en nudos sin apuntarla a mano. Si la dirección del modelo no coincide con la de la flota (más de 25°), avisa y no deja usarlo. Es un modelo: puede diferir unos nudos del viento del campo. No se usa el reanálisis ERA5 (en la costa mezcla tierra y mar).
+
 ### Reglaje y temporada
 
 - **Reglaje**: en la página del campeonato, botón **Reglaje** en cada prueba: pares ajuste → valor libres (obenques altos y bajos, backstay, velas…), con «Copiar de la prueba anterior». El debrief de la prueba lo tiene en cuenta como hipótesis.
@@ -133,7 +137,7 @@ En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. 
 - El texto se guarda y se reutiliza. Si cambian las cifras (nueva versión del motor, viento de referencia…), avisa de que conviene regenerarlo.
 
 - **Tres debriefs**: de cada prueba (pestaña *Debrief IA*); **de cada día** y **del campeonato** (al final del Resumen, con un selector). El del día usa solo las pruebas de ese día (resultado del día, top 5 del día) y cómo quedas en la general al terminarlo; acaba con las claves para mañana. El del campeonato usa las pruebas disputadas y analizadas hasta ese momento: no hace falta que el campeonato termine; cuando haya pruebas nuevas avisa para regenerarlo.
-- **Debrief de coach por día** (al final del Resumen, botones «Coach · día»): tramo a tramo de cada prueba del día, con táctica (lado, amura favorecida, maniobras a favor o en contra de la rolada, laylines, puertas), cómo se aprovecharon las roladas y la presión, velocidad, escora frente a la óptima (ceñida y popa), maniobras por fases y posicionamiento en la salida; lo mejor y lo peor de la jornada (elegidos por el motor: VMG frente al top 5; sin flota, frente a la media del barco) y qué trabajar por roles (timonel, táctico, trimmers, proa; adaptado a la clase). Como los demás, **solo se genera cuando lo pides**.
+- **Un solo debrief, orientado a mejorar** (de la prueba, del día y del campeonato): lo que más tiempo costó y por qué (ordenado con «dónde se perdió la prueba» y los mejores y peores tramos, con el detalle de cada tramo: salida, velocidad y escora, maniobras, táctica y roladas), lo que funcionó y qué trabajar, con el rol responsable. Solo se genera cuando lo pides.
 - **Crónica de la prueba** (pestaña *Debrief IA* de cada prueba): qué pasó en el campo — salida, cada tramo y llegada — con los barcos que la marcaron, qué lado o decisión pagó y por qué, y dónde quedó tu barco. Solo cuando la pides.
 - **Referencia: el top 5.** Las conclusiones salen de comparar con los 5 primeros de la prueba (o de la general, en el campeonato); la mediana de la flota queda como contexto.
 

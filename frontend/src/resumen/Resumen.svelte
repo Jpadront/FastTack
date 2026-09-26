@@ -274,25 +274,20 @@
         {#each res.dias as d}
           <button class="dia" class:activo={ambitoIA === 'dia:' + d} aria-pressed={ambitoIA === 'dia:' + d} onclick={() => (ambitoIA = 'dia:' + d)}>{nombreDia(d)}</button>
         {/each}
-      </div>
-      <div class="modos" role="group" aria-label="Debrief de coach por día">
-        {#each res.dias as d}
-          <button class="dia" class:activo={ambitoIA === 'coach:' + d} aria-pressed={ambitoIA === 'coach:' + d} onclick={() => (ambitoIA = 'coach:' + d)}>Coach · {nombreDia(d)}</button>
-        {/each}
+
       </div>
       {#if ambitoIA === 'campeonato' && (res.pendientes.length || progreso)}
         <p class="nota">Aún se están analizando {res.pendientes.length} prueba(s): el debrief usará las ya analizadas. Cuando terminen, te avisará para regenerarlo.</p>
       {:else if ambitoIA === 'campeonato'}
         <p class="nota">Con las {res.pruebas.length} pruebas disputadas hasta ahora; si hay pruebas nuevas, avisa para regenerarlo.</p>
-      {:else if ambitoIA.startsWith('coach:')}
-        <p class="nota">Debrief de entrenador del día ({res.pruebas.filter((p) => 'coach:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}): tramo a tramo, táctica y roladas, maniobras, escora, lo mejor y lo peor de la jornada y qué trabajar por roles. Solo se genera cuando lo pides.</p>
+
       {:else}
-        <p class="nota">Solo las pruebas de ese día ({res.pruebas.filter((p) => 'dia:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}), comparadas con el top 5 del día, y cómo quedas en la general al terminarlo.</p>
+        <p class="nota">Lo que más costó ese día, lo que funcionó y qué trabajar (con el rol responsable), a partir del detalle de cada tramo. Solo las pruebas de ese día ({res.pruebas.filter((p) => 'dia:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}), comparadas con el top 5 del día, y cómo quedas en la general al terminarlo.</p>
       {/if}
     </section>
     {#key ambitoIA}
       <div class="bloque-ia"><Debrief {campId} ambito={ambitoIA} barco={ref}
-        titulo={ambitoIA === 'campeonato' ? `Debrief del campeonato · ${vc(ref)} · IA` : ambitoIA.startsWith('coach:') ? `Debrief de coach · ${nombreDia(ambitoIA.slice(6))} · ${vc(ref)} · IA` : `Debrief del ${nombreDia(ambitoIA.slice(4))} · ${vc(ref)} · IA`} /></div>
+        titulo={ambitoIA === 'campeonato' ? `Debrief del campeonato · ${vc(ref)} · IA` : `Debrief del ${nombreDia(ambitoIA.slice(4))} · ${vc(ref)} · IA`} /></div>
     {/key}
   {/if}
 {/if}
