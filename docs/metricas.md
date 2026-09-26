@@ -169,6 +169,9 @@ Con las posiciones GPS de todos los barcos que salen, cada 2 s de −30 a +90 s 
 
 ## Capas del mapa y valores instantáneos (estimado)
 
+- **Amura favorecida** (capa): cada tramo de la traza en azul si navega en la amura favorecida (la que apunta más cerca de la baliza con la TWD de ese momento, como en «Táctica por tramo»), en rojo si va con la rolada en contra, en gris si da igual (TWD a < 3° de la dirección de la baliza) y en gris claro si está maniobrando o rodeando (a más de 25° de su ángulo de amura). La leyenda da el % del tramo en la favorecida del barco de referencia.
+- **Línea del líder**: recta perpendicular al viento (TWD del momento) por la posición del barco más avanzado del tramo que se navega (hacia barlovento en ceñida, hacia sotavento en popa), y la paralela por el barco de referencia; los metros son la distancia entre las dos a lo largo del viento («escalera»). En los huecos de RaceSense se usa la última posición si es de hace ≤ 30 s.
+
 - **Cada barco en su tramo**: los valores instantáneos (VMG, TWA) se calculan con el tramo que navega cada barco según sus propios pasos por baliza, no el del líder ni el de la pestaña: mientras unos ya van de popa, otros siguen en la ceñida o en el offset. Entre la baliza y el offset (rodeo) no hay VMG. Las tablas por tramo y las medias ya usaban los tiempos de entrada y salida de cada barco.
 - **Fases de rolada y presión**: contiguas; cada cambio se sitúa entre los centros de los cortes (corte k = k·10 + 5 %), la primera fase desde el 0 % y la última hasta el 100 %.
 

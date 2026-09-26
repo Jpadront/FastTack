@@ -232,6 +232,7 @@ export function derivados(an, pistas, v) {
   const d = { tramo: new Int16Array(n).fill(-1), twd: new Float32Array(n).fill(NaN), rol: new Float32Array(n).fill(NaN),
               vmg: new Float32Array(n).fill(NaN), twa: new Float32Array(n).fill(NaN), escora: new Float32Array(n), cabeceo: new Float32Array(n) };
   const rangos = an.tramos.map((tr) => { const f = tr.barcos[v]; return f ? [(f.t_entrada - an.senal) / 1000, (f.t_salida - an.senal) / 1000] : null; });
+  const marcas = an.tramos.map((tr) => an.controles.find((c) => c.id === tr.hasta)?.xy || null);
   for (let i = 0; i < n; i++) {
     d.escora[i] = Math.abs(b.roll[i] - off);
     d.cabeceo[i] = b.pitch ? b.pitch[i] : NaN;
@@ -246,14 +247,46 @@ export function derivados(an, pistas, v) {
     const ref = ceñida ? twd : (twd + 180) % 360;
     d.vmg[i] = b.sog[i] * Math.cos((dif(b.cog[i] - ref) * Math.PI) / 180);
     d.twa[i] = Math.abs(dif(b.cog[i] - twd));
-    // Beneficio de la rolada: con TWA constante el rumbo gira con el viento. Ganancia de avance
-    // hacia la baliza respecto al rumbo que tendría con el viento medio del tramo.
-    const delta = dif(twd - tr.viento.twd_media);
-    const r = (a) => Math.cos((dif(a - tr.rumbo_eje) * Math.PI) / 180);
-    d.rol[i] = r(b.cog[i]) - r(b.cog[i] - delta);
+    // Amura favorecida (como motor/tactica.py): de las dos amuras posibles con la TWD de este
+    // momento, la que apunta más cerca de la baliza. +1 = navega en ella, −1 = en la otra (con la
+    // rolada en contra), 0 = da igual (TWD a < 3° de la dirección de la baliza), NaN = maniobrando.
+    const marca = marcas[k];
+    const medio = ceñida ? (tr.viento.twa_flota ?? 42) : 180 - (tr.viento.twa_flota ?? 150);
+    const rel = dif(b.cog[i] - ref);
+    if (Math.abs(Math.abs(rel) - medio) > 25) continue;
+    const brg = marca ? (Math.atan2(marca[0] - b.x[i], marca[1] - b.y[i]) * 180 / Math.PI + 360) % 360 : tr.rumbo_eje;
+    if (Math.abs(dif(ref - brg)) < 3) { d.rol[i] = 0; continue; }
+    const fav = Math.abs(dif(ref + medio - brg)) < Math.abs(dif(ref - medio - brg)) ? 1 : -1;
+    d.rol[i] = Math.sign(rel) === fav ? 1 : -1;
   }
   porAn.set(v, d);
   return d;
+}
+
+// Línea del líder: perpendicular al viento por la posición del barco más avanzado del tramo (el
+// que más ha avanzado hacia barlovento en ceñida, hacia sotavento en popa) en T. Devuelve también
+// cuántos metros tiene por detrás cada barco (a lo largo del viento).
+export function lineaLider(an, pistas, tramo, T) {
+  if (!tramo) return null;
+  const k = an.tramos.indexOf(tramo);
+  const twd = twdEn(tramo, T, an.senal);
+  const dir = tramo.tipo === 'ceñida' ? twd : (twd + 180) % 360;
+  const ux = Math.sin((dir * Math.PI) / 180), uy = Math.cos((dir * Math.PI) / 180);
+  const avance = {};
+  for (const v of Object.keys(pistas.barcos)) {
+    const b = pistas.barcos[v];
+    const e = estado(b, T);
+    // en un hueco de datos, la última posición si es de hace ≤ 30 s (RaceSense pierde muchas muestras)
+    if (!e || (e.sinDatos && T - b.t[e.i] > 30)) continue;
+    const d = derivados(an, pistas, v);
+    if (!d || d.tramo[e.i] !== k) continue;
+    avance[v] = { a: e.x * ux + e.y * uy, x: e.x, y: e.y };
+  }
+  const velas = Object.keys(avance);
+  if (!velas.length) return null;
+  const lider = velas.reduce((m, v) => (avance[v].a > avance[m].a ? v : m), velas[0]);
+  const detras = Object.fromEntries(velas.map((v) => [v, avance[lider].a - avance[v].a]));
+  return { lider, x: avance[lider].x, y: avance[lider].y, dir, detras, pos: avance };
 }
 
 // Fase de rolada en curso (según el % del tramo)

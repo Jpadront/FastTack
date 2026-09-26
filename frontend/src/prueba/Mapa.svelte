@@ -3,12 +3,15 @@
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { estado, puntosControl, colorBarco, indice, HUECO_S, velaCorta, derivados, presionEn, laylines, twdEn, dif,
-           DIVERGENTE, RAMPA_SOG, corrienteEn, num } from './datos.js';
+           DIVERGENTE, RAMPA_SOG, corrienteEn, num, lineaLider, tramoEn } from './datos.js';
 
   // pistas: decodificadas; an: análisis; sel: Set de velas; ref: vela de referencia
   // T: tiempo actual (s desde la señal); ventana: [t0, t1] de la pestaña; nombres: vela → texto
   // capa: 'presion' | 'twd' | 'rol' | 'sog' | null; tramo: el tramo en curso (para capas y laylines)
-  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null } = $props();
+  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null, lider = false } = $props();
+  // el tramo que se navega en T (aunque la pestaña sea otra)
+  const liderEn = (T) => { const t = tramoEn(an, T) || tramo; return t ? lineaLider(an, pistas, t, T) : null; };
+  const ll = $derived(lider ? liderEn(T) : null);
   const corr = $derived(corrienteEn(an, T));
 
   let cont, lienzo, mapa, ctx;
@@ -63,12 +66,41 @@
     mapa.fitBounds([aLonLat(minx - m, miny - m), aLonLat(maxx + m, maxy + m)], { padding: 30, duration: 0, maxZoom: 17 });
   }
   $effect(() => { ventana; sel; if (listo) encuadrar(); });
-  $effect(() => { T; sel; controlesVisibles; capa; tramo; if (listo) dibujar(); });
+  $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; if (listo) dibujar(); });
 
   function px(x, y) { const p = mapa.project(aLonLat(x, y)); return [p.x, p.y]; }
   function metrosPx(m) { const a = px(0, 0), b = px(m, 0); return Math.hypot(b[0] - a[0], b[1] - a[1]); }
   function colorSog(v, lo, hi) { const k = Math.max(0, Math.min(RAMPA_SOG.length - 1, Math.round(((v - lo) / (hi - lo || 1)) * (RAMPA_SOG.length - 1)))); return RAMPA_SOG[k]; }
-  function colorRol(r) { return r > 0.02 ? DIVERGENTE.favor : r < -0.02 ? DIVERGENTE.contra : DIVERGENTE.neutro; }
+  function colorRol(r) { return r > 0 ? DIVERGENTE.favor : r < 0 ? DIVERGENTE.contra : DIVERGENTE.neutro; }
+
+  // Línea perpendicular al viento por el líder del tramo y la paralela por el barco de referencia
+  function dibujarLider() {
+    const L = lider ? liderEn(T) : null;
+    if (!L) return;
+    const r = ((L.dir + 90) * Math.PI) / 180, lx = Math.sin(r), ly = Math.cos(r), m = 3000;
+    const linea = (x, y, dash, color, ancho) => {
+      ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = ancho;
+      ctx.beginPath(); ctx.moveTo(...px(x - lx * m, y - ly * m)); ctx.lineTo(...px(x + lx * m, y + ly * m)); ctx.stroke(); ctx.setLineDash([]);
+    };
+    ctx.globalAlpha = 0.85;
+    linea(L.x, L.y, [], '#10222b', 1.5);
+    const etiqueta = (texto, X, Y) => {
+      ctx.font = '600 12px "Barlow Semi Condensed", Arial, sans-serif';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(texto, X, Y); ctx.fillStyle = '#10222b'; ctx.fillText(texto, X, Y);
+    };
+    const [LX, LY] = px(L.x, L.y);
+    etiqueta(`Líder: ${velaCorta(L.lider, nombres)}`, LX + 10, LY - 12);
+    const p = L.pos[ref];
+    if (p && L.lider !== ref) {
+      linea(p.x, p.y, [6, 5], colorBarco(ref, ref), 1.5);
+      // flecha de la distancia: de nuestro barco hasta la línea del líder, a lo largo del viento
+      const d = L.detras[ref], ux = Math.sin((L.dir * Math.PI) / 180), uy = Math.cos((L.dir * Math.PI) / 180);
+      const A = px(p.x, p.y), B = px(p.x + ux * d, p.y + uy * d);
+      ctx.strokeStyle = colorBarco(ref, ref); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
+      etiqueta(`${num(d, 0)} m`, (A[0] + B[0]) / 2 + 8, (A[1] + B[1]) / 2);
+    }
+    ctx.globalAlpha = 1;
+  }
 
   function dibujar() {
     if (!ctx) return;
@@ -120,6 +152,7 @@
         }
       }
     }
+    dibujarLider();
     // Rango de SOG de la ventana (p5–p95 de los seleccionados) para la rampa de la capa SOG
     let sogLo = 0, sogHi = 1;
     if (capa === 'sog') {
@@ -136,14 +169,15 @@
       const color = colorBarco(v, ref);
       const t0 = todos && v !== ref ? Math.max(ventana[0], T - 180) : ventana[0];
       const i0 = Math.max(0, indice(b.t, t0)), i1 = indice(b.t, T);
-      ctx.lineWidth = v === ref ? 2.6 : todos ? 1 : 1.6; ctx.globalAlpha = todos && v !== ref ? 0.6 : 0.9;
+      ctx.lineWidth = v === ref ? (capa === 'rol' ? 4 : 2.6) : todos ? 1 : capa === 'rol' ? 2.2 : 1.6; ctx.globalAlpha = todos && v !== ref ? 0.6 : 0.9;
       const e = estado(b, T);
       if (capa === 'sog' || capa === 'rol') {
         // Traza coloreada segmento a segmento
         const dv = capa === 'rol' ? derivados(an, pistas, v) : null;
         for (let i = Math.max(i0, 1); i <= i1; i++) {
           if (b.t[i] - b.t[i - 1] > HUECO_S) continue;
-          ctx.strokeStyle = capa === 'sog' ? colorSog(b.sog[i], sogLo, sogHi) : (isNaN(dv.rol[i]) ? DIVERGENTE.neutro : colorRol(dv.rol[i]));
+          if (capa === 'rol' && isNaN(dv.rol[i])) { ctx.strokeStyle = '#c3ccd0'; }   // maniobrando, rodeando o fuera del tramo
+          else ctx.strokeStyle = capa === 'sog' ? colorSog(b.sog[i], sogLo, sogHi) : colorRol(dv.rol[i]);
           ctx.beginPath(); ctx.moveTo(...px(b.x[i - 1], b.y[i - 1])); ctx.lineTo(...px(b.x[i], b.y[i])); ctx.stroke();
         }
       } else {
@@ -181,6 +215,16 @@
 
 <div class="mapa" bind:this={cont}>
   <canvas bind:this={lienzo} aria-hidden="true"></canvas>
+  {#if lider && !ll}
+    <div class="lider-info">Línea del líder: sin posiciones recientes en este momento (huecos de datos)</div>
+  {:else if ll}
+    <div class="lider-info">
+      {#if ll.lider === ref}<b>{velaCorta(ref, nombres)}</b> lidera el tramo
+      {:else if ll.detras[ref] != null}<b class="num">{num(ll.detras[ref], 0)} m</b> por detrás de la línea de {velaCorta(ll.lider, nombres)}
+      {:else}Líder del tramo: {velaCorta(ll.lider, nombres)}{/if}
+      <span class="est">est.</span>
+    </div>
+  {/if}
   {#if corr}
     <div class="corr" title={`Corriente estimada (${corr.ambito}), confianza ${corr.confianza}: ${num(corr.velocidad_kn, 2)} kn hacia ${num(corr.hacia_grados, 0)}°`}>
       <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true" style:transform={`rotate(${corr.hacia_grados}deg)`}>
@@ -192,7 +236,8 @@
   {#if capa === 'sog'}
     <div class="leyenda"><span class="num">{rangoSog[0].toFixed(1)}</span>{#each RAMPA_SOG as c}<i style:background={c}></i>{/each}<span class="num">{rangoSog[1].toFixed(1)} kn</span></div>
   {:else if capa === 'rol'}
-    <div class="leyenda"><i style:background={DIVERGENTE.favor}></i>a favor <i style:background={DIVERGENTE.neutro}></i>neutral <i style:background={DIVERGENTE.contra}></i>en contra <span class="est">est.</span></div>
+    <div class="leyenda"><i style:background={DIVERGENTE.favor}></i>en la amura favorecida <i style:background={DIVERGENTE.contra}></i>con la rolada en contra <i style:background={DIVERGENTE.neutro}></i>igual <span class="est">est.</span>
+      {#if tramo?.barcos[ref]?.tactica?.amura_favorecida_pct != null}<span class="pct">· {velaCorta(ref, nombres)}: <b class="num">{num(tramo.barcos[ref].tactica.amura_favorecida_pct, 0)} %</b> del {tramo.nombre} en la favorecida</span>{/if}</div>
   {:else if capa === 'twd'}
     <div class="leyenda"><i style:background={DIVERGENTE.favor}></i>rolada izquierda <i style:background={DIVERGENTE.contra}></i>rolada derecha (±10°) <span class="est">est.</span></div>
   {:else if capa === 'presion'}
@@ -210,6 +255,10 @@
   .corr .est { color: #6a5acd; }
   .leyenda { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
     background: rgba(255,255,255,.9); color: #10222b; border-radius: 4px; padding: 3px 8px; font: 500 12px var(--display); max-width: calc(100% - 120px); }
+  .lider-info { position: absolute; left: 50%; transform: translateX(-50%); top: 8px; z-index: 3; background: rgba(255,255,255,.92); color: #10222b;
+    border-radius: 4px; padding: 3px 10px; font: 500 13px var(--display); white-space: nowrap; }
+  .lider-info .est { color: #6a5acd; font-size: 11px; }
+  .leyenda .pct { margin-left: 4px; }
   .leyenda i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; }
   .leyenda .est { color: #6a5acd; }
 </style>

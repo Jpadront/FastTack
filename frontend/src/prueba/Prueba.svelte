@@ -67,7 +67,8 @@
   const twdAhora = $derived(trMapa ? twdEn(trMapa, T, an.senal) : null);
   const faseAhora = $derived(trMapa ? faseEn(trMapa, T, an.senal) : null);
   const corrAhora = $derived(an ? corrienteEn(an, T) : null);
-  const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Rol'], ['sog', 'SOG']];
+  const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Amura favorecida'], ['sog', 'SOG']];
+  let lider = $state(false);
   const lado = (v) => ({ IZQUIERDA: 'izquierda', DERECHA: 'derecha', flota: 'toda la flota' })[v] || '—';
   const desfase = $derived(camp?.tz_offset_ms || 0);
   const controlesTab = $derived.by(() => {
@@ -162,6 +163,7 @@
         <div class="modos" role="group" aria-label="Capa del mapa">
           <button class:activo={capa === null} aria-pressed={capa === null} onclick={() => (capa = null)}>Colores de barco</button>
           {#each CAPAS as [k, t]}<button class:activo={capa === k} aria-pressed={capa === k} onclick={() => (capa = capa === k ? null : k)}>{t}</button>{/each}
+          <button class:activo={lider} aria-pressed={lider} title="Línea perpendicular al viento por el líder del tramo y metros que te faltan hasta ella" onclick={() => (lider = !lider)}>Línea del líder</button>
         </div>
         <div class="indic num">
           <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
@@ -169,7 +171,7 @@
           {#if corrAhora}<span>· corriente {num(corrAhora.velocidad_kn, 1)} kn hacia {num(corrAhora.hacia_grados, 0)}° <span class="est">est.</span></span>{:else}<span class="tenue">· corriente sin estimar</span>{/if}
         </div>
       </div>
-      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} /></div>
+      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} {lider} /></div>
       <Reproductor bind:T ventana={vent} senalMs={an.senal} desfaseMs={desfase} />
     </div>
     <div class="der">
