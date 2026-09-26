@@ -40,6 +40,14 @@ export const api = {
     return datos;
   },
   quitarVkx: (sid, n) => pedir('DELETE', `/api/sesiones/${sid}/vkx/${n}`),
+  subirVkxCampeonato: async (c, archivo, vela) => {
+    const q = new URLSearchParams({ vela, archivo: archivo.name });
+    const r = await fetch(`/api/campeonatos/${id(c)}/vkx?${q}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: archivo });
+    const datos = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(`${archivo.name}: ${typeof datos?.detail === 'string' ? datos.detail : 'error ' + r.status}`);
+    return datos;
+  },
+  quitarVkxCampeonato: (c, n) => pedir('DELETE', `/api/campeonatos/${id(c)}/vkx/${n}`),
   preferencias: () => pedir('GET', '/api/preferencias'),
   fijarBarco: (barco) => pedir('PUT', '/api/preferencias', { barco }),
 };

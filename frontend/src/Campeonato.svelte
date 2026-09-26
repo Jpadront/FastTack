@@ -87,6 +87,10 @@
   const estadoTexto = { oficial: 'oficial', reconstruida: 'reconstruida', 'sin llegadas': 'sin llegadas', estimada: 'estimada' };
   const propia = $derived(camp?.fuente === 'vkx');
 
+  async function quitarPropio(a) {
+    if (!confirm(`¿Quitar ${a.archivo || 'el archivo'} (${a.vela})? El barco volverá a analizarse con los datos de RaceSense.`)) return;
+    try { await api.quitarVkxCampeonato(id, a.n); await leer(); } catch (e) { error = e.message; }
+  }
   async function quitar(a) {
     if (!confirm(`¿Quitar ${a.archivo || 'el archivo'} (${a.vela}) de la sesión?`)) return;
     try {
@@ -197,6 +201,22 @@
     </section>
     <p class="tenue pie">«Estimada»: la llegada de cada barco es el final de su último tramo (los archivos no traen la línea de llegada) y las balizas salen de sus rodeos. La salida usa los pings de pin y comité del Atlas. Con pocos barcos no hay comparación con la flota ni top 5; cuantos más archivos de otros barcos del mismo día, más completo el análisis.</p>
   {:else}
+    <section class="tarjeta archivos">
+      <h2>Tus archivos .vkx</h2>
+      <p class="tenue">RaceSense pierde muchas muestras. Si añades el registro de tu Atlas (el .vkx de cada día), tu barco se analiza con sus datos completos (maniobras, salida, escora) y el resto de la flota sigue viniendo de RaceSense.</p>
+      {#if camp.propios?.length}
+        <ul>
+          {#each camp.propios as a (a.n)}
+            <li><b>{a.vela}</b> <span class="tenue">{a.archivo} · {horaLocal(a.desde, camp.tz_offset_ms)}–{horaLocal(a.hasta, camp.tz_offset_ms, false)} · cubre {a.pruebas} {a.pruebas === 1 ? 'prueba' : 'pruebas'}</span>
+              <button class="enlace" onclick={() => quitarPropio(a)}>Quitar</button></li>
+          {/each}
+        </ul>
+      {/if}
+      <details>
+        <summary>Añadir archivos .vkx</summary>
+        <SubirVkx camp={id} onHecho={leer} />
+      </details>
+    </section>
   <p class="tenue pie">«Reconstruida»: prueba o llegadas obtenidas de la telemetría porque RaceSense no las tiene (puesto provisional). «Cuenta»: desmárcala para dejar fuera una prueba (entrenamiento, anulada); la numeración se ajusta sola. Pulsa «Analizar» para abrir el análisis de una prueba.</p>
   {/if}
 {/if}

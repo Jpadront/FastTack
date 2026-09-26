@@ -23,7 +23,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.13.1"
+VERSION = "0.14.2"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -247,6 +247,9 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             f["puerta"] = paso_fin.puerta if paso_fin else None
             man_t = [m.t for m in mans]
             f["polar"] = rend.polar(tr, e, s, vt, man_t)
+            f["vmg_estable"] = _r(rend.vmg_estable(tr, e, s, vt, man_t), 3)
+            pm = rend.segundos_en_maniobras(mans)
+            f["perdida_man_s"] = None if pm is None else round(pm, 1)
             ventanas[v] = rend.vmg_por_ventanas(tr, e, s, vt, man_t, t["en_tramo"][t["lider"]][0])
             if fin_ctrl.tipo in ("barlovento", "sotavento"):
                 f["rodeo"] = rend.rodeo(tr, paso_fin)
@@ -378,6 +381,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             cv = corr.estimar(trazas, [a, b], decl)
             vueltas_corr.append({"vuelta": len(vueltas_corr) + 1, "desde_s": round((a["t0"] - senal) / 1000),
                                  "hasta_s": round((b["t1"] - senal) / 1000), **(cv.a_dict() if cv else {"confianza": None})})
+    for v in rendimiento:   # dónde perdió o ganó tiempo cada barco frente al top 5
+        rendimiento[v]["desglose"] = rend.desglose(salida_tramos, salida, llegadas, v)
     orden = sorted(llegadas, key=llegadas.get)
     dudoso = recorrido_dudoso(salida_tramos, llegadas, senal)
     if dudoso:

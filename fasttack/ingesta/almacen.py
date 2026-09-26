@@ -125,7 +125,8 @@ class Almacen:
                            "definitivo": bool(len(cols["ts"])) and b < time.time() * 1000 - config.MARGEN_DIRECTO_MS})
             idx_p.write_text(json.dumps(tramos))
         archivos = [d / t["archivo"] for t in tramos if t["hasta"] >= desde and t["desde"] <= hasta]
-        return quitar_congeladas(_leer_parquets(archivos, desde, hasta))
+        from .propios import mezclar   # archivos .vkx propios: sustituyen a RaceSense para ese barco
+        return mezclar(d, quitar_congeladas(_leer_parquets(archivos, desde, hasta)), desde, hasta)
 
 
 def es_local(event_id: str) -> bool:

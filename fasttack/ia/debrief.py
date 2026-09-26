@@ -36,6 +36,7 @@ Reglas estrictas:
 - En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
 - Si hay «set_tras_barlovento» o «rodeo_final», úsalos solo cuando expliquen una ganancia o una pérdida clara del tramo (set directo o trasluchando al montar frente a lo que hizo el top 5; tiempo en la zona de la baliza y velocidad mínima frente al top 5).
 - El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
+- «donde_se_perdio_la_prueba» reparte el tiempo perdido frente al top 5 en salida, velocidad, maniobras y táctica y resto: úsalo para ordenar qué pesó más (y di que es estimado).
 - «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
@@ -283,6 +284,8 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
                 continue
             dp = hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))
             fila["tramos"] = hechos_mod.tramos_compactos(dp, coach=coach)
+            if dp.get("donde_se_perdio_la_prueba"):
+                fila["donde_se_perdio_la_prueba"] = {k: x for k, x in dp["donde_se_perdio_la_prueba"].items() if k != "por_tramo"}
             if coach and dp.get("salida"):
                 fila["salida"] = dp["salida"]
         # la escora óptima de un solo día tiene pocos datos: la del campeonato hasta ese día

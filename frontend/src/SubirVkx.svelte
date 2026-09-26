@@ -5,7 +5,8 @@
   import { onMount } from 'svelte';
   import { api, velaBonita } from './api.js';
 
-  let { sid = null, onHecho } = $props();
+  // camp: campeonato de RaceSense (los archivos sustituyen a la telemetría de ese barco)
+  let { sid = null, camp = null, onHecho } = $props();
 
   const CLASES = ['J/70', 'J/80', 'J/24', 'Snipe', 'ILCA', '470', '420', '49er', 'Nacra 17', 'Finn', 'Star', 'Etchells',
     'Melges 24', 'Melges 20', 'SB20', 'Dragon', 'Optimist', '29er', 'Flying Fifteen', 'RS21', 'J/111', 'Fireball'];
@@ -58,7 +59,8 @@
     if (lista.some((x) => !x.vela.trim())) { error = 'Falta la vela de algún archivo.'; return; }
     try {
       let id = sid;
-      if (!id) {
+      if (camp) id = camp;
+      else if (!id) {
         progreso = 'Creando la sesión';
         id = (await api.crearSesion(nombre || 'Sesión propia', clase)).id;
         sid = id;   // si falla un archivo, los siguientes intentos van a la misma sesión
@@ -67,7 +69,8 @@
       for (const [k, x] of pendientes.entries()) {
         progreso = `Leyendo ${x.archivo.name} (${k + 1} de ${pendientes.length})`;
         try {
-          await api.subirVkx(id, x.archivo, x.vela, x.barco);
+          if (camp) await api.subirVkxCampeonato(camp, x.archivo, x.vela);
+          else await api.subirVkx(id, x.archivo, x.vela, x.barco);
           x.estado = 'ok';
         } catch (err) {
           // un archivo repetido no es un fallo: ya está en la sesión
@@ -88,7 +91,7 @@
 </script>
 
 <form onsubmit={enviar}>
-  {#if !sid}
+  {#if !sid && !camp}
     <label class="etiqueta" for="s-nombre">Nombre</label>
     <input id="s-nombre" class="campo" bind:value={nombre} placeholder="Regata de Barcelona, mayo 2025">
     <label class="etiqueta" for="s-clase">Clase</label>
@@ -105,7 +108,7 @@
           <li class:ok={x.estado === 'ok'} class:mal={x.estado === 'error'}>
             <span class="nombre" title={x.archivo.name}>{x.archivo.name} <small class="tenue">{tamaño(x.archivo.size)}{x.estado === 'ok' ? ' · añadido' : x.estado === 'error' ? ' · error' : ''}</small></span>
             <input class="campo vela" aria-label={`Vela de ${x.archivo.name}`} placeholder="Vela" bind:value={x.vela} disabled={x.estado === 'ok'}>
-            <input class="campo barco" aria-label={`Nombre del barco de ${x.archivo.name}`} placeholder="Barco (opcional)" bind:value={x.barco} disabled={x.estado === 'ok'}>
+            {#if !camp}<input class="campo barco" aria-label={`Nombre del barco de ${x.archivo.name}`} placeholder="Barco (opcional)" bind:value={x.barco} disabled={x.estado === 'ok'}>{:else}<span></span>{/if}
             <button type="button" class="quitar" aria-label={`Quitar ${x.archivo.name}`} onclick={() => lista.splice(k, 1)} disabled={!!progreso}>✕</button>
           </li>
         {/each}
@@ -117,7 +120,7 @@
     <input class="oculto" type="file" accept=".vkx" multiple bind:this={entrada} onchange={(e) => añadir(e.currentTarget.files)}>
   </div>
 
-  <button class="boton" disabled={!!progreso || !lista.length}>{progreso ? progreso + '…' : sid ? `Añadir ${lista.length || ''} a la sesión` : 'Crear la sesión'}</button>
+  <button class="boton" disabled={!!progreso || !lista.length}>{progreso ? progreso + '…' : camp ? 'Añadir al campeonato' : sid ? `Añadir ${lista.length || ''} a la sesión` : 'Crear la sesión'}</button>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 </form>
 

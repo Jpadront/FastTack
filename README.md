@@ -7,7 +7,7 @@ Análisis post-regata con los datos de **Vakaros RaceSense** (dispositivos Atlas
 Lo que hace, de un vistazo:
 
 1. **Pegas el enlace** del visor de RaceSense → carga el campeonato y reconstruye las pruebas y llegadas que RaceSense no tiene.
-2. **Analizar una prueba** → recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), capas del mapa (presión, TWD, amura favorecida, SOG) y línea del líder perpendicular al viento con los metros que te faltan, métricas por tramo y barco, salida (con posicionamiento: pronto/tarde, huecos, aire sucio; y viento a lo largo de la línea), polar del tramo y regularidad, maniobras por fases (giro, aceleración, ángulo de salida), táctica (amura favorecida, lado), escora óptima en ceñida y popa, laylines, puertas, barco fantasma.
+2. **Analizar una prueba** → arriba, **dónde se perdió la prueba** frente al top 5 (salida, velocidad, maniobras, táctica);  recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), capas del mapa (presión, TWD, amura favorecida, SOG) y línea del líder perpendicular al viento con los metros que te faltan, métricas por tramo y barco, salida (con posicionamiento: pronto/tarde, huecos, aire sucio; y viento a lo largo de la línea), polar del tramo y regularidad, maniobras por fases (giro, aceleración, ángulo de salida), táctica (amura favorecida, lado), escora óptima en ceñida y popa, laylines, puertas, barco fantasma.
 3. **Resumen del campeonato** → general calculada, evolución por prueba frente a la flota y al top 5, salidas, maniobras, laylines, puertas y viento.
 4. **Debrief con IA** → texto para la tripulación a partir de esas cifras; cada cifra se comprueba.
 5. **Sesión con archivos .vkx** → regatas o entrenamientos que no están en RaceSense, con el registro del propio Atlas 2 (ver abajo).
@@ -59,6 +59,10 @@ En la lista de pruebas:
 - **sin llegadas**: no se detecta una llegada de la flota (entrenamiento, anulada o sin datos). No cuenta.
 - **Viento ref. (kn)**: la intensidad del viento en el disparo, si la sabéis. Sin ella, la intensidad del viento del análisis se mostrará relativa y «sin calibrar».
 - **Cuenta**: desmárcala para dejar fuera una prueba; la numeración se ajusta sola.
+
+### Tu .vkx dentro de un campeonato de RaceSense
+
+En la página del campeonato, **Tus archivos .vkx**: añade el registro de tu Atlas de cada día y tu barco se analiza con sus datos completos (RaceSense pierde muchas muestras); el resto de la flota sigue siendo la de RaceSense. Se puede quitar cuando quieras.
 
 ### Nombre y lista de campeonatos
 

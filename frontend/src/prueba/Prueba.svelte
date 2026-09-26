@@ -13,6 +13,7 @@
   import EscoraOptima from './EscoraOptima.svelte';
   import Maniobras from './Maniobras.svelte';
   import Polar from './Polar.svelte';
+  import DondeSePerdio from './DondeSePerdio.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -153,6 +154,7 @@
     </section>
   {/if}
 
+  <DondeSePerdio desglose={an.rendimiento?.[ref]?.desglose} nombreRef={vc(ref)} nombres={vc} />
   <nav class="pestanas" aria-label="Fases de la prueba">
     {#each tabs as t}
       <button class:activa={pestana === t.id} aria-current={pestana === t.id} onclick={() => (pestana = t.id)}>{t.nombre}</button>

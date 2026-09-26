@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..ingesta import campeonato as camp_mod
+from ..ingesta import propios as propios_mod
 from ..ingesta import sesion as sesion_mod
 from ..ingesta.vkx import ErrorVKX
 from ..ingesta.almacen import Almacen
@@ -137,6 +138,27 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         except KeyError as e:
             raise HTTPException(404, "Sesión no encontrada") from e
 
+    # ------------------------------------------------------------------ .vkx propios en un campeonato de RaceSense
+    @app.post("/api/campeonatos/{camp_id:path}/vkx")
+    async def subir_vkx_campeonato(camp_id: str, request: Request, vela: str, archivo: str = ""):
+        camp = camp_mod.leer(alm, camp_id)
+        if camp is None:
+            raise HTTPException(404, "Campeonato no encontrado")
+        datos = await request.body()
+        if not datos or len(datos) > MAX_VKX:
+            raise HTTPException(422, "Archivo vacío o demasiado grande.")
+        try:
+            return propios_mod.añadir(alm, camp, datos, vela, archivo)
+        except (ErrorVKX, ValueError) as e:
+            raise HTTPException(422, str(e)) from e
+
+    @app.delete("/api/campeonatos/{camp_id:path}/vkx/{n}")
+    def quitar_vkx_campeonato(camp_id: str, n: int):
+        camp = camp_mod.leer(alm, camp_id)
+        if camp is None:
+            raise HTTPException(404, "Campeonato no encontrado")
+        return propios_mod.quitar(alm, camp, n)
+
     @app.get("/api/campeonatos")
     def lista():
         return [dict(r) for r in alm.sql(
@@ -229,6 +251,8 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         extra = dict(r[0]) if r else {}
         alias = extra.pop("alias", None)
         out = {**(c or {"id": camp_id}), **extra}
+        if c and not sesion_mod.es_sesion(camp_id):
+            out["propios"] = propios_mod.lista(alm, c)
         if alias:
             out["nombre_original"], out["nombre"] = out.get("nombre"), alias
         return out

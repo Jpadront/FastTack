@@ -147,6 +147,19 @@ Validación: con la ventana fija anterior (−10…+20 s) un barco que tarda má
 - **Lado del campo**: distancia lateral a la recta entre las balizas del tramo, mirando a barlovento; % a la derecha y separación máxima.
 - Validación (Mundial, 6 pruebas, 20 tramos): la correlación entre el % en la amura favorecida y el parcial del tramo va en el sentido esperado (más tiempo en la favorecida, parcial menor) en 14 de 20 tramos, pero es débil (mediana −0,17): la TWD de la flota no ve las roladas locales. Usar la TWD de cada lado del campo no la mejora. Es orientativa.
 
+## Dónde se perdió la prueba (estimado)
+
+Tarjeta arriba de cada prueba (`rendimiento.desglose`): segundos perdidos (+) o ganados (−) por el barco de referencia frente al tiempo mediano de los 5 primeros (sin él). Por tramo con datos (calidad alta o media):
+- **Velocidad** = largo del tramo / VMG estable propia − largo / VMG estable mediana del top 5 (VMG navegando sin maniobras ni rodeos; incluye el aire sucio).
+- **Maniobras** = segundos perdidos en las maniobras del tramo (las no medidas por huecos, a la mediana de las medidas) − los del top 5.
+- **Salida** (primera ceñida) = (metros por detrás del primero a los 60 s − mediana del top 5) / VMG propia; «sin datos» si el barco no tiene datos en la señal.
+- **Táctica y resto** = la diferencia real en la llegada menos lo anterior: roladas, lado, laylines, rodeos y los tramos sin datos.
+Mundial P9, ESP 1214: 136 s perdidos, casi todos de velocidad (+141 s); maniobras +5 s; táctica y resto −10 s. En la flota, la parte de velocidad está relacionada con el puesto final (correlación 0,42–0,64).
+
+## Archivos .vkx propios en un campeonato de RaceSense
+
+En la página del campeonato, «Tus archivos .vkx»: el registro del Atlas de un barco de la flota sustituye la telemetría de RaceSense de ese barco en el tiempo que cubre el archivo (`ingesta/propios.py`); el resto de la flota sigue viniendo de RaceSense. Así el barco propio no tiene huecos (maniobras, salida, escora completas). Se comprueba que la vela esté en la flota y que el archivo cubra alguna prueba; al añadir o quitar un archivo se recalculan los análisis.
+
 ## Rendimiento dentro del tramo (estimado)
 
 `fasttack/motor/rendimiento.py`, navegando estable (sin rodeos, 20 s, ni maniobras, ±15 s):

@@ -1,1 +1,1 @@
-__version__ = "0.17.0"  # polar, regularidad, viento en la línea, crónica, puertas estimadas
+__version__ = "0.18.0"  # dónde se perdió la prueba y .vkx propios en campeonatos de RaceSense

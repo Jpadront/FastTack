@@ -122,3 +122,80 @@ def rodeo(tr: Traza, paso) -> dict | None:
     return {"tiempo_zona_s": round((paso.salida - paso.entrada) / 1000, 1),
             "sog_entrada": round(float(tr.sog[i[0]]), 2), "sog_minima": round(float(np.min(tr.sog[i])), 2),
             "sog_salida": round(float(tr.sog[i[-1]]), 2)}
+
+
+def vmg_estable(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> float | None:
+    """VMG media navegando estable (sin rodeos ni maniobras): la velocidad «pura» del barco."""
+    i = _estables(tr, e, s, vt, maniobras_t)
+    if i is None:
+        return None
+    v = vmg(tr, i, vt.twd_en(tr.ts[i]), vt.ceñida)
+    w = np.minimum(np.diff(tr.ts[i], append=tr.ts[i][-1]), 5_000).astype(float)
+    return float(np.sum(v * w) / w.sum()) if w.sum() > 0 else None
+
+
+def segundos_en_maniobras(mans) -> float | None:
+    """Segundos perdidos en las maniobras del tramo: las medidas, y las no medidas (huecos de datos)
+    a la mediana de las medidas. None si no se midió ninguna."""
+    med = [m.detalle["perdida_s"] for m in mans if m.detalle]
+    if not mans:
+        return 0.0
+    if not med:
+        return None
+    return float(sum(med) + (len(mans) - len(med)) * np.median(med))
+
+
+KN_MS = 1852 / 3600
+
+
+def desglose(salida_tramos: list[dict], salida: dict | None, llegadas: dict, v: str) -> dict | None:
+    """Dónde perdió (o ganó) tiempo el barco frente al top 5 de la prueba (los 5 primeros sin él).
+
+    Por tramo, frente a la mediana del top 5:
+    - velocidad = largo / VMG estable propia − largo / VMG estable del top 5;
+    - maniobras = segundos perdidos en maniobras propios − los del top 5;
+    - salida (solo la primera ceñida) = (metros por detrás del primero a los 60 s − los del top 5) / VMG propia;
+    - táctica = diferencia de parcial − lo anterior (roladas, lado, laylines, rodeos y lo no medido).
+    En el total, la táctica es la diferencia real en la llegada menos salida, velocidad y maniobras.
+    + = segundos perdidos, − = ganados."""
+    top5 = [x for x in sorted(llegadas, key=llegadas.get) if x != v][:5]
+    if v not in llegadas or len(top5) < 3:
+        return None
+    sal_medida = False
+    tramos, tot = [], {"salida_s": 0.0, "velocidad_s": 0.0, "maniobras_s": 0.0, "tactica_s": 0.0, "total_s": 0.0}
+    for k, t in enumerate(salida_tramos):
+        f = t["barcos"].get(v)
+        cinco = [t["barcos"][x] for x in top5 if x in t["barcos"]]
+        if not f or len(cinco) < 3 or f.get("calidad") not in ("alta", "media") or not t.get("largo_m"):
+            tramos.append({"tramo": t["nombre"], "sin_datos": True})
+            continue
+        med = lambda key: (float(np.median([c[key] for c in cinco if c.get(key) is not None]))
+                           if sum(c.get(key) is not None for c in cinco) >= 3 else None)
+        d_total = f["parcial_s"] - med("parcial_s")
+        vm, v5 = f.get("vmg_estable"), med("vmg_estable")
+        d_vel = (t["largo_m"] / (vm * KN_MS) - t["largo_m"] / (v5 * KN_MS)) if vm and v5 and vm > 0.5 and v5 > 0.5 else 0.0
+        m5 = med("perdida_man_s")
+        d_man = (f["perdida_man_s"] - m5) if f.get("perdida_man_s") is not None and m5 is not None else 0.0
+        d_sal = 0.0
+        if k == 0 and salida:
+            b = salida["barcos"].get(v) or {}
+            d5 = [salida["barcos"][x].get("dist_60") for x in top5 if (salida["barcos"].get(x) or {}).get("dist_60") is not None]
+            if b.get("dist_60") is not None and len(d5) >= 3 and vm:
+                d_sal = (b["dist_60"] - float(np.median(d5))) / (vm * KN_MS)
+                sal_medida = True
+        d_tac = d_total - d_vel - d_man - d_sal
+        fila = {"tramo": t["nombre"], "total_s": round(d_total), "salida_s": round(d_sal), "velocidad_s": round(d_vel),
+                "maniobras_s": round(d_man), "tactica_s": round(d_tac)}
+        tramos.append(fila)
+        for key in tot:
+            tot[key] += fila[key]
+    if not any("total_s" in x for x in tramos):
+        return None
+    # Total: la diferencia real en la llegada frente al tiempo mediano del top 5. «Táctica y resto» es
+    # lo que no explican salida, velocidad y maniobras (incluye los tramos sin datos).
+    total = (llegadas[v] - float(np.median([llegadas[x] for x in top5]))) / 1000
+    medidos = tot["salida_s"] + tot["velocidad_s"] + tot["maniobras_s"]
+    return {"frente_a": top5, "total_s": round(total), "salida_s": round(tot["salida_s"]) if sal_medida else None,
+            "velocidad_s": round(tot["velocidad_s"]), "maniobras_s": round(tot["maniobras_s"]),
+            "tactica_s": round(total - medidos), "por_tramo": tramos,
+            "tramos_sin_datos": sum(1 for x in tramos if x.get("sin_datos"))}

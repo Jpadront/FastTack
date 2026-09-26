@@ -317,6 +317,17 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
         pos_ant = f.get("posicion") or pos_ant
         tramos.append(tr)
     h["tramos"] = tramos
+    dg = (an["rendimiento"].get(v) or {}).get("desglose")
+    if dg:
+        h["donde_se_perdio_la_prueba"] = {
+            "total_frente_al_top5_s": dg["total_s"], "salida_s": dg["salida_s"] if dg["salida_s"] is not None else "sin datos en la señal",
+            "velocidad_s": dg["velocidad_s"],
+            "maniobras_s": dg["maniobras_s"], "tactica_y_resto_s": dg["tactica_s"],
+            "por_tramo": [{k.replace("tactica_s", "tactica_y_resto_s"): x for k, x in f.items()} for f in dg["por_tramo"]],
+            "significa": ("segundos perdidos (+) o ganados (−) frente al tiempo mediano del top 5; velocidad = VMG navegando "
+                          "estable (incluye aire sucio); táctica y resto = lo que falta hasta la diferencia real (roladas, lado, "
+                          "laylines, rodeos)"),
+        }
     # Medias de la prueba frente al top 5 y a la flota
     r = an["rendimiento"].get(v)
     if r:
