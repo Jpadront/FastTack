@@ -60,7 +60,7 @@
 </header>
 <div class="columnas">
 <section class="guardados">
-  <h2>Tus campeonatos</h2>
+  <div class="titulo-lista"><h2>Tus campeonatos</h2>{#if guardados.length}<a class="acceso" href="#/temporada">Tu temporada →</a>{/if}</div>
   {#if error && !url}<p class="error" role="alert">{error}</p>{/if}
   {#if guardados.length}
     <ul>
@@ -126,6 +126,7 @@
   @media (max-width: 800px) { .columnas { grid-template-columns: minmax(0, 1fr); } }
   .cargar { padding: 16px; display: grid; gap: 8px; }
   .guardados { grid-row: span 2; }
+  .titulo-lista { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .vkx { grid-column: 2; }
   @media (max-width: 800px) { .vkx { grid-column: auto; } .guardados { grid-row: auto; } }
   h2 { font-size: 22px; margin: 0 0 10px; }

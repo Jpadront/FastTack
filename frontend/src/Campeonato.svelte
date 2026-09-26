@@ -87,6 +87,26 @@
   const estadoTexto = { oficial: 'oficial', reconstruida: 'reconstruida', 'sin llegadas': 'sin llegadas', estimada: 'estimada' };
   const propia = $derived(camp?.fuente === 'vkx');
 
+  // Reglaje de cada prueba: pares ajuste → valor, libres (con sugerencias)
+  const AJUSTES = ['Obenques altos', 'Obenques bajos', 'Backstay', 'Pie de mástil', 'Mayor', 'Foque / génova', 'Spi', 'Peso tripulación'];
+  let reglajeDe = $state(null);   // clave de la prueba que se edita
+  let filasReglaje = $state([]);
+  function editarReglaje(p) {
+    if (reglajeDe === p.clave) { reglajeDe = null; return; }
+    reglajeDe = p.clave;
+    const r = Object.entries(p.reglaje || {});
+    filasReglaje = r.length ? r.map(([k, v]) => ({ k, v })) : AJUSTES.slice(0, 3).map((k) => ({ k, v: '' }));
+  }
+  function copiarAnterior(p) {
+    const antes = camp.pruebas.filter((q) => q.senal < p.senal && Object.keys(q.reglaje || {}).length);
+    const q = antes[antes.length - 1];
+    if (q) filasReglaje = Object.entries(q.reglaje).map(([k, v]) => ({ k, v }));
+  }
+  async function guardarReglaje(p) {
+    const r = Object.fromEntries(filasReglaje.filter((f) => f.k.trim() && f.v.trim()).map((f) => [f.k.trim(), f.v.trim()]));
+    await ajustar(p, { reglaje: r });
+    reglajeDe = null;
+  }
   async function quitarPropio(a) {
     if (!confirm(`¿Quitar ${a.archivo || 'el archivo'} (${a.vela})? El barco volverá a analizarse con los datos de RaceSense.`)) return;
     try { await api.quitarVkxCampeonato(id, a.n); await leer(); } catch (e) { error = e.message; }
@@ -176,8 +196,28 @@
             <td>
               <label class="cuenta"><input type="checkbox" checked={!p.excluida}
                      onchange={(e) => ajustar(p, { excluida: !e.currentTarget.checked })}> {p.excluida ? 'no' : 'sí'}</label>
+              {#if p.n_llegadas}<button class="enlace reglaje" onclick={() => editarReglaje(p)} title={Object.entries(p.reglaje || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'Sin reglaje apuntado'}>Reglaje{Object.keys(p.reglaje || {}).length ? ' ✓' : ''}</button>{/if}
             </td>
           </tr>
+          {#if reglajeDe === p.clave}
+            <tr class="fila-reglaje"><td colspan="7">
+              <form class="reglaje-form" onsubmit={(e) => { e.preventDefault(); guardarReglaje(p); }}>
+                {#each filasReglaje as f, k}
+                  <div class="par">
+                    <input class="campo" list="ajustes" placeholder="Ajuste" bind:value={f.k} aria-label="Ajuste">
+                    <input class="campo" placeholder="Valor" bind:value={f.v} aria-label={`Valor de ${f.k || 'ajuste'}`}>
+                    <button type="button" class="enlace" aria-label="Quitar" onclick={() => filasReglaje.splice(k, 1)}>✕</button>
+                  </div>
+                {/each}
+                <datalist id="ajustes">{#each AJUSTES as a}<option value={a}></option>{/each}</datalist>
+                <div class="acciones-reglaje">
+                  <button type="button" class="enlace" onclick={() => filasReglaje.push({ k: '', v: '' })}>+ ajuste</button>
+                  <button type="button" class="enlace" onclick={() => copiarAnterior(p)}>Copiar de la prueba anterior</button>
+                  <button class="boton">Guardar</button>
+                </div>
+              </form>
+            </td></tr>
+          {/if}
         {/each}
       </tbody>
     </table>
@@ -273,6 +313,8 @@
     td:nth-child(6)::before { content: 'Viento kn'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     td:nth-child(7)::before { content: 'Cuenta'; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
     .n { text-align: left; }
+    tr.fila-reglaje { display: block; }
+    tr.fila-reglaje td { display: block; }
   }
   .archivos { padding: 14px 16px; margin-top: 12px; display: grid; gap: 10px; }
   .archivos h2 { font-size: 20px; margin: 0; }
@@ -281,6 +323,13 @@
   .archivos li .tenue { font-size: 14px; }
   .archivos summary { cursor: pointer; font: 600 15px var(--display); color: var(--foco); margin-bottom: 8px; }
   .enlace { background: none; border: 0; padding: 0; color: var(--foco); text-decoration: underline; font-size: 14px; }
+  .reglaje { display: block; margin-top: 4px; font-size: 13px; }
+  .fila-reglaje td { background: color-mix(in srgb, var(--foco) 4%, transparent); }
+  .reglaje-form { display: grid; gap: 6px; max-width: 560px; }
+  .par { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; }
+  .par .campo { padding: 5px 8px; font-size: 14px; }
+  .acciones-reglaje { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .acciones-reglaje .boton { padding: 5px 14px; font-size: 14px; }
   .acciones-camp { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .resumen { display: inline-block; text-decoration: none; font-size: 15px; padding: 7px 14px; }
   .recargar { font-size: 15px; padding: 7px 14px; }

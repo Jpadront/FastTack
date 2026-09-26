@@ -6,6 +6,7 @@
   // El análisis (con el mapa) se carga solo al abrir una prueba: la portada queda ligera
   const cargarPrueba = () => import('./prueba/Prueba.svelte');
   const cargarResumen = () => import('./resumen/Resumen.svelte');
+  const cargarTemporada = () => import('./Temporada.svelte');
 
   // Rutas por hash: #/ · #/c/<campeonato> · #/c/<campeonato>/p/<clave de la prueba> · #/c/<campeonato>/resumen
   let ruta = $state(location.hash);
@@ -51,6 +52,12 @@
         <m.default {campId} {barco} />
       {/await}
     {/key}
+  {:else if ruta.startsWith('#/temporada')}
+    {#await cargarTemporada()}
+      <p class="tenue">Cargando…</p>
+    {:then m}
+      <m.default {barco} />
+    {/await}
   {:else if campId}
     {#key campId}
       <Campeonato id={campId} {barco} onBarco={cambiarBarco} />

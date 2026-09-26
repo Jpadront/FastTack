@@ -64,6 +64,11 @@ En la lista de pruebas:
 
 En la página del campeonato, **Tus archivos .vkx**: añade el registro de tu Atlas de cada día y tu barco se analiza con sus datos completos (RaceSense pierde muchas muestras); el resto de la flota sigue siendo la de RaceSense. Se puede quitar cuando quieras.
 
+### Reglaje y temporada
+
+- **Reglaje**: en la página del campeonato, botón **Reglaje** en cada prueba: pares ajuste → valor libres (obenques altos y bajos, backstay, velas…), con «Copiar de la prueba anterior». El debrief de la prueba lo tiene en cuenta como hipótesis.
+- **Tu temporada** (enlace en la página inicial): todas las pruebas analizadas de tu barco en todos los campeonatos y sesiones: dónde se pierde de media frente al top 5, evolución de la VMG en ceñida y popa frente al top 5, de la pérdida por virada y del puesto, y la comparación de reglajes por franja de viento (con el viento de referencia de cada prueba). Con pocas pruebas por casilla es orientativo.
+
 ### Nombre y lista de campeonatos
 
 En la página inicial, junto a cada campeonato: ✎ para ponerle otro nombre (vacío = el original) y 🗑 para quitarlo de la lista. Al quitar una sesión .vkx se borran sus archivos; la telemetría ya descargada de RaceSense se conserva, por si se vuelve a cargar.

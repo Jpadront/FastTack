@@ -19,7 +19,7 @@ from ..ingesta.almacen import Almacen
 from ..ingesta.campeonato import DivisionAmbigua, elegir_division
 from ..ingesta.racesense import ErrorRaceSense
 from ..ingesta.url import UrlNoValida, leer_url
-from .. import __version__, servicio
+from .. import __version__, servicio, temporada as temporada_mod
 from ..ia import debrief
 
 WEB = Path(__file__).resolve().parent.parent / "web"
@@ -38,6 +38,7 @@ class PeticionDebrief(BaseModel):
 
 
 class AjustePrueba(BaseModel):
+    reglaje: dict[str, str] | None = None   # lo que se llevaba: {«Obenques altos»: «14», …}
     numero: int | None = None
     excluida: bool | None = None
     viento_kn: float | None = None
@@ -177,6 +178,10 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         cambios = a.model_dump(exclude_unset=True)
         if not cambios:
             raise HTTPException(422, "Nada que cambiar")
+        if "reglaje" in cambios:
+            import json as _json
+            r = {k.strip(): v.strip() for k, v in (cambios["reglaje"] or {}).items() if k.strip() and v.strip()}
+            cambios["reglaje"] = _json.dumps(r, ensure_ascii=False) if r else None
         cols = ", ".join(cambios)
         alm.sql(f"insert into ajuste_prueba (campeonato, clave, {cols}) values (?, ?, {', '.join('?' * len(cambios))}) "
                 f"on conflict(campeonato, clave) do update set " + ", ".join(f"{c}=excluded.{c}" for c in cambios),
@@ -279,6 +284,10 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             import shutil
             shutil.rmtree(alm.ruta(camp_id), ignore_errors=True)
         return {"eliminado": camp_id}
+
+    @app.get("/api/temporada")
+    def temporada(barco: str | None = None):
+        return temporada_mod.temporada(alm, barco or alm.preferencia("barco", BARCO_POR_DEFECTO))
 
     @app.get("/api/version")
     def version():

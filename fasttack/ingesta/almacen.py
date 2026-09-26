@@ -70,6 +70,9 @@ class Almacen:
         if "alias" not in cols:   # nombre puesto por el usuario (v0.16)
             self.db.execute("alter table campeonato add column alias text")
             self.db.commit()
+        if "reglaje" not in {r[1] for r in self.db.execute("pragma table_info(ajuste_prueba)")}:   # v0.19
+            self.db.execute("alter table ajuste_prueba add column reglaje text")
+            self.db.commit()
 
     # ------------------------------------------------------------------ SQLite
     def sql(self, q: str, args=()):

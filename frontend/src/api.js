@@ -48,6 +48,7 @@ export const api = {
     return datos;
   },
   quitarVkxCampeonato: (c, n) => pedir('DELETE', `/api/campeonatos/${id(c)}/vkx/${n}`),
+  temporada: (barco) => pedir('GET', `/api/temporada${barco ? '?barco=' + encodeURIComponent(barco) : ''}`),
   preferencias: () => pedir('GET', '/api/preferencias'),
   fijarBarco: (barco) => pedir('PUT', '/api/preferencias', { barco }),
 };

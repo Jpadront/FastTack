@@ -35,6 +35,7 @@ Reglas estrictas:
 - Si los DATOS traen «sesion_propia» con un solo barco, no hay flota ni top 5: no hables de puestos ni de la flota; compara entre pruebas y entre tramos del propio barco (evolución, regularidad, ceñida frente a popa) y recuerda que llegadas y balizas son estimadas.
 - En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
 - Si hay «set_tras_barlovento» o «rodeo_final», úsalos solo cuando expliquen una ganancia o una pérdida clara del tramo (set directo o trasluchando al montar frente a lo que hizo el top 5; tiempo en la zona de la baliza y velocidad mínima frente al top 5).
+- Si hay «reglaje_apuntado», es lo que la tripulación apuntó que llevaba: puedes relacionarlo con la velocidad o la escora como hipótesis, nunca como causa demostrada.
 - El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
 - «donde_se_perdio_la_prueba» reparte el tiempo perdido frente al top 5 en salida, velocidad, maniobras y táctica y resto: úsalo para ordenar qué pesó más (y di que es estimado).
 - «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
@@ -301,4 +302,8 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     an = servicio.analisis_prueba(alm, camp_id, ambito)
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:
         raise ValueError("Este barco no tiene datos en esta prueba.")
-    return hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))
+    h = hechos_mod.de_prueba(an, barco, nombres, camp.get("clase"))
+    reg = next((p.get("reglaje") for p in camp["pruebas"] if p["clave"] == ambito), None)
+    if reg:
+        h["reglaje_apuntado"] = reg
+    return h

@@ -160,6 +160,10 @@ Mundial P9, ESP 1214: 136 s perdidos, casi todos de velocidad (+141 s); maniobra
 
 En la página del campeonato, «Tus archivos .vkx»: el registro del Atlas de un barco de la flota sustituye la telemetría de RaceSense de ese barco en el tiempo que cubre el archivo (`ingesta/propios.py`); el resto de la flota sigue viniendo de RaceSense. Así el barco propio no tiene huecos (maniobras, salida, escora completas). Se comprueba que la vela esté en la flota y que el archivo cubra alguna prueba; al añadir o quitar un archivo se recalculan los análisis.
 
+## Temporada y reglaje
+
+`fasttack/temporada.py`: por cada prueba analizada del barco (sin recorrido dudoso): puesto relativo, VMG en ceñida y en popa frente a la mediana del top 5 de la prueba, pérdida mediana por virada (s), laylines, regularidad mediana y el desglose de «dónde se perdió». Reglaje: para cada ajuste con al menos dos valores, media de esos indicadores por valor y por franja de viento de referencia (< 8, 8–12, 12–16, > 16 kn, o «sin viento de referencia»). Es una media de pocas pruebas en condiciones distintas: orientativo.
+
 ## Rendimiento dentro del tramo (estimado)
 
 `fasttack/motor/rendimiento.py`, navegando estable (sin rodeos, 20 s, ni maniobras, ±15 s):
