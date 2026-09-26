@@ -21,7 +21,9 @@
   let entrada;
 
   onMount(async () => {
-    const p = await api.preferencias().catch(() => null);
+    let local = null;
+    try { local = localStorage.getItem('fasttack.barco'); } catch {}
+    const p = local ? { barco: local } : await api.preferencias().catch(() => null);
     if (p?.barco) velaDefecto = velaBonita(p.barco);
   });
 

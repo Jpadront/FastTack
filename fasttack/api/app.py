@@ -67,6 +67,7 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
     app = FastAPI(title="FastTack", docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.add_middleware(GZipMiddleware, minimum_size=2000)
     tareas: dict[str, dict] = {}  # carga en curso por campeonato
+    generando: dict[tuple, dict] = {}  # debriefs que se están generando (campeonato, ámbito, barco)
 
     def _cargar(camp_id: str, url: str, division: str):
         def progreso(texto):
@@ -235,8 +236,10 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         d = debrief.leer(alm, camp_id, ambito, barco)
         if d:  # se vuelve a comprobar con las cifras actuales (es inmediato)
             d["avisos"] = debrief.no_verificadas(d["texto"], datos)
+        g = generando.get((camp_id, ambito, barco), {})
         return {"debrief": d, "vigente": bool(d and d["huella"] == debrief.huella(datos)),
-                "instrucciones": debrief.instrucciones(datos), "claude_code": bool(debrief.comando_claude())}
+                "instrucciones": debrief.instrucciones(datos), "claude_code": bool(debrief.comando_claude()),
+                "generando": g.get("estado") == "generando", "error": g.get("error")}
 
     @app.post("/api/campeonatos/{camp_id:path}/debrief")
     def generar_debrief(camp_id: str, p: PeticionDebrief):
@@ -245,11 +248,24 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             if not p.texto.strip():
                 raise HTTPException(422, "El texto está vacío")
             return debrief.guardar(alm, camp_id, p.ambito, p.barco, datos, p.texto, "manual")
-        try:
-            texto = debrief.generar_claude_code(debrief.instrucciones(datos))
-        except debrief.IANoDisponible as e:
-            raise HTTPException(503, str(e)) from e
-        return debrief.guardar(alm, camp_id, p.ambito, p.barco, datos, texto, "claude-code")
+        if not debrief.comando_claude():
+            raise HTTPException(503, "Claude Code no está instalado en este ordenador (comando «claude»).")
+        # En segundo plano: tarda 30–100 s y, publicado con Cloudflare, una petición no puede pasar de 100 s.
+        # La web consulta el estado (GET) hasta que termina.
+        clave_g = (camp_id, p.ambito, p.barco)
+        if generando.get(clave_g, {}).get("estado") == "generando":
+            return {"generando": True}
+        generando[clave_g] = {"estado": "generando"}
+
+        def trabajo():
+            try:
+                texto = debrief.generar_claude_code(debrief.instrucciones(datos))
+                debrief.guardar(alm, camp_id, p.ambito, p.barco, datos, texto, "claude-code")
+                generando[clave_g] = {"estado": "hecho"}
+            except Exception as e:  # noqa: BLE001 - el error se enseña en la web
+                generando[clave_g] = {"estado": "error", "error": str(e)}
+        threading.Thread(target=trabajo, daemon=True).start()
+        return {"generando": True}
 
     def _datos_debrief(camp_id: str, ambito: str, barco: str) -> dict:
         try:

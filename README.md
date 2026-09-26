@@ -46,6 +46,14 @@ En el móvil, las pestañas de la prueba quedan fijas arriba y el reproductor fi
 
 Si no carga: comprueba que el Mac no esté en reposo y que el cortafuegos de macOS permite conexiones entrantes a Python (*Ajustes del Sistema → Red → Cortafuegos*).
 
+## Publicarlo en internet (para el equipo)
+
+Con un túnel de Cloudflare, FastTack se abre desde cualquier sitio en una dirección propia (p. ej. `https://fasttack.tudominio.com`) y solo entran los correos que autorices; sigue funcionando en tu Mac, con tus datos y tu Claude Code. Guía paso a paso en [`docs/publicar.md`](docs/publicar.md). Una vez preparado:
+
+```bash
+uv run fasttack --tunel --direccion https://fasttack.tudominio.com
+```
+
 ## Cargar un campeonato
 
 1. Abre el campeonato en el visor de RaceSense y copia el enlace (`https://player.vakaros.com/watch/…`).

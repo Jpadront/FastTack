@@ -15,7 +15,12 @@
 
   onMount(async () => {
     window.addEventListener('hashchange', () => (ruta = location.hash));
-    try { barco = (await api.preferencias()).barco; } catch {}
+    // Barco de referencia: el de este navegador (cada miembro del equipo puede mirar el suyo); si no
+    // hay, el del servidor
+    let local = null;
+    try { local = localStorage.getItem('fasttack.barco'); } catch {}
+    if (local) barco = local;
+    else { try { barco = (await api.preferencias()).barco; } catch {} }
     try { version = (await (await fetch('/api/version')).json()).version; } catch {}
   });
 
@@ -26,7 +31,7 @@
 
   async function cambiarBarco(v) {
     barco = v;
-    try { await api.fijarBarco(v); } catch {}
+    try { localStorage.setItem('fasttack.barco', v); } catch {}
   }
 </script>
 

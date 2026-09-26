@@ -12,12 +12,22 @@
   async function leer() {
     try { estado = await api.debrief(campId, ambito, barco); error = ''; } catch (e) { error = e.message; }
   }
-  onMount(leer);
+  // La generación va en segundo plano en el servidor: se consulta hasta que termina
+  async function esperar() {
+    generando = true;
+    while (true) {
+      await new Promise((r) => setTimeout(r, 3000));
+      await leer();
+      if (!estado?.generando) break;
+    }
+    generando = false;
+    if (estado?.error && !estado?.vigente) error = estado.error;
+  }
+  onMount(async () => { await leer(); if (estado?.generando) esperar(); });
 
   async function generar() {
     generando = true; error = '';
-    try { await api.generarDebrief(campId, ambito, barco); await leer(); } catch (e) { error = e.message; }
-    generando = false;
+    try { await api.generarDebrief(campId, ambito, barco); await esperar(); } catch (e) { error = e.message; generando = false; }
   }
   async function guardarPegado() {
     error = '';

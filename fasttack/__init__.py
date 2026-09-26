@@ -1,1 +1,1 @@
-__version__ = "0.22.0"  # intensidad del viento del modelo meteorológico
+__version__ = "0.23.0"  # publicar con Cloudflare: túnel, debrief en segundo plano, barco por navegador
