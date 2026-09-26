@@ -8,6 +8,8 @@
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 from .geo import dif
@@ -152,7 +154,8 @@ def desglose(salida_tramos: list[dict], salida: dict | None, llegadas: dict, v: 
     """Dónde perdió (o ganó) tiempo el barco frente al top 5 de la prueba (los 5 primeros sin él).
 
     Por tramo, frente a la mediana del top 5:
-    - velocidad = largo / VMG estable propia − largo / VMG estable del top 5;
+    - velocidad = d / VMG estable propia − d / VMG estable del top 5, con d = largo del tramo en la
+      dirección del viento (la VMG se mide a lo largo del viento);
     - maniobras = segundos perdidos en maniobras propios − los del top 5;
     - salida (solo la primera ceñida) = (metros por detrás del primero a los 60 s − los del top 5) / VMG propia;
     - táctica = diferencia de parcial − lo anterior (roladas, lado, laylines, rodeos y lo no medido).
@@ -173,7 +176,10 @@ def desglose(salida_tramos: list[dict], salida: dict | None, llegadas: dict, v: 
                            if sum(c.get(key) is not None for c in cinco) >= 3 else None)
         d_total = f["parcial_s"] - med("parcial_s")
         vm, v5 = f.get("vmg_estable"), med("vmg_estable")
-        d_vel = (t["largo_m"] / (vm * KN_MS) - t["largo_m"] / (v5 * KN_MS)) if vm and v5 and vm > 0.5 and v5 > 0.5 else 0.0
+        # la VMG se mide a lo largo del viento: la distancia que cubre es la del tramo en esa dirección
+        dir_viento = t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360
+        dist = t["largo_m"] * abs(math.cos(math.radians(t["rumbo_eje"] - dir_viento)))
+        d_vel = (dist / (vm * KN_MS) - dist / (v5 * KN_MS)) if vm and v5 and vm > 0.5 and v5 > 0.5 else 0.0
         m5 = med("perdida_man_s")
         d_man = (f["perdida_man_s"] - m5) if f.get("perdida_man_s") is not None and m5 is not None else 0.0
         d_sal = 0.0

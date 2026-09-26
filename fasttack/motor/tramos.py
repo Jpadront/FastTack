@@ -376,18 +376,25 @@ def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, c
 
 
 def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: float | None) -> float | None:
-    """Distancia del barco fantasma: recorre el tramo con el ángulo de la flota y siempre en la
-    amura favorecida por la rolada de cada corte. En el corte k avanza largo/10 a lo largo del eje
-    y navega (largo/10) / cos(α − |δk|), con δk = TWD del corte − rumbo del eje (en popa, con la
-    dirección del viento + 180)."""
+    """Distancia del barco fantasma: recorre el tramo siempre en la amura favorecida por la rolada
+    de cada corte. En el corte k avanza largo/10 a lo largo del eje y navega (largo/10) / cos(a),
+    con a = ángulo con el eje del rumbo sobre el fondo de la amura favorecida (el de la flota en ese
+    corte, que incluye la corriente). Sin rumbos por amura: a = α − |δk|, con α el ángulo de la flota
+    y δk = TWD del corte − rumbo del eje (en popa, con la dirección del viento + 180)."""
     if not twa_flota or not largo_m:
         return None
     alpha = twa_flota if viento.ceñida else 180 - twa_flota
     total = 0.0
     for c in viento.cortes:
-        ref = c.twd if viento.ceñida else (c.twd + 180) % 360
-        delta = min(abs(float(dif(ref - eje_tramo))), alpha - 1)
-        total += (largo_m / len(viento.cortes)) / math.cos(math.radians(alpha - delta))
+        if c.rumbos is not None:
+            # rumbos sobre el fondo de las dos amuras (con la corriente, como las laylines): el fantasma
+            # navega en la que forma menos ángulo con el eje del tramo
+            a = min(abs(float(dif(c.rumbos[0] - eje_tramo))), abs(float(dif(c.rumbos[1] - eje_tramo))))
+            a = min(a, 89.0)
+        else:
+            ref = c.twd if viento.ceñida else (c.twd + 180) % 360
+            a = alpha - min(abs(float(dif(ref - eje_tramo))), alpha - 1)
+        total += (largo_m / len(viento.cortes)) / math.cos(math.radians(a))
     return round(total, 1)
 
 

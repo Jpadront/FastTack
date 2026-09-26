@@ -290,3 +290,23 @@ Comparada con los resultados oficiales publicados por el club organizador (100 b
 - **Debrief del campeonato en curso**: usa las pruebas analizadas hasta ese momento e indica si el campeonato sigue en curso y cuántas pruebas faltan por analizar.
 - **Caché**: el texto se guarda con la huella (SHA-1) de sus cifras; si las cifras cambian, se avisa de que conviene regenerarlo.
 - **Prueba real** (Mundial, prueba 9 y campeonato, ESP 1214, Claude Code): 36 y 54 s; todas las cifras verificadas. Un texto pegado a mano con una VMG inventada (9,99 kn) queda marcado.
+
+
+## Revisión de variables (v0.21)
+
+Repaso de cada cálculo: qué variables usa y qué queda fuera.
+
+| Cálculo | Tiene en cuenta | Queda fuera / supuesto | Estado |
+|---|---|---|---|
+| COG | posiciones GPS (diferencia centrada) | ruido del GPS | Medido con los .vkx (COG del propio GPS): la mitad de las muestras a ±2° y el 90 % a ±6°; sesgo en la VMG del 0,15 %. Sin cambios |
+| TWD, TWA, VMG | COG de la flota (bisectriz o amuras), por cortes | se miden **sobre el fondo**: incluyen la corriente y el abatimiento. Igual para todos los barcos del mismo campo, así que las comparaciones valen | Documentado |
+| Laylines | rumbos sobre el fondo de cada amura (con corriente) | posición de la baliza estimada sin Atlas | Correcto |
+| Barco fantasma | antes: TWD ± TWA (sin corriente) | — | **Corregido**: rumbos sobre el fondo de cada amura, como las laylines |
+| Dónde se perdió (velocidad) | antes: largo del tramo / VMG | la VMG se mide a lo largo del viento | **Corregido**: distancia del tramo en la dirección del viento |
+| Pérdida en maniobras | VMG de cada amura, giro, aceleración, huecos | viento local del barco (usa la TWD de la flota) | Correcto |
+| Escora | roll − desviación del sensor (simetría de amuras) | si se navega mucho más en una amura con más viento, la desviación se sesga algo | Aceptable |
+| Escora óptima | vecinos en la misma amura (mismo viento) | peso y estilo de cada tripulación | Documentado |
+| Corriente | brújulas + velocidades por amura, por vuelta | constante en todo el campo | Documentado; se compara con el modelo de Open-Meteo |
+| Intensidad del viento (TWS) | SOG de la flota proporcional al viento, anclada al viento de referencia | la velocidad no es proporcional al viento (planeo, saturación con mucho viento) | Pendiente: usar el viento horario del modelo |
+| Salida, OCS, llegadas | posición de la **antena** GPS | distancia de la antena a la proa (el margen a la línea y el OCS se miden en la antena) | Pendiente: necesita la posición del Atlas |
+| Viento en la línea | ángulo al viento común de la flota | cada barco orza o arriba distinto | Documentado |

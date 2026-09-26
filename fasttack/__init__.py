@@ -1,1 +1,1 @@
-__version__ = "0.20.0"  # meteo de referencia (Open-Meteo) y un solo debrief orientado a mejorar
+__version__ = "0.21.0"  # revisión de cálculos: fantasma con corriente y distancia a lo largo del viento
