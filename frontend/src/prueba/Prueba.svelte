@@ -37,21 +37,17 @@
       pistas = decodificarPistas(await api.pistas(campId, clave));
       cargando = '';
       T = -60;
-      api.meteo(campId, clave).then((m) => (meteo = m)).catch((e) => (meteoError = e.message));
+      api.meteo(campId, clave).then(async (m) => {
+        meteo = m;
+        // el viento horario del modelo se acaba de guardar: el análisis lo usa para la intensidad
+        if (m.analisis_actualizado) an = await api.analisis(campId, clave);
+      }).catch((e) => (meteoError = e.message));
     } catch (e) {
       error = e.message; cargando = '';
     }
   });
   // Viento y corriente del modelo (Open-Meteo) como referencia
-  let meteo = $state(null), meteoError = $state(''), aplicando = $state(false);
-  async function usarVientoModelo() {
-    aplicando = true;
-    try {
-      await api.ajustar(campId, clave, { viento_kn: meteo.viento.kn });
-      an = await api.analisis(campId, clave);   // con el viento de referencia cambia el análisis (TWS en nudos)
-    } catch (e) { error = e.message; }
-    aplicando = false;
-  }
+  let meteo = $state(null), meteoError = $state('');
 
   const ref = $derived(claveVela(barco));
   const nombres = $derived(Object.fromEntries((camp?.barcos || []).map((b) => [b.clave, b])));
@@ -142,7 +138,9 @@
       <p class="meta">
         {camp.clase} · {an.clasificacion.length} llegadas · {an.vueltas} vueltas
         {#if p.estado === 'reconstruida'}<span class="chip reconstruida">reconstruida</span>{/if}
-        {#if !p.viento_kn}<span class="chip">viento sin calibrar</span>{:else}<span class="chip">viento ref. {num(p.viento_kn, 1)} kn</span>{/if}
+        {#if an.tws_fuente?.startsWith('modelo')}<span class="chip" title={an.tws_fuente === 'modelo' ? 'Intensidad del viento del modelo meteorológico (Open-Meteo), hora a hora' : `Evolución del modelo meteorológico escalada al viento de referencia (${num(p.viento_kn, 1)} kn)`}>viento del modelo{p.viento_kn ? ` · ref. ${num(p.viento_kn, 1)} kn` : ''}</span>
+        {:else if p.viento_kn}<span class="chip">viento ref. {num(p.viento_kn, 1)} kn</span>
+        {:else}<span class="chip">viento sin calibrar</span>{/if}
         <span class="tenue">· motor {an.version}</span>
       </p>
       {#if meteo}
@@ -151,7 +149,7 @@
           {#if meteo.viento}
             <span class:tachado={meteo.viento.coincide === false}>viento <b class="num">{num(meteo.viento.kn, 0)} kn</b> de {meteo.viento.desde_grados}° <span class="tenue num">({num(meteo.viento.min_kn, 0)}–{num(meteo.viento.max_kn, 0)}{meteo.viento.rachas_kn ? `, rachas ${num(meteo.viento.rachas_kn, 0)}` : ''})</span></span>
             {#if meteo.viento.coincide === false}<span class="aviso-meteo">no coincide con la dirección de la flota ({meteo.twd_flota_grados}°, {meteo.viento.diferencia_con_la_flota_grados}° de diferencia): no lo uses como referencia</span>
-            {:else if !p.viento_kn || Math.abs(p.viento_kn - meteo.viento.kn) > 0.4}<button class="enlace" disabled={aplicando} onclick={usarVientoModelo}>{aplicando ? 'Aplicando…' : `Usar ${num(meteo.viento.kn, 0)} kn como viento de referencia`}</button>{/if}
+{/if}
           {:else}<span class="tenue" title={meteo.aviso || ''}>sin viento del modelo{meteo.aviso?.includes('limit') ? ' (límite diario de Open-Meteo: se reintentará)' : ''}</span>{/if}
           {#if meteo.corriente}· corriente <b class="num">{num(meteo.corriente.kn, 1)} kn</b> hacia {meteo.corriente.hacia_grados}°{#if meteo.corriente_estimada}<span class="tenue"> (estimada con la flota: {num(meteo.corriente_estimada.velocidad_kn, 1)} kn hacia {num(meteo.corriente_estimada.hacia_grados, 0)}°)</span>{/if}{/if}
           <span class="tenue">· Open-Meteo, {meteo.horas[0]}–{meteo.horas[meteo.horas.length - 1]} UTC; viento a 10 m del modelo, puede diferir del del campo</span>

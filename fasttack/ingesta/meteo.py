@@ -97,6 +97,8 @@ def en_ventana(raiz: Path, lat: float, lon: float, desde_ms: int, hasta_ms: int,
         out["aviso"] = "; ".join(dict.fromkeys(errores))
     vs = [(h["viento"]["wind_speed_10m"][k], h["viento"]["wind_direction_10m"][k], h["viento"]["wind_gusts_10m"][k])
           for _, h, k in horas if h.get("viento") and h["viento"]["wind_speed_10m"][k] is not None]
+    out["serie"] = [[ms, h["viento"]["wind_speed_10m"][k], h["viento"]["wind_direction_10m"][k]]
+                    for ms, h, k in horas if h.get("viento") and h["viento"]["wind_speed_10m"][k] is not None]
     if vs:
         out["viento"] = {"kn": round(sum(x[0] for x in vs) / len(vs), 1),
                          "desde_grados": round(_media_circular([x[1] for x in vs], [x[0] for x in vs])),

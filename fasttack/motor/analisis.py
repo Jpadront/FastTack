@@ -21,9 +21,9 @@ from . import rendimiento as rend
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
-from .viento import calibrar_tws, fases, quien_primero, viento_tramo
+from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.15.0"
+VERSION = "0.16.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -151,7 +151,12 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         tramos.append({"id": f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
                        "ceñida": ceñida, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
                        "eje": eje_tramo, "largo_m": largo, "lider": lider, "p_ini": p_ini})
-    calibrar_tws([t["viento"] for t in tramos], prueba.get("viento_kn"))
+    # Intensidad del viento: del modelo meteorológico si cuadra con la flota; si no, de la SOG anclada
+    # al viento de referencia apuntado; si no hay ninguno, sin calibrar (solo presión relativa)
+    tws_fuente = tws_modelo([t["viento"] for t in tramos], prueba.get("meteo_horario"), prueba.get("viento_kn"), senal)
+    if tws_fuente is None and prueba.get("viento_kn"):
+        calibrar_tws([t["viento"] for t in tramos], prueba.get("viento_kn"))
+        tws_fuente = "referencia y SOG de la flota"
 
     # ---------------------------------------------------------------- maniobras y offset de escora
     man_por_tramo = {t["id"]: {} for t in tramos}
@@ -275,10 +280,10 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 f["eficiencia_pct"] = round((fant - f["distancia_m"]) / fant * 100, 1)
             else:
                 f["vs_fantasma_m"] = f["eficiencia_pct"] = None
-        presion = [c.tws for c in vt.cortes] if prueba.get("viento_kn") else [c.sog_mediana for c in vt.cortes]
+        presion = [c.tws for c in vt.cortes] if tws_fuente else [c.sog_mediana for c in vt.cortes]
         fr = fases([c.twd for c in vt.cortes], 3.0, ("PROGRESIVA DERECHA", "PROGRESIVA IZQUIERDA", "ESTABLE"), circular=True)
         quien_primero(fr, vt.cortes, "twd", True)
-        fp = fases(presion, 0.5 if prueba.get("viento_kn") else 0.2, ("SUBIENDO", "BAJANDO", "ESTABLE"))
+        fp = fases(presion, 0.5 if tws_fuente else 0.2, ("SUBIENDO", "BAJANDO", "ESTABLE"))
         quien_primero(fp, vt.cortes, "sog", False)
         cortes = [{"pct": 5 + 10 * k, "t": c.t, "twd": round(c.twd, 1), "twa_flota": _r(c.twa_flota, 1),
                    "sog_mediana": _r(c.sog_mediana), "tws": c.tws, "confianza": c.confianza, "fuente": c.fuente,
@@ -301,7 +306,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             "desde": t["desde"], "hasta": t["hasta"], "t0": vt.t0, "t1": vt.t1,
             "rumbo_eje": round(t["eje"], 1), "largo_m": _r(t["largo_m"], 0),
             "viento": {"sog_min": round(vt.sog_min, 2), "twd_media": round(vt.twd_media, 1), "twa_flota": _r(twa_flota, 1), "cortes": cortes,
-                       "tws_calibrada": bool(prueba.get("viento_kn"))},
+                       "tws_calibrada": bool(tws_fuente), "tws_fuente": tws_fuente},
             "fases_rolada": fr,
             "fases_presion": fp,
             "fantasma_m": fant,
@@ -390,6 +395,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                          "(balizas estimadas mal situadas). Las llegadas valen; las métricas por tramo, no.")
     return {
         "recorrido_dudoso": dudoso,
+        "tws_fuente": tws_fuente,
         "maniobras_top5": ref_maniobras,
         "corriente": (c.a_dict() | {"por_vuelta": vueltas_corr}) if c else None,
         "brujulas": c.a_dict_brujulas() if c else {"declinacion_grados": round(decl, 1), "desvios_grados": {}},

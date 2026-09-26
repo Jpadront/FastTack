@@ -29,6 +29,9 @@ def analisis_prueba(alm: Almacen, camp_id: str, clave: str, recalcular: bool = F
     cols = alm.telemetria(camp["event_id"], camp["division"], desde, hasta)
     if not len(cols["ts"]):
         raise PruebaNoAnalizable("RaceSense no tiene telemetría de esta prueba.")
+    fm = _ruta_meteo(alm, camp, prueba)
+    if fm.exists():   # viento horario del modelo (lo guarda meteo_prueba): intensidad del viento en nudos
+        prueba = {**prueba, "meteo_horario": json.loads(fm.read_text())}
     res = analisis.analizar(prueba, cols, {k: int(v) for k, v in camp["roles_recorrido"].items()}, camp.get("clase"))
     res["prueba"] = {"clave": clave, "numero": prueba["numero"], "estado": prueba["estado"],
                      "viento_kn": prueba.get("viento_kn"), "nota": prueba.get("nota")}
@@ -38,8 +41,13 @@ def analisis_prueba(alm: Almacen, camp_id: str, clave: str, recalcular: bool = F
 
 def _ruta_analisis(alm: Almacen, camp: dict, prueba: dict):
     # La caché depende de la versión del motor y del viento de referencia.
-    nombre = f"analisis_{prueba['clave']}_v{analisis.VERSION}_{prueba.get('viento_kn') or 'sin'}.json"
+    mod = "_mod" if _ruta_meteo(alm, camp, prueba).exists() else ""
+    nombre = f"analisis_{prueba['clave']}_v{analisis.VERSION}_{prueba.get('viento_kn') or 'sin'}{mod}.json"
     return alm._dir(camp["event_id"], camp["division"]) / nombre
+
+
+def _ruta_meteo(alm: Almacen, camp: dict, prueba: dict):
+    return alm._dir(camp["event_id"], camp["division"]) / f"meteo_{prueba['clave']}.json"
 
 
 def dia_de(ms: int, tz_ms: int) -> str:
@@ -162,6 +170,10 @@ def meteo_prueba(alm: Almacen, camp_id: str, clave: str, solo_cache: bool = Fals
     an = analisis_prueba(alm, camp_id, clave)
     hasta = max(prueba["llegadas"].values())
     m = meteo.en_ventana(alm.raiz, an["proyeccion"]["lat0"], an["proyeccion"]["lon0"], prueba["senal"], hasta, solo_cache)
+    fm = _ruta_meteo(alm, camp, prueba)
+    if m.get("serie") and not fm.exists():
+        fm.write_text(json.dumps(m["serie"]))   # el análisis lo usará para la intensidad del viento
+        m["analisis_actualizado"] = True
     # ¿cuadra con el viento que reconstruye la flota? Si la dirección no coincide, el modelo no vale aquí
     import math
     twds = [t["viento"]["twd_media"] for t in an["tramos"]]

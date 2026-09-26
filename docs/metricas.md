@@ -307,6 +307,6 @@ Repaso de cada cálculo: qué variables usa y qué queda fuera.
 | Escora | roll − desviación del sensor (simetría de amuras) | si se navega mucho más en una amura con más viento, la desviación se sesga algo | Aceptable |
 | Escora óptima | vecinos en la misma amura (mismo viento) | peso y estilo de cada tripulación | Documentado |
 | Corriente | brújulas + velocidades por amura, por vuelta | constante en todo el campo | Documentado; se compara con el modelo de Open-Meteo |
-| Intensidad del viento (TWS) | SOG de la flota proporcional al viento, anclada al viento de referencia | la velocidad no es proporcional al viento (planeo, saturación con mucho viento) | Pendiente: usar el viento horario del modelo |
-| Salida, OCS, llegadas | posición de la **antena** GPS | distancia de la antena a la proa (el margen a la línea y el OCS se miden en la antena) | Pendiente: necesita la posición del Atlas |
+| Intensidad del viento (TWS) | **viento horario del modelo** (Open-Meteo) interpolado en cada corte si su dirección cuadra con la de la flota (≤ 25°); con viento de referencia apuntado, el modelo se escala para valer eso en el disparo. Sin modelo: SOG de la flota proporcional al viento, anclada a la referencia | el modelo es a 10 m y promediado por horas: no ve las rachas | **Corregido**: ya no depende de la SOG (que no es proporcional al viento al planear) |
+| Salida, OCS, llegadas | posición que da el Atlas | — | El Atlas va en el palo y, configurado con la clase (J/70), da la posición corregida a la proa; todos los barcos igual. Sin corrección adicional |
 | Viento en la línea | ángulo al viento común de la flota | cada barco orza o arriba distinto | Documentado |

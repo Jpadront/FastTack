@@ -66,7 +66,7 @@ En la página del campeonato, **Tus archivos .vkx**: añade el registro de tu At
 
 ### Viento y corriente de referencia (modelo)
 
-En la cabecera de cada prueba, el viento (a 10 m, con rachas) y la corriente del modelo meteorológico de Open-Meteo (gratis, sin clave) a las horas de la prueba, junto a la corriente que estimamos con la flota. Botón **Usar como viento de referencia** para calibrar la intensidad en nudos sin apuntarla a mano. Si la dirección del modelo no coincide con la de la flota (más de 25°), avisa y no deja usarlo. Es un modelo: puede diferir unos nudos del viento del campo. No se usa el reanálisis ERA5 (en la costa mezcla tierra y mar).
+En la cabecera de cada prueba, el viento (a 10 m, con rachas) y la corriente del modelo meteorológico de Open-Meteo (gratis, sin clave) a las horas de la prueba, junto a la corriente que estimamos con la flota. Si la dirección del modelo cuadra con la de la flota (25° o menos), la intensidad del viento de la prueba (TWS en nudos, tramo a tramo) sale del modelo hora a hora, sin tener que apuntarla; si además apuntas un viento de referencia medido, el modelo se escala a él. Si no cuadra, avisa y no se usa. Es un modelo: puede diferir unos nudos del viento del campo. No se usa el reanálisis ERA5 (en la costa mezcla tierra y mar).
 
 ### Reglaje y temporada
 

@@ -260,6 +260,37 @@ def calibrar_tws(tramos: list[VientoTramo], tws_disparo: float | None):
         ancla_tws = ultimo or ancla_tws
 
 
+COINCIDE_MODELO_DEG = 25
+
+
+def tws_modelo(tramos: list[VientoTramo], horario: list, tws_disparo: float | None, senal: int) -> str | None:
+    """Intensidad del viento (TWS, kn) de cada corte con el viento horario del modelo meteorológico,
+    interpolado en el tiempo, si su dirección cuadra con la TWD de la flota (≤ 25°). Con viento de
+    referencia apuntado, el modelo se escala para que en el disparo valga ese viento (el modelo da la
+    evolución; la referencia, el nivel). Así la intensidad no depende de la SOG, que no es
+    proporcional al viento (planeo, saturación). Devuelve la fuente usada, o None si no vale."""
+    if not horario or not tramos:
+        return None
+    ts = np.array([h[0] for h in horario], dtype=float)
+    kn = np.array([h[1] for h in horario], dtype=float)
+    dirs = [h[2] for h in horario]
+    t0 = min(vt.t0 for vt in tramos)
+    t1 = max(vt.t1 for vt in tramos)
+    dentro = [d for (t, _, d) in horario if t0 - 1800_000 <= t <= t1 + 1800_000] or dirs
+    twd = mediana_circular([c.twd for vt in tramos for c in vt.cortes], tramos[0].cortes[0].twd)
+    if abs(float(dif(mediana_circular(dentro, dentro[0]) - twd))) > COINCIDE_MODELO_DEG:
+        return None
+    factor = 1.0
+    if tws_disparo:
+        en_senal = float(np.interp(senal, ts, kn))
+        if en_senal > 0.5:
+            factor = tws_disparo / en_senal
+    for vt in tramos:
+        for c in vt.cortes:
+            c.tws = round(float(np.interp(c.t, ts, kn)) * factor, 2)
+    return "modelo escalado a la referencia" if tws_disparo else "modelo"
+
+
 def fases(valores: list[float | None], umbral: float, etiquetas=("SUBIENDO", "BAJANDO", "ESTABLE"),
           circular: bool = False) -> list[dict]:
     """Agrupa los cortes en fases con la misma tendencia. Devuelve

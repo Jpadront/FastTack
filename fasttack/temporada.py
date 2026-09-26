@@ -77,10 +77,14 @@ def temporada(alm: Almacen, barco: str) -> dict:
             f = fila_de(an, v)
             if f is None:
                 continue
+            viento = p.get("viento_kn")
+            if viento is None and an.get("tws_fuente"):   # sin referencia apuntada: la del modelo (media de la prueba)
+                tws = [c["tws"] for t in an["tramos"] for c in t["viento"]["cortes"] if c.get("tws")]
+                viento = round(statistics.mean(tws), 1) if tws else None
             filas.append({"campeonato": c["id"], "nombre": c["nombre"], "clase": camp.get("clase"),
                           "clave": p["clave"], "numero": p["numero"], "senal": p["senal"],
-                          "dia": servicio.dia_de(p["senal"], tz), "viento_kn": p.get("viento_kn"),
-                          "franja": _franja(p.get("viento_kn")), "reglaje": p.get("reglaje") or {}, **f})
+                          "dia": servicio.dia_de(p["senal"], tz), "viento_kn": viento,
+                          "franja": _franja(viento), "reglaje": p.get("reglaje") or {}, **f})
     filas.sort(key=lambda x: x["senal"])
     return {"barco": v, "filas": filas, "pendientes": pendientes, "reglajes": comparar_reglajes(filas)}
 

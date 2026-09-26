@@ -141,3 +141,16 @@ def test_puerta_estimada_con_dos_grupos():
     assert xs[0] == pytest.approx(0, abs=3) and xs[1] == pytest.approx(45, abs=3)
     una = [(f"B{k}", T0, float(rng.normal(0, 4)), float(rng.normal(0, 3))) for k in range(40)]
     assert rec._puerta_estimada("s1", una, 0.0, T0, 3 * 4.72, []) is None
+
+
+def test_tws_del_modelo_si_cuadra_con_la_flota():
+    from fasttack.motor.viento import tws_modelo
+    vt = viento_fijo(twd=TWD)
+    horario = [[T0 - 3600_000, 10.0, TWD], [T0 + 3600_000, 14.0, TWD]]
+    assert tws_modelo([vt], horario, None, T0) == "modelo"
+    assert vt.cortes[0].tws == pytest.approx(12.0, abs=0.01)                       # interpolado a la hora
+    vt2 = viento_fijo(twd=TWD)
+    assert tws_modelo([vt2], horario, 18.0, T0) == "modelo escalado a la referencia"
+    assert vt2.cortes[0].tws == pytest.approx(18.0, abs=0.01)                      # en el disparo = referencia
+    vt3 = viento_fijo(twd=TWD)
+    assert tws_modelo([vt3], [[T0, 12.0, (TWD + 60) % 360], [T0 + 3600_000, 12.0, (TWD + 60) % 360]], None, T0) is None
