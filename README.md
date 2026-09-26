@@ -69,7 +69,7 @@ En la lista de pruebas:
 
 ## Sesiones con archivos .vkx (sin RaceSense)
 
-Para regatas o entrenamientos que no se retransmitieron en RaceSense. En la página inicial, **Sesión con archivos .vkx**: nombre, clase, vela del barco y sus archivos `.vkx` (el registro interno del Atlas 2, uno por día). Se pueden añadir después más días u otros barcos del mismo día (página de la sesión → «Añadir archivos»). Los archivos se guardan en `datos/sesiones/` y no salen del ordenador.
+Para regatas o entrenamientos que no se retransmitieron en RaceSense. En la página inicial, **Sesión con archivos .vkx**: nombre, clase y los archivos `.vkx` (el registro interno del Atlas 2, uno por día y barco). Los archivos se van sumando a la lista: se pueden elegir de varias carpetas con «+ Añadir archivos…» (una selección tras otra) o arrastrarlos; cada uno lleva su vela y el nombre del barco (propuesto a partir del nombre del archivo). Se pueden añadir después más días u otros barcos del mismo día (página de la sesión → «Añadir archivos»). Los archivos se guardan en `datos/sesiones/` y no salen del ordenador.
 
 - **Pruebas**: una por cada salida marcada con el cronómetro del Atlas (evento «salida»; si varios barcos la marcan, se agrupan).
 - **Línea de salida**: los últimos pings de pin y comité anteriores a la señal (de cualquier barco). Sin pings, la prueba no se puede analizar.
