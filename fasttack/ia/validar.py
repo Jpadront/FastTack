@@ -3,7 +3,7 @@
 Cada número del texto se compara, con su unidad (kn, m, s, °, %), con las cifras de los datos
 (unidad por el sufijo del campo: _kn, _m, _s, _grados, _pct). Vale si el número del texto es un
 redondeo de alguna cifra de los datos (±media unidad de su último decimal). Los tiempos mm:ss se
-pasan a segundos. Se ignoran los números de etiquetas (P3, Ceñida 2, top 10, ESP 1214…), los
+pasan a segundos; «1.533» (punto de miles) es 1533. Se ignoran los números de etiquetas (P3, Ceñida 2, top 10, ESP 1214…), los
 marcadores de lista y los enteros pequeños sin unidad (recuentos como «3 claves»).
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ UNIDADES = {"kn": "kn", "nudo": "kn", "nudos": "kn", "m": "m", "metro": "m", "me
 SUFIJOS = (("_kn", "kn"), ("_m", "m"), ("_s", "s"), ("_grados", "grados"), ("_pct", "pct"))
 
 NUMERO = re.compile(
-    r"(?<![\w/.,])[-−+]?(\d+(?:[.,]\d+)?)(?::(\d{2}))?(?::(\d{2}))?"
+    r"(?<![\w/.,])[-−+]?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?::(\d{2}))?(?::(\d{2}))?"
     r"(?:\s*(kn|nudos?|metros?|m|segundos?|seg|s|minutos?|min|°|grados?|%)(?![\wáéíóúñ]))?")
 ETIQUETA = re.compile(r"(?:\bP|[Cc]eñidas?|[Pp]opas?|[Oo]ffsets?|[Bb]alizas?|[Pp]ruebas?|[Rr]egatas?|[Tt]op|"
                       r"[Tt]ramos?|J/|\b(?!VMG|SOG|TWA|TWD|TWS|COG|HDG)[A-Z]{3}|[Pp]uertas?|RRS|[Aa]pp?)\s*$")
@@ -63,7 +63,8 @@ def no_verificadas(texto: str, datos) -> list[str]:
                 valor = partes[0] * 3600 + partes[1] * 60 + partes[2] if ss else partes[0] * 60 + partes[1]
                 tol, unidad = 0.5, "s"
             else:
-                txt = ent.replace(",", ".")
+                # «1.533» (punto de miles, como se escribe en español) = 1533
+                txt = (ent.replace(".", "") if re.fullmatch(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?", ent) else ent).replace(",", ".")
                 valor = float(txt)
                 dec = len(txt.split(".")[1]) if "." in txt else 0
                 tol = 0.5 * 10 ** -dec + 1e-9

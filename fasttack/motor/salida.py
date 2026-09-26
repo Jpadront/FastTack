@@ -126,6 +126,52 @@ def posicionamiento(trazas: dict[str, Traza], salen: set, senal: int, twd: float
     return out
 
 
+LINEA_DESDE_S, LINEA_HASTA_S = 10, 60   # viento en la línea: rumbos de los barcos de +10 a +60 s
+MIN_BARCOS_ZONA = 3
+
+
+def viento_en_la_linea(trazas: dict[str, Traza], barcos: dict, senal: int, twd: float, twa: float | None) -> list[dict] | None:
+    """TWD y presión en cada tercio de la línea (comité, centro, pin) justo después de la salida.
+
+    Casi todos salen en la misma amura, así que la bisectriz no sirve: con el ángulo al viento de la
+    flota en la ceñida (TWA), cada muestra da su TWD = COG ± TWA según la amura (se descartan las que
+    se apartan > 20° de ese ángulo: maniobrando o arribando). Cada barco va a la zona de la línea por
+    la que salió; TWD de la zona = mediana de sus barcos; presión = SOG mediana."""
+    if not twa:
+        return None
+    zonas = {"comité": [], "centro": [], "pin": []}
+    for v, f in barcos.items():
+        p = f.get("posicion_linea_pct")
+        if not f.get("en_salida") or p is None or not 0 <= p <= 100:
+            continue
+        tr = trazas[v]
+        i = tr.tramo(senal + LINEA_DESDE_S * 1000, senal + LINEA_HASTA_S * 1000)
+        i = i[~np.isnan(tr.cog[i])]
+        if len(i) < 5:
+            continue
+        rel = dif(tr.cog[i] - twd)
+        ok = np.abs(np.abs(rel) - twa) <= 20
+        if ok.sum() < 5:
+            continue
+        est = (tr.cog[i][ok] - np.sign(rel[ok]) * twa) % 360     # babor (rel +): TWD = COG − TWA
+        r = np.radians(est)
+        t_barco = float(np.degrees(np.arctan2(np.sin(r).mean(), np.cos(r).mean())) % 360)
+        zona = "comité" if p < 100 / 3 else "centro" if p < 200 / 3 else "pin"
+        zonas[zona].append((t_barco, float(np.median(tr.sog[i]))))
+    if sum(len(z) for z in zonas.values()) < 2 * MIN_BARCOS_ZONA:
+        return None
+    out = []
+    for nombre, xs in zonas.items():
+        if len(xs) < MIN_BARCOS_ZONA:
+            out.append({"zona": nombre, "barcos": len(xs), "twd": None, "sog": None})
+            continue
+        r = np.radians([x[0] for x in xs])
+        t_z = float(np.degrees(np.arctan2(np.sin(r).mean(), np.cos(r).mean())) % 360)
+        out.append({"zona": nombre, "barcos": len(xs), "twd": round(t_z, 1), "rolada": round(float(dif(t_z - twd)), 1),
+                    "sog": round(float(np.median([x[1] for x in xs])), 2)})
+    return out
+
+
 def valorar(f: dict, ref_sog: float | None, eslora: float) -> dict:
     """Diagnóstico de la salida a partir de las cifras (sin interpretar más allá de ellas)."""
     diag = {}
@@ -215,6 +261,8 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
     for v, p in pos.items():
         barcos[v].update(p)
         barcos[v]["diagnostico"] = valorar(barcos[v], ref_sog, eslora)
+    twas = [c.twa_flota for c in viento1.cortes[:3] if c.twa_flota]
+    en_linea = viento_en_la_linea(trazas, barcos, senal, twd, float(np.median(twas)) if twas else None)
 
     # Posición y distancia al primero a +60 y +180 s: avance hacia la baliza 1 a lo largo del eje
     for seg in (60, 180):
@@ -240,6 +288,7 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
         "twd_disparo": round(twd, 1),
         "rumbo_linea": round(float(rumbo(cp[0], cp[1])), 1),
         "sog_primera_fila": None if ref_sog is None else round(ref_sog, 2),
+        "viento_en_la_linea": en_linea,
         "eslora_m": eslora,
         "barcos": barcos,
     }

@@ -34,6 +34,9 @@ Reglas estrictas:
 - Izquierda/derecha son lados del campo, mirando a barlovento (en las puertas, mirando a sotavento, como indica el dato). No los traduzcas a babor/estribor ni a amuras.
 - Si los DATOS traen «sesion_propia» con un solo barco, no hay flota ni top 5: no hables de puestos ni de la flota; compara entre pruebas y entre tramos del propio barco (evolución, regularidad, ceñida frente a popa) y recuerda que llegadas y balizas son estimadas.
 - En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
+- Si hay «set_tras_barlovento» o «rodeo_final», úsalos solo cuando expliquen una ganancia o una pérdida clara del tramo (set directo o trasluchando al montar frente a lo que hizo el top 5; tiempo en la zona de la baliza y velocidad mínima frente al top 5).
+- El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
+- «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
 
@@ -86,6 +89,18 @@ Eres el entrenador del equipo. Este es el debrief de coach de un día: tramo a t
 Máximo 900 palabras.
 """
 
+CRONICA = COMUN + """
+Esto es la crónica de la prueba: qué pasó en el campo, para entenderla. No es un debrief del barco: cuenta la prueba (salida, cada tramo, llegada) con los barcos que la marcaron, qué lado o qué decisión pagó y por qué según los datos (roladas, presión, viento en la línea, puertas, sets), y en una línea por tramo dónde quedó el barco de referencia. No des consejos ni «claves».
+
+## La prueba en dos frases
+## Salida
+## Tramo a tramo
+(una línea por tramo que empiece por su nombre en negrita)
+## Llegada
+
+Máximo 450 palabras.
+"""
+
 CAMPEONATO = COMUN + """
 Si «estado.campeonato_en_curso» es verdadero, el campeonato no ha terminado: habla de lo disputado hasta ahora y orienta las prioridades a las pruebas que quedan.
 
@@ -108,7 +123,7 @@ class IANoDisponible(RuntimeError):
 
 def instrucciones(datos: dict) -> str:
     base = {"debrief del campeonato": CAMPEONATO, "debrief del día": DIA,
-            "debrief de coach del día": COACH}.get(datos.get("tipo"), PRUEBA)
+            "debrief de coach del día": COACH, "crónica de la prueba": CRONICA}.get(datos.get("tipo"), PRUEBA)
     base = base.replace("{clase}", datos.get("clase") or "vela")
     return base + "\nDATOS:\n```json\n" + json.dumps(datos, ensure_ascii=False, indent=1) + "\n```\n"
 
@@ -277,6 +292,9 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
         if coach:
             _valorar_tramos(h)
         return h
+    if ambito.startswith("cronica:"):
+        an = servicio.analisis_prueba(alm, camp_id, ambito[8:])
+        return hechos_mod.de_cronica(an, barco, nombres, camp.get("clase"))
     an = servicio.analisis_prueba(alm, camp_id, ambito)
     if not any(c["vela"] == barco for c in an["clasificacion"]) and barco not in an["rendimiento"]:
         raise ValueError("Este barco no tiene datos en esta prueba.")

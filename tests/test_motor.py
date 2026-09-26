@@ -127,3 +127,17 @@ def test_zona_segun_la_clase():
     from fasttack.motor.recorrido import zona_de
     assert abs(zona_de("J/70") - 20.79) < 0.01 and abs(zona_de("Snipe") - 14.16) < 0.01
     assert zona_de("clase desconocida") == zona_de("J/70")
+
+
+def test_puerta_estimada_con_dos_grupos():
+    """Rodeos en dos grupos separados 45 m (una boya cada uno): puerta con dos boyas estimadas."""
+    from fasttack.motor import recorrido as rec
+    rng = np.random.default_rng(1)
+    pts = [(f"B{k}", T0, float(x + rng.normal(0, 3)), float(rng.normal(0, 3)))
+           for k, x in enumerate([0.0] * 20 + [45.0] * 30)]
+    c = rec._puerta_estimada("s1", pts, 0.0, T0, 3 * 4.72, [])
+    assert c is not None and c.es_puerta and c.fuente == "estimada"
+    xs = sorted(float(p.x[0]) for _, p in c.puntos)
+    assert xs[0] == pytest.approx(0, abs=3) and xs[1] == pytest.approx(45, abs=3)
+    una = [(f"B{k}", T0, float(rng.normal(0, 4)), float(rng.normal(0, 3))) for k in range(40)]
+    assert rec._puerta_estimada("s1", una, 0.0, T0, 3 * 4.72, []) is None

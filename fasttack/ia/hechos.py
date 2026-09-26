@@ -51,6 +51,45 @@ def _limpia(d):
     return d
 
 
+def _offset(an, t, v, top5):
+    """Popa que empieza en un offset: tiempo desde la baliza de barlovento hasta el offset, frente al top 5."""
+    if t["tipo"] != "popa" or not t["desde"].startswith("o"):
+        return None
+    b = "b" + t["desde"][1:]
+    dur = lambda x: ((an["pasos"].get(x, {}).get(t["desde"], {}).get("t") or 0) - (an["pasos"].get(x, {}).get(b, {}).get("t") or 0)) / 1000
+    mio = dur(v)
+    if not 0 < mio < 300:
+        return None
+    t5 = [d for d in (dur(x) for x in top5) if 0 < d < 300]
+    return {"de_la_baliza_al_offset_s": _r(mio), "top5_mediana_s": _r(_mediana(t5)) if len(t5) >= 2 else None}
+
+
+def _twa_max(pol):
+    """TWA de la franja de la polar con más VMG (con ≥ 30 s)."""
+    pol = [x for x in (pol or []) if x["s"] >= 30]
+    return max(pol, key=lambda x: x["vmg"])["twa"] if pol else None
+
+
+def _rodeo(r, top5):
+    if not r:
+        return None
+    t5 = [x for x in top5 if x]
+    return {"tiempo_en_la_zona_s": r["tiempo_zona_s"], "sog_entrada_kn": r["sog_entrada"], "sog_minima_kn": r["sog_minima"],
+            "sog_salida_kn": r["sog_salida"],
+            "top5_tiempo_en_la_zona_mediano_s": _r(_mediana([x["tiempo_zona_s"] for x in t5]), 1) if len(t5) >= 2 else None,
+            "top5_sog_minima_mediana_kn": _r(_mediana([x["sog_minima"] for x in t5]), 2) if len(t5) >= 2 else None,
+            "nota": "zona = 3 esloras alrededor de la baliza"}
+
+
+def _set(st, top5):
+    if not st:
+        return None
+    t5 = [x["set"] for x in top5 if x]
+    return {"set": {"directo": "directo (sin trasluchar al montar)", "trasluchando": "trasluchando al montar"}[st["set"]],
+            "trasluchada_tras_el_rodeo_s": st.get("trasluchada_s"),
+            "top5": {k: t5.count(k) for k in ("directo", "trasluchando") if t5.count(k)} or None}
+
+
 def _tactica(tac, top5):
     """Cómo se jugaron las roladas y el lado del campo (motor/tactica.py), con el top 5."""
     if not tac:
@@ -152,6 +191,16 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "sesgo_de_la_linea_grados": _r(s["sesgo"]["grados"], 1), "ventaja_del_extremo_m": _r(s["sesgo"]["metros"]),
             "twd_en_el_disparo_grados": _r(s.get("twd_disparo")),
         }
+        vl = [z for z in (s.get("viento_en_la_linea") or []) if z.get("twd") is not None]
+        if len(vl) >= 2:
+            p_l = b.get("posicion_linea_pct")
+            h["salida"]["viento_en_la_linea"] = {
+                "zonas": [{"zona": z["zona"], "barcos": z["barcos"], "rolada_frente_a_la_media_grados": z["rolada"],
+                           "sog_mediana_kn": z["sog"]} for z in vl],
+                "zona_del_barco": (None if p_l is None else "comité" if p_l < 100 / 3 else "centro" if p_l < 200 / 3 else "pin"),
+                "significa": ("TWD estimada en cada tercio de la línea de +10 a +60 s con los rumbos de los barcos que salieron por él; "
+                              "rolada + = a la derecha (el viento viene más de la derecha), − = a la izquierda"),
+            }
         d = b.get("diagnostico")
         if d:
             h["salida"]["posicionamiento"] = {
@@ -234,6 +283,14 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "escora_grados": _r(f.get("escora")), "cabeceo_grados": _r(f.get("cabeceo")),
             "escora_con_signo_grados": _r(f.get("escora_sotavento"), 1),
             "tactica": _tactica(f.get("tactica"), [t["barcos"][x].get("tactica") for x in top5 if t["barcos"].get(x)]),
+            "regularidad_vmg_pct": f.get("regularidad_pct"),
+            "regularidad_vmg_top5_mediana_pct": _r(_mediana([(t["barcos"].get(x) or {}).get("regularidad_pct") for x in top5]), 1),
+            "regularidad_significa": "variación de la VMG de cada 30 s frente a la de la flota en esos 30 s: cuanto menor, más regular",
+            "twa_de_maxima_vmg_grados": _twa_max(f.get("polar")),
+            "twa_de_maxima_vmg_top5_grados": _r(_mediana([_twa_max((t["barcos"].get(x) or {}).get("polar")) for x in top5]), 1),
+            "rodeo_final": _rodeo(f.get("rodeo"), [(t["barcos"].get(x) or {}).get("rodeo") for x in top5]),
+            "set_tras_barlovento": _set(f.get("set"), [(t["barcos"].get(x) or {}).get("set") for x in top5]),
+            "offset": _offset(an, t, v, top5),
             "maniobras_detalle": _maniobras(f, t, an, v),
         }
         o = t.get("escora_optima")
@@ -440,7 +497,8 @@ def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
               "twa_grados", "maniobras", "perdida_en_maniobras_m", "layline", "puerta", "modo")
     claves_coach = ("sog_kn", "sog_frente_al_top5_kn", "sog_mediana_flota_kn", "twa_mediana_flota_grados", "escora_grados",
                     "escora_con_signo_grados", "escora_optima", "tactica", "maniobras_detalle", "viento", "parcial_s",
-                    "frente_al_barco_fantasma_m", "top5")
+                    "frente_al_barco_fantasma_m", "top5", "regularidad_vmg_pct", "regularidad_vmg_top5_mediana_pct",
+                    "twa_de_maxima_vmg_grados", "twa_de_maxima_vmg_top5_grados", "rodeo_final", "set_tras_barlovento", "offset")
     out = []
     for t in dp.get("tramos", []):
         if t.get("sin_datos_del_barco"):
@@ -451,3 +509,62 @@ def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
             f["vmg_top5_kn"] = t["top5"].get("vmg_mediana_kn")
         out.append(f)
     return out
+
+
+def de_cronica(an: dict, v: str, nombres: dict | None = None, clase: str | None = None) -> dict:
+    """Crónica de la prueba: qué pasó en el campo (salida, cada tramo, llegada) con los barcos que
+    marcaron la prueba, y dónde queda el barco de referencia en cada momento."""
+    nombres = nombres or {}
+    vn = lambda x: _vela(x, nombres)
+    clas = an["clasificacion"]
+    p = an["prueba"]
+    h = {"tipo": "crónica de la prueba", "clase": clase, "barco_de_referencia": vn(v),
+         "prueba": {"numero": p.get("numero"), "barcos_llegados": len(clas),
+                    "llegadas": {"reconstruida": "reconstruidas", "estimada": "estimadas"}.get(p.get("estado"), "oficiales"),
+                    "podio": [vn(c["vela"]) for c in clas[:3]],
+                    "puesto_del_barco_de_referencia": next((c["posicion"] for c in clas if c["vela"] == v), None)}}
+    s = an.get("salida")
+    if s:
+        orden60 = sorted((f["pos_60"], x) for x, f in s["barcos"].items() if f.get("pos_60"))
+        zona = lambda pl: None if pl is None else "comité" if pl < 100 / 3 else "centro" if pl < 200 / 3 else "pin"
+        h["salida"] = {
+            "extremo_favorecido": {"PIN": "pin", "COMITÉ": "comité"}.get(s["sesgo"]["extremo"], s["sesgo"]["extremo"]),
+            "sesgo_grados": _r(s["sesgo"]["grados"], 1), "ventaja_del_extremo_m": _r(s["sesgo"]["metros"]),
+            "viento_en_la_linea": [{"zona": z["zona"], "barcos": z["barcos"], "rolada_frente_a_la_media_grados": z.get("rolada"),
+                                    "sog_mediana_kn": z.get("sog")} for z in (s.get("viento_en_la_linea") or []) if z.get("twd") is not None] or None,
+            "mejores_a_60_s": [{"barco": vn(x), "zona_de_la_linea": zona(s["barcos"][x].get("posicion_linea_pct"))} for _, x in orden60[:5]],
+            "barco_de_referencia": ({"puesto_a_60_s": s["barcos"][v].get("pos_60"), "zona_de_la_linea": zona(s["barcos"][v].get("posicion_linea_pct")),
+                                     "diagnostico": s["barcos"][v].get("diagnostico")} if v in s["barcos"] else None),
+        }
+    tramos = []
+    for t in an["tramos"]:
+        fs = t["barcos"]
+        por_pos = sorted((f["posicion"], x) for x, f in fs.items() if f.get("posicion"))
+        top10 = [x for _, x in por_pos[:10]]
+        rapidos = sorted((f["parcial_s"], x) for x, f in fs.items() if f.get("parcial_s") and f.get("calidad") in ("alta", "media"))[:3]
+        lados = [(fs[x].get("tactica") or {}).get("lado") for x in top10]
+        tr = {"nombre": t["nombre"], "tipo": t["tipo"],
+              "lider_al_final": vn(por_pos[0][1]) if por_pos else None,
+              "mas_rapidos_del_tramo": [{"barco": vn(x), "parcial_s": _r(ps)} for ps, x in rapidos],
+              "lado_de_los_10_primeros_al_final": {l: lados.count(l) for l in ("izquierda", "centro", "derecha") if lados.count(l)} or None,
+              "roladas": [{"desde_pct": x["desde_pct"], "hasta_pct": x["hasta_pct"], "tipo": x["tipo"].lower(), "cambio_grados": _r(x["delta"], 1),
+                           "lado_que_la_recibio_primero": _lado(x.get("primero"))} for x in t.get("fases_rolada", []) if x["tipo"] != "ESTABLE"],
+              "presion": [{"desde_pct": x["desde_pct"], "hasta_pct": x["hasta_pct"], "tipo": x["tipo"].lower(),
+                           "lado_que_la_recibio_primero": _lado(x.get("primero"))} for x in t.get("fases_presion", []) if x["tipo"] != "ESTABLE"],
+              "laylines_sobrepasadas_entre_los_10_primeros": sum(1 for x in top10 if (fs[x].get("layline") or {}).get("estado") == "SOBREPASADA")}
+        sets = [(fs[x].get("set") or {}).get("set") for x in top10]
+        if any(sets):
+            tr["set_de_los_10_primeros"] = {k: sets.count(k) for k in ("directo", "trasluchando") if sets.count(k)}
+        puertas = [fs[x].get("puerta") for x in top10 if fs[x].get("puerta")]
+        if puertas:
+            fin = next((c for c in an["controles"] if c["id"] == t["hasta"]), {})
+            tr["puerta"] = {"eleccion_de_los_10_primeros": {k.lower(): puertas.count(k) for k in ("IZQUIERDA", "DERECHA") if puertas.count(k)},
+                            "favorecida": (fin.get("puerta") or {}).get("favorecida", "").lower() or None,
+                            "nota": "izquierda/derecha mirando a sotavento"}
+        f = fs.get(v)
+        if f:
+            tr["barco_de_referencia"] = {"puesto_al_final": f.get("posicion"), "lado": (f.get("tactica") or {}).get("lado"),
+                                         "parcial_s": _r(f.get("parcial_s"))}
+        tramos.append(tr)
+    h["tramos"] = tramos
+    return _limpia(h)

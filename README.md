@@ -7,7 +7,7 @@ Análisis post-regata con los datos de **Vakaros RaceSense** (dispositivos Atlas
 Lo que hace, de un vistazo:
 
 1. **Pegas el enlace** del visor de RaceSense → carga el campeonato y reconstruye las pruebas y llegadas que RaceSense no tiene.
-2. **Analizar una prueba** → recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), capas del mapa (presión, TWD, amura favorecida, SOG) y línea del líder perpendicular al viento con los metros que te faltan, métricas por tramo y barco, salida (con posicionamiento: pronto/tarde, huecos, aire sucio), maniobras por fases (giro, aceleración, ángulo de salida), táctica (amura favorecida, lado), escora óptima en ceñida y popa, laylines, puertas, barco fantasma.
+2. **Analizar una prueba** → recorrido, pasos por baliza, viento reconstruido (TWD, roladas, presión), capas del mapa (presión, TWD, amura favorecida, SOG) y línea del líder perpendicular al viento con los metros que te faltan, métricas por tramo y barco, salida (con posicionamiento: pronto/tarde, huecos, aire sucio; y viento a lo largo de la línea), polar del tramo y regularidad, maniobras por fases (giro, aceleración, ángulo de salida), táctica (amura favorecida, lado), escora óptima en ceñida y popa, laylines, puertas, barco fantasma.
 3. **Resumen del campeonato** → general calculada, evolución por prueba frente a la flota y al top 5, salidas, maniobras, laylines, puertas y viento.
 4. **Debrief con IA** → texto para la tripulación a partir de esas cifras; cada cifra se comprueba.
 5. **Sesión con archivos .vkx** → regatas o entrenamientos que no están en RaceSense, con el registro del propio Atlas 2 (ver abajo).
@@ -125,6 +125,7 @@ En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. 
 
 - **Tres debriefs**: de cada prueba (pestaña *Debrief IA*); **de cada día** y **del campeonato** (al final del Resumen, con un selector). El del día usa solo las pruebas de ese día (resultado del día, top 5 del día) y cómo quedas en la general al terminarlo; acaba con las claves para mañana. El del campeonato usa las pruebas disputadas y analizadas hasta ese momento: no hace falta que el campeonato termine; cuando haya pruebas nuevas avisa para regenerarlo.
 - **Debrief de coach por día** (al final del Resumen, botones «Coach · día»): tramo a tramo de cada prueba del día, con táctica (lado, amura favorecida, maniobras a favor o en contra de la rolada, laylines, puertas), cómo se aprovecharon las roladas y la presión, velocidad, escora frente a la óptima (ceñida y popa), maniobras por fases y posicionamiento en la salida; lo mejor y lo peor de la jornada (elegidos por el motor: VMG frente al top 5; sin flota, frente a la media del barco) y qué trabajar por roles (timonel, táctico, trimmers, proa; adaptado a la clase). Como los demás, **solo se genera cuando lo pides**.
+- **Crónica de la prueba** (pestaña *Debrief IA* de cada prueba): qué pasó en el campo — salida, cada tramo y llegada — con los barcos que la marcaron, qué lado o decisión pagó y por qué, y dónde quedó tu barco. Solo cuando la pides.
 - **Referencia: el top 5.** Las conclusiones salen de comparar con los 5 primeros de la prueba (o de la general, en el campeonato); la mediana de la flota queda como contexto.
 
 Para instalar Claude Code en el Mac (sin Node ni permisos de administrador):

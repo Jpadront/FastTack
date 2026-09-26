@@ -172,7 +172,10 @@ def reconstruir(trazas: dict[str, Traza], balizas: dict[int, Pista], roles: dict
         else:
             n_sota += 1
             puerta = [roles.get("gateLeft"), roles.get("gateRight")]
-            c = _puerta(f"s{k}", balizas, puerta, mx, my, t_med) or _baliza(
+            atlas = [(sn, balizas[sn]) for sn in dict.fromkeys(puerta + [roles.get("markPort"), roles.get("markStarboard")])
+                     if sn is not None and sn in balizas]
+            c = _puerta(f"s{k}", balizas, puerta, mx, my, t_med) or _puerta_estimada(
+                f"s{k}", pts, eje, t_med, zona_m, atlas) or _baliza(
                 f"s{k}", "Sotavento" if vueltas < 3 else f"Sotavento {n_sota}", tipo, balizas,
                 [roles.get("markPort"), roles.get("markStarboard")], mx, my, t_med)
         controles.append(c)
@@ -253,6 +256,50 @@ def _baliza(cid, nombre, tipo, balizas, sns, mx, my, t_med) -> Control:
         if not np.isnan(bx[0]) and distancia(mx, my, bx[0], by[0]) < RADIO_ATLAS_M:
             return Control(cid, nombre, tipo, "atlas", [(sn, p)], t_med)
     return Control(cid, nombre, tipo, "estimada", [(None, Pista.constante(mx, my))], t_med)
+
+
+PUERTA_MIN_FRACCION = 0.2   # cada boya de una puerta estimada, al menos el 20 % de los rodeos
+PUERTA_MIN_ESLORAS = 4       # y separadas al menos 4 esloras
+
+
+def _puerta_estimada(cid, pts, eje, t_med, zona_m, atlas) -> Control | None:
+    """Puerta de sotavento con alguna boya sin Atlas: los rodeos de la flota forman dos grupos
+    separados en lateral (uno por boya). Se separan por el corte que más distingue los dos grupos
+    (Otsu en 1D); cada boya es su Atlas si hay uno a menos de 3 esloras + 30 m de la mediana del
+    grupo y, si no, esa mediana (estimada). None si no hay dos grupos claros (una sola baliza)."""
+    if len(pts) < 10:
+        return None
+    lat = np.array([a_ejes(p[2], p[3], eje)[1] for p in pts])
+    orden = np.argsort(lat)
+    ls = lat[orden]
+    n = len(ls)
+    mejor, k_mejor = -1.0, None
+    for k in range(max(2, int(PUERTA_MIN_FRACCION * n)), n - max(2, int(PUERTA_MIN_FRACCION * n)) + 1):
+        a, b = ls[:k], ls[k:]
+        var = k * (n - k) * (a.mean() - b.mean()) ** 2
+        if var > mejor:
+            mejor, k_mejor = var, k
+    if k_mejor is None:
+        return None
+    g1, g2 = orden[:k_mejor], orden[k_mejor:]
+    sep = float(np.median(lat[g2]) - np.median(lat[g1]))
+    # los grupos deben estar separados de verdad: más que 4 esloras y más que su propia dispersión
+    disp = max(float(np.subtract(*np.percentile(lat[g1], [75, 25]))), float(np.subtract(*np.percentile(lat[g2], [75, 25]))))
+    if sep < PUERTA_MIN_ESLORAS * zona_m / 3 or sep < 2 * disp:
+        return None
+    boyas, fuentes = [], []
+    for g in (g1, g2):
+        gx, gy = float(np.median([pts[j][2] for j in g])), float(np.median([pts[j][3] for j in g]))
+        cerca = None
+        for sn, b in atlas:
+            bx, by = b.en(np.array([t_med]))
+            if not np.isnan(bx[0]) and distancia(gx, gy, bx[0], by[0]) < zona_m + 30:
+                cerca = (sn, b)
+        boyas.append(cerca or (None, Pista.constante(gx, gy)))
+        fuentes.append("atlas" if cerca else "estimada")
+    if boyas[0][0] is not None and boyas[0][0] == boyas[1][0]:
+        return None
+    return Control(cid, "Puerta", "sotavento", "atlas" if fuentes == ["atlas", "atlas"] else "estimada", boyas, t_med)
 
 
 def _puerta(cid, balizas, sns, mx, my, t_med) -> Control | None:

@@ -1,6 +1,6 @@
 [project]
 name = "fasttack"
-version = "0.16.0"
+version = "0.17.0"
 description = "Análisis post-regata de vela con datos de Vakaros RaceSense o archivos .vkx del Atlas 2"
 readme = "README.md"
 requires-python = ">=3.11"

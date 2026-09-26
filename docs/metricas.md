@@ -42,6 +42,10 @@ La **distancia navegada** exige cobertura ≥ 50 %, porque cruza los huecos en l
 7. **Elección de puerta**: la baliza de la puerta por la que pasó.
 8. **Tramos**: salida → B1 = Ceñida 1; offset (o B1) → puerta = Popa 1; puerta → B2 = Ceñida 2; …; el rodeo baliza → offset no es tramo. Un barco cuyo parcial esté fuera de 0,5–2,5 × el parcial mediano no cuenta en ese tramo (rodeo mal detectado por un hueco) y se avisa.
 
+
+**Puerta de sotavento sin Atlas (o con una sola boya con Atlas)**: los puntos de rodeo de la flota se separan en lateral (respecto al eje) por el corte que más distingue dos grupos (Otsu en 1D, cada grupo ≥ 20 % de los rodeos). Si los dos grupos están a ≥ 4 esloras y a más del doble de su propia dispersión, es una puerta: cada boya es su Atlas si hay uno a menos de 3 esloras + 30 m de la mediana del grupo y, si no, esa mediana (estimada). Si no hay dos grupos claros, es una sola baliza. Mundial de Snipe 2026, pruebas 4–6: puerta con una boya con Atlas y la otra estimada, a unos 45 m (antes salía una sola baliza estimada y los barcos de la otra boya «giraban por encima»).
+
+**Offset**: forma parte del rodeo de barlovento; no es un punto aparte en la web. La popa empieza en él; el debrief lo menciona solo si el tiempo de la baliza al offset es claramente distinto del del top 5.
 ## Viento (estimado)
 
 - **TWD por corte**: el tramo se divide en 10 cortes del tiempo del líder. En cada corte se reúnen los COG estables (cambio < 8° entre muestras; SOG > 2 kn en ceñida, > 3 kn en popa; excluidos 20 s alrededor de cada rodeo) de los barcos que navegan ese tramo. Se separan en dos grupos (2-medias circular, 6 iteraciones) y **TWD = bisectriz** (+180° en popa). Válido si cada grupo tiene ≥ 8 muestras, hay ≥ 3 barcos y la separación es de 50–130° (ceñida) o 25–150° (popa). Si no, el corte hereda la TWD anterior («arrastre», confianza 0,2). En los tramos después del primero, un corte que se aparte > 30° de la TWD con la que acabó el tramo anterior se descarta.
@@ -143,6 +147,14 @@ Validación: con la ventana fija anterior (−10…+20 s) un barco que tarda má
 - **Lado del campo**: distancia lateral a la recta entre las balizas del tramo, mirando a barlovento; % a la derecha y separación máxima.
 - Validación (Mundial, 6 pruebas, 20 tramos): la correlación entre el % en la amura favorecida y el parcial del tramo va en el sentido esperado (más tiempo en la favorecida, parcial menor) en 14 de 20 tramos, pero es débil (mediana −0,17): la TWD de la flota no ve las roladas locales. Usar la TWD de cada lado del campo no la mejora. Es orientativa.
 
+## Rendimiento dentro del tramo (estimado)
+
+`fasttack/motor/rendimiento.py`, navegando estable (sin rodeos, 20 s, ni maniobras, ±15 s):
+- **Polar del tramo**: VMG y SOG medianas por franja de TWA (2° en ceñida, 5° en popa; ≥ 15 s por franja) del barco de referencia frente a la mediana del top 5; se marca la TWA de máxima VMG (franjas con ≥ 30 s). Sin anemómetro, vale para el viento de ese tramo.
+- **Regularidad**: VMG media de cada ventana de 30 s (alineadas para toda la flota) dividida por la mediana de la flota en esa ventana; la regularidad es la desviación típica de ese cociente (%). Así las rachas y roladas, que tiene toda la flota, no cuentan. Menor = más regular. Sin flota (< 3 barcos por ventana), respecto a la mediana del propio barco. Mundial P9: correlación con la VMG del tramo de −0,42 a −0,95 (los irregulares van más lentos).
+- **Set tras barlovento** (solo para el debrief): banda de 5–15 s tras el rodeo (offset o baliza) frente a la de 20–45 s: «trasluchando» si cambia, «directo» si no.
+- **Rodeo** (solo para el debrief): tiempo dentro de la zona (3 esloras) de la baliza de final de tramo y SOG de entrada, mínima y de salida, frente al top 5.
+
 ## Salida
 
 | Métrica | Naturaleza | Fórmula |
@@ -157,6 +169,10 @@ Validación: con la ventana fija anterior (−10…+20 s) un barco que tarda má
 | Baliza 1 | calculada | posición y gap en su paso |
 | OCS | directa | lista del comité (`ocs` − exonerados − `clearedOcs`); «sobre la línea (GPS)» si el margen es positivo |
 | Sesgo de la línea | estimada | extremo más a barlovento según la TWD en el disparo; grados = asin(ventaja / largo de la línea); metros = ventaja a barlovento |
+
+### Viento a lo largo de la línea (estimado)
+
+La línea se divide en tercios (comité, centro, pin) según dónde cruzó cada barco. De +10 a +60 s, cada muestra de un barco da una TWD = COG ± TWA de la flota en la primera ceñida (según la amura; se descartan las que se apartan > 20° de ese ángulo). TWD del barco = media circular; de la zona = media de sus barcos (≥ 3); presión = SOG mediana. Se da la rolada de cada tercio frente a la TWD del disparo. Casi todos salen en la misma amura, por eso no se usa la bisectriz. Supone que todos navegan al mismo ángulo: un barco en aire sucio que arriba o uno que orza lo desvían; con muchos barcos por zona se compensa.
 
 ### Posicionamiento en la salida (estimado)
 

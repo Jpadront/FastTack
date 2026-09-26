@@ -57,3 +57,10 @@ def test_cifras_del_nombre_del_campo():
 def test_instrucciones_del_dia():
     t = debrief.instrucciones({"tipo": "debrief del día", "clase": "Snipe"})
     assert "Claves para mañana" in t and "equipo de Snipe" in t
+
+
+def test_validador_punto_de_miles():
+    from fasttack.ia.validar import no_verificadas
+    datos = {"parcial_s": 1533, "vmg_kn": 5.44}
+    assert no_verificadas("Parcial de 1.533 s a 5,44 kn.", datos) == []
+    assert no_verificadas("Parcial de 1.534 s.", datos) == ["1.534 s"]

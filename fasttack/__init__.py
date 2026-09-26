@@ -1,1 +1,1 @@
-__version__ = "0.16.0"  # debrief de coach, maniobras por fases, táctica, salida y escora en popa
+__version__ = "0.17.0"  # polar, regularidad, viento en la línea, crónica, puertas estimadas

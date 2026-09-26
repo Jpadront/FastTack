@@ -17,12 +17,13 @@ from . import salida as sal
 from . import corriente as corr
 from . import trafico as traf
 from . import tactica as tac
+from . import rendimiento as rend
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, viento_tramo
 
-VERSION = "0.12.0"
+VERSION = "0.13.1"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
@@ -178,6 +179,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         twas = [c.twa_flota for c in vt.cortes if c.twa_flota]
         twa_flota = float(np.median(twas)) if twas else None
         filas = {}
+        ventanas = {}
         rejilla = None
         for v, (e, s) in t["en_tramo"].items():
             tr = trazas[v]
@@ -243,7 +245,16 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             f["tactica"] = tac.tramo(tr, e, s, vt, ceñida, marca if marca is not None else _punto(fin_ctrl, s),
                                      t["p_ini"], t["eje"], mans)
             f["puerta"] = paso_fin.puerta if paso_fin else None
+            man_t = [m.t for m in mans]
+            f["polar"] = rend.polar(tr, e, s, vt, man_t)
+            ventanas[v] = rend.vmg_por_ventanas(tr, e, s, vt, man_t, t["en_tramo"][t["lider"]][0])
+            if fin_ctrl.tipo in ("barlovento", "sotavento"):
+                f["rodeo"] = rend.rodeo(tr, paso_fin)
+            if not ceñida and t["desde"][0] in "bo":   # popa tras barlovento u offset: ¿set directo o trasluchando?
+                f["set"] = rend.tipo_set(tr, e, vt)
             filas[v] = f
+        for v, r in rend.regularidad(ventanas).items():
+            filas[v]["regularidad_pct"] = r
         # posiciones y gaps al final del tramo
         orden = sorted(filas, key=lambda v: filas[v]["t_salida"])
         for k, v in enumerate(orden, 1):
@@ -384,6 +395,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         "eje": round(eje, 1),
         "controles": [{"id": c.id, "nombre": c.nombre, "tipo": c.tipo, "fuente": c.fuente,
                        "sn": [sn for sn, _ in c.puntos], "t_mediano": c.rodeo_mediano,
+                       "puntos_xy": [None if pp is None or sn is not None else [float(pp.x[0]), float(pp.y[0])] for sn, pp in c.puntos],
                        "xy": _punto(c, c.rodeo_mediano or senal), **({"puerta": puertas[c.id]} if c.id in puertas else {})}
                       for c in controles],
         "pasos": {v: {cid: {"t": p.t, "entrada": p.entrada, "salida": p.salida, "puerta": p.puerta}

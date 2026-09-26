@@ -69,8 +69,10 @@ export function balizaEn(b, T) {
 // Posición de un control (del análisis) en T: Atlas si se mueve, si no su punto fijo.
 export function puntosControl(c, pistas, T) {
   const pts = [];
-  (c.sn || []).forEach((sn) => {
-    const p = sn != null ? balizaEn(pistas.balizas[String(sn)], T) : null;
+  (c.sn || []).forEach((sn, k) => {
+    // boya con Atlas: su posición en T; sin Atlas (estimada): su punto fijo
+    const fijo = c.puntos_xy?.[k];
+    const p = sn != null ? balizaEn(pistas.balizas[String(sn)], T) : fijo ? { x: fijo[0], y: fijo[1] } : null;
     if (p) pts.push(p);
   });
   if (!pts.length && c.xy) pts.push({ x: c.xy[0], y: c.xy[1] });
@@ -105,13 +107,8 @@ export function pestanas(an) {
     out.push({ id: tr.id, nombre: tr.nombre, tipo: 'tramo', tramo: tr });
     const fin = an.controles.find((c) => c.id === tr.hasta);
     if (!fin || fin.tipo === 'llegada') continue;
-    if (fin.tipo === 'barlovento') {
-      const off = an.controles.find((c) => c.id === `o${fin.id.slice(1)}`);
-      // La pestaña del rodeo de barlovento se llama por el offset, que es donde acaba el rodeo
-      out.push({ id: fin.id, nombre: off ? off.nombre : fin.nombre, tipo: 'baliza', controles: off ? [fin, off] : [fin] });
-    } else {
-      out.push({ id: fin.id, nombre: fin.nombre, tipo: 'baliza', controles: [fin] });
-    }
+    // El offset no es un punto aparte: forma parte del rodeo de barlovento y del inicio de la popa
+    out.push({ id: fin.id, nombre: fin.nombre, tipo: 'baliza', controles: [fin] });
   }
   out.push({ id: 'llegada', nombre: 'Llegada', tipo: 'llegada' });
   out.push({ id: 'rendimiento', nombre: 'Rendimiento', tipo: 'rendimiento' });

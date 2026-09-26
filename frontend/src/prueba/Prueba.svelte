@@ -12,6 +12,7 @@
   import Debrief from '../Debrief.svelte';
   import EscoraOptima from './EscoraOptima.svelte';
   import Maniobras from './Maniobras.svelte';
+  import Polar from './Polar.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -69,6 +70,7 @@
   const corrAhora = $derived(an ? corrienteEn(an, T) : null);
   const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Amura favorecida'], ['sog', 'SOG']];
   let lider = $state(false);
+  let cronica = $state(false);
   const lado = (v) => ({ IZQUIERDA: 'izquierda', DERECHA: 'derecha', flota: 'toda la flota' })[v] || '—';
   const desfase = $derived(camp?.tz_offset_ms || 0);
   const controlesTab = $derived.by(() => {
@@ -189,6 +191,26 @@
         <div><i>Línea</i><b>{num(s.sesgo.largo_linea_m, 0)} m</b></div>
         <div><i>Corriente <span class="est">est.</span></i>{#if an.corriente}<b>{num(an.corriente.velocidad_kn, 2)} kn hacia {num(an.corriente.hacia_grados, 0)}°</b><small class="tenue">confianza {an.corriente.confianza}</small>{:else}<b class="tenue">sin estimar</b>{/if}</div>
       </section>
+      {@const zl = (s.viento_en_la_linea || []).filter((z) => z.twd != null)}
+      {#if zl.length >= 2}
+        {@const pl = s.barcos[ref]?.posicion_linea_pct}
+        {@const miZona = pl == null ? null : pl < 100 / 3 ? 'comité' : pl < 200 / 3 ? 'centro' : 'pin'}
+        <section class="tarjeta bloque">
+          <h3>Viento a lo largo de la línea <span class="est">estimado</span></h3>
+          <div class="zonas">
+            {#each s.viento_en_la_linea as z}
+              <div class="zona" class:mia={z.zona === miZona}>
+                <i>{z.zona}{z.zona === miZona ? ` · ${vc(ref)}` : ''}</i>
+                {#if z.twd != null}
+                  <b class="num">{Math.abs(z.rolada) < 1 ? 'como la media' : `${num(Math.abs(z.rolada), 1)}° ${z.rolada > 0 ? 'derecha' : 'izquierda'}`}</b>
+                  <small class="tenue num">SOG {num(z.sog, 1)} kn · {z.barcos} barcos</small>
+                {:else}<b class="tenue">sin datos</b><small class="tenue">{z.barcos} barcos</small>{/if}
+              </div>
+            {/each}
+          </div>
+          <p class="nota-z">Rolada de cada tercio respecto a la TWD del disparo, de +10 a +60 s, con los rumbos de los barcos que salieron por él (a su ángulo al viento de la ceñida). Derecha = el viento viene más de la derecha mirando a barlovento.</p>
+        </section>
+      {/if}
       <Tabla titulo="Comparativa de apertura" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
         nota="Margen negativo = por detrás de la línea en el disparo. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
         columnas={[
@@ -231,6 +253,7 @@
           { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
           { k: 'maniobras', titulo: 'Man.', num: true, est: true },
           { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
+          { k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') },
           { k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
           { k: 'layline_txt', titulo: 'Layline', est: true },
           { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
@@ -244,6 +267,7 @@
       {#if tr.escora_optima}
         <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
       {/if}
+      <Polar tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
       <Maniobras tramo={tr} {ref} nombreRef={vc(ref)} senalMs={an.senal} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)}
         refTop5={an.maniobras_top5?.[tr.tipo === 'ceñida' ? 'virada' : 'trasluchada']} />
       <GraficoViento tramo={tr} {T} senalMs={an.senal} />
@@ -336,7 +360,14 @@
           { k: 'cobertura', titulo: 'Datos', num: true, fmt: (v) => (v == null ? '—' : num(v * 100, 0) + ' %') },
         ]} />
     {:else if tab.tipo === 'debrief'}
-      <Debrief {campId} ambito={clave} barco={ref} titulo={`Debrief de la prueba ${p.numero ?? ''} · ${vc(ref)} · IA`} />
+      <div class="modos-ia" role="group" aria-label="Qué texto">
+        <button class:activo={!cronica} aria-pressed={!cronica} onclick={() => (cronica = false)}>Debrief de {vc(ref)}</button>
+        <button class:activo={cronica} aria-pressed={cronica} onclick={() => (cronica = true)}>Crónica de la prueba</button>
+      </div>
+      {#key cronica}
+        <Debrief {campId} ambito={cronica ? 'cronica:' + clave : clave} barco={ref}
+          titulo={cronica ? `Crónica de la prueba ${p.numero ?? ''} · IA` : `Debrief de la prueba ${p.numero ?? ''} · ${vc(ref)} · IA`} />
+      {/key}
     {/if}
 
     {#if an.avisos.length}
@@ -367,6 +398,14 @@
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
   .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 10px; align-items: start; }
   .izq { display: grid; gap: 8px; min-width: 0; }
+  .zonas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .zona { display: grid; gap: 2px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+  .zona.mia { outline: 2px solid color-mix(in srgb, var(--yo) 60%, transparent); }
+  .zona i { font-style: normal; font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-2); }
+  .nota-z { font-size: 13px; color: var(--tinta-3); margin: 6px 0 0; }
+  .modos-ia { display: flex; gap: 6px; margin-bottom: 8px; }
+  .modos-ia button { font: 600 14px var(--display); padding: 5px 12px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); cursor: pointer; }
+  .modos-ia button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
   .capas { display: flex; justify-content: space-between; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
   .indic { font-size: 13px; color: var(--tinta-2); display: flex; gap: 4px; flex-wrap: wrap; }
   .peq { font-size: 12px !important; font-weight: 500 !important; color: var(--tinta-3); }
