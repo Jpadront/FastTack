@@ -177,8 +177,8 @@ def valorar(f: dict, ref_sog: float | None, eslora: float) -> dict:
     diag = {}
     m, sog = f.get("margen_m"), f.get("sog_disparo")
     m10 = f.get("margen_menos_10_m")
-    if f.get("sobre_linea_gps") or f.get("ocs") not in (None, "NO"):
-        diag["llegada"] = "pasado: sobre la línea en la señal"
+    if f.get("ocs") not in (None, "NO"):
+        diag["llegada"] = "pasado: OCS según el comité"
     elif m10 is not None and m10 > -eslora and sog is not None and ref_sog and sog < 0.7 * ref_sog:
         diag["llegada"] = "pronto: a menos de una eslora de la línea 10 s antes y lento en la señal (tuvo que frenar)"
     elif m is not None and m < -PRIMERA_FILA_ESLORAS * eslora and (f.get("cruce_s") or 0) > 5:
@@ -226,7 +226,6 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
             fila["posicion_linea_pct"] = round(float(b @ cp) / largo2 * 100, 1)
             fila["margen_m"] = round(float(firmada(*xy)), 1)
             fila["sog_disparo"] = round(tr.en(senal, "sog"), 2)
-            fila["sobre_linea_gps"] = fila["margen_m"] > 0  # en el lado del recorrido en el disparo
         # Cruce de la línea: primer paso del lado de salida al del recorrido desde 30 s antes
         i = tr.tramo(senal - 30_000, senal + 180_000)
         if len(i) > 1:

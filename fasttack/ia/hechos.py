@@ -6,6 +6,7 @@ Las diferencias con la flota se calculan aquí para que la IA no tenga que hacer
 """
 from __future__ import annotations
 
+import math
 import statistics
 
 CALIDAD_BUENA = ("alta", "media")
@@ -25,6 +26,30 @@ def _mediana(vals):
 MOTIVOS = {"no_podia_virar": "tráfico: no podía virar (barco a menos de 3 esloras hacia donde tenía que virar)",
            "layline_con_trafico": "tráfico: la layline ya estaba ocupada por barcos delante (virar debajo era aire sucio)",
            "calculo": "cálculo: nadie le impedía virar ni ocupaba la layline"}
+
+
+def causa_vmg(vmg, sog, twa, vmg5, sog5, twa5, popa: bool) -> dict | None:
+    """Por qué la VMG es distinta de la del top 5: VMG ≈ SOG·|cos TWA|, así que la diferencia se reparte
+    en velocidad (SOG, con el ángulo del top 5) y ángulo (TWA, con la SOG del barco)."""
+    if None in (vmg, sog, twa, vmg5, sog5, twa5):
+        return None
+    c, c5 = abs(math.cos(math.radians(twa))), abs(math.cos(math.radians(twa5)))
+    vel, ang = (sog - sog5) * c5, sog * (c - c5)
+    d = vmg - vmg5
+    umbral = max(0.03, 0.01 * abs(vmg5))   # por debajo, no hay diferencia que explicar
+    if abs(d) < umbral:
+        return {"vmg": "igual que el top 5"}
+    peor = d < 0
+    # la causa es la parte que va en el mismo sentido que la diferencia; si las dos pesan, las dos
+    a_favor = {k: x for k, x in (("velocidad", vel), ("ángulo", ang)) if (x < 0) == peor and abs(x) >= 0.3 * abs(d)}
+    causa = ("velocidad y ángulo" if len(a_favor) == 2 else next(iter(a_favor), "sin causa clara (ni la SOG ni el ángulo la explican)"))
+    out = {"vmg": "peor que el top 5" if peor else "mejor que el top 5", "causa": causa}
+    if "velocidad" in causa:
+        out["velocidad"] = "más lento" if sog < sog5 else "más rápido"
+    if "ángulo" in causa:
+        out["angulo"] = (("más profundo" if twa > twa5 else "más alto") if popa
+                         else ("más abierto (menos altura)" if twa > twa5 else "más cerrado (más altura)"))
+    return out
 
 
 def _motivo(tr):
@@ -186,7 +211,7 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "puesto_a_180_s": b.get("pos_180"), "distancia_al_primero_a_180_s_m": _r(b.get("dist_180")),
             "primera_virada_tras_la_senal_s": b.get("primera_virada_s"),
             "puesto_en_baliza_1": b.get("pos_b1"), "detras_del_primero_en_baliza_1_s": b.get("gap_b1_s"),
-            "ocs": b.get("ocs") not in (None, "NO"), "sobre_la_linea_gps": bool(b.get("sobre_linea_gps")),
+            "ocs_segun_el_comite": b.get("ocs") not in (None, "NO"),
             "extremo_favorecido": {"PIN": "pin", "COMITE": "comité"}.get(s["sesgo"]["extremo"], s["sesgo"]["extremo"].lower()),
             "sesgo_de_la_linea_grados": _r(s["sesgo"]["grados"], 1), "ventaja_del_extremo_m": _r(s["sesgo"]["metros"]),
             "twd_en_el_disparo_grados": _r(s.get("twd_disparo")),
@@ -232,8 +257,6 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
     tramos = []
     for t in an["tramos"]:
         f = t["barcos"].get(v)
-        buenos = [x for x in t["barcos"].values() if x.get("calidad") in CALIDAD_BUENA]
-        med = {k: _mediana([x.get(k) for x in buenos]) for k in ("vmg", "sog", "twa", "perdida_m")}
         # top 5 con datos (también calidad baja: son pocos barcos); con menos de 2, sin referencia
         cinco = [t["barcos"][x] for x in top5 if (t["barcos"].get(x) or {}).get("calidad") in CALIDAD_BUENA + ("baja",)]
         m5 = {k: (_mediana([x.get(k) for x in cinco]) if len(cinco) >= 2 else None)
@@ -257,8 +280,9 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "puestos_ganados": (pos_ant - f["posicion"]) if pos_ant and f.get("posicion") else None,
             "detras_del_primero_s": _r(f.get("gap_s")), "parcial_s": _r(f.get("parcial_s")),
             "calidad_de_datos": f.get("calidad"), "cobertura_pct": _r((f.get("cobertura") or 0) * 100),
-            "vmg_kn": _r(f.get("vmg"), 2), "vmg_mediana_flota_kn": _r(med["vmg"], 2),
-            "vmg_frente_a_la_mediana_kn": _r(f["vmg"] - med["vmg"], 2) if f.get("vmg") is not None and med["vmg"] is not None else None,
+            "vmg_kn": _r(f.get("vmg"), 2),
+            "vmg_frente_al_top5_por_que": causa_vmg(f.get("vmg"), f.get("sog"), f.get("twa"), m5["vmg"], m5["sog"], m5["twa"],
+                                                    t["tipo"] == "popa"),
             "top5": {"barcos_con_datos": len(cinco),
                      "vmg_mediana_kn": _r(m5["vmg"], 2), "sog_mediana_kn": _r(m5["sog"], 2),
                      "twa_mediana_grados": _r(m5["twa"], 1), "maniobras_mediana": _r(m5["maniobras"]),
@@ -268,11 +292,9 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "vmg_frente_al_top5_kn": _r(f["vmg"] - m5["vmg"], 2) if f.get("vmg") is not None and m5["vmg"] is not None else None,
             "sog_frente_al_top5_kn": _r(f["sog"] - m5["sog"], 2) if f.get("sog") is not None and m5["sog"] is not None else None,
             "distancia_frente_al_top5_m": _r(f["distancia_m"] - m5["distancia_m"]) if f.get("distancia_m") is not None and m5["distancia_m"] is not None else None,
-            "sog_kn": _r(f.get("sog"), 2), "sog_mediana_flota_kn": _r(med["sog"], 2),
-            "twa_grados": _r(f.get("twa"), 1), "twa_mediana_flota_grados": _r(med["twa"], 1),
+            "sog_kn": _r(f.get("sog"), 2), "twa_grados": _r(f.get("twa"), 1),
             "distancia_navegada_m": _r(f.get("distancia_m")),
             "maniobras": f.get("maniobras"), "perdida_en_maniobras_m": _r(f.get("perdida_m")),
-            "perdida_en_maniobras_mediana_flota_m": _r(med["perdida_m"]),
             "layline": ({"estado": "sobrepasada", "lado": (lay.get("lado") or "").lower()
                          + (" (mirando a sotavento)" if t["tipo"] == "popa" else " (mirando a barlovento)"), "exceso_m": _r(lay.get("metros")),
                          "tiempo_fuera_s": lay.get("segundos"), **_motivo(lay.get("trafico"))} if lay.get("estado") == "SOBREPASADA"
@@ -294,20 +316,14 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "maniobras_detalle": _maniobras(f, t, an, v),
         }
         o = t.get("escora_optima")
-        if o:
+        if o and "escora" in o:
             tr["escora_optima"] = {
-                "concluyente": o["concluyente"],
-                "rango_desde_grados": o["rango"][0], "rango_hasta_grados": o["rango"][1],
-                "mejor_franja_desde_grados": o["mejor"][0], "mejor_franja_hasta_grados": o["mejor"][1],
-                "por_debajo_de_grados": (o.get("debajo") or {}).get("hasta_grados"),
-                "perdida_por_debajo_pct": (o.get("debajo") or {}).get("perdida_pct"),
-                "por_encima_de_grados": (o.get("encima") or {}).get("desde_grados"),
-                "perdida_por_encima_pct": (o.get("encima") or {}).get("perdida_pct"),
-                "tiempo_del_barco_en_rango_pct": f.get("escora_en_rango_pct"),
-                "con_mas_escora_va_mas_rapido_pero_mas_abierto_desde_grados": (o.get("sobreescora") or {}).get("desde_grados"),
-                "nota": ("estimada: VMG relativa a la flota por franjas de 2° de escora; si no es concluyente, la escora no marcó diferencias"
-                         + ("; en popa la escora lleva signo: + a sotavento, − a barlovento (compárala con escora_con_signo_grados)"
-                            if t["tipo"] == "popa" else "")),
+                "escora_de_los_5_con_mas_vmg_grados": o["escora"],
+                "entre_grados": o["rango"],
+                "escora_del_barco_frente_a_ella_grados": f.get("escora_frente_optima"),
+                "tiempo_a_menos_de_2_grados_pct": f.get("escora_en_rango_pct"),
+                "nota": ("estimada: media de la escora de los 5 barcos con más VMG del tramo; + = el barco escora más"
+                         + ("; en popa lleva signo: + a sotavento, − a barlovento" if t["tipo"] == "popa" else "")),
             }
         if f.get("puerta"):
             fin = next((c for c in an["controles"] if c["id"] == t["hasta"]), {})
@@ -335,16 +351,15 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
         for k, u, d in (("vmg_ceñida", "kn", 2), ("vmg_popa", "kn", 2), ("sog_ceñida", "kn", 2), ("sog_popa", "kn", 2),
                         ("twa_ceñida", "grados", 1), ("twa_popa", "grados", 1), ("escora_ceñida", "grados", 0),
                         ("escora_popa", "grados", 0), ("perdida_virada_m", None, 0), ("perdida_trasluchada_m", None, 0)):
-            med = _mediana([x.get(k) for x in an["rendimiento"].values() if (x.get("cobertura") or 0) >= 0.5])
             nombre = k if u is None else f"{k}_{u}"
-            mn = k.replace("_m", "_mediana_flota_m") if u is None else f"{k}_mediana_flota_{u}"
             rend[nombre] = _r(r.get(k), d)
-            rend[mn] = _r(med, d)
             t5 = _mediana([an["rendimiento"][x].get(k) for x in top5
                            if x in an["rendimiento"] and (an["rendimiento"][x].get("cobertura") or 0) >= 0.5])
             rend[k.replace("_m", "_top5_m") if u is None else f"{k}_top5_{u}"] = _r(t5, d)
             if r.get(k) is not None and t5 is not None:
                 rend[k.replace("_m", "_frente_al_top5_m") if u is None else f"{k}_frente_al_top5_{u}"] = _r(r[k] - t5, d)
+        rend |= _por_que(r, lambda k: _mediana([an["rendimiento"][x].get(k) for x in top5
+                                                 if x in an["rendimiento"] and (an["rendimiento"][x].get("cobertura") or 0) >= 0.5]))
         rend["viradas"] = r.get("n_viradas")
         rend["trasluchadas"] = r.get("n_trasluchadas")
         rend["cobertura_pct"] = _r((r.get("cobertura") or 0) * 100)
@@ -352,27 +367,24 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
     return _limpia(h)
 
 
-def _dif(f, p, m):
-    a = (f or {}).get("rend", {}) or {}
-    b = p.get("flota") or {}
-    return _r(a[m] - b[m], 2) if a.get(m) is not None and b.get(m) is not None else None
+def _por_que(r: dict, t5) -> dict:
+    """Causa de la diferencia de VMG con el top 5 en ceñida y en popa (r: medias del barco; t5(k): la del top 5)."""
+    return {f"vmg_{m}_frente_al_top5_por_que": causa_vmg(r.get(f"vmg_{m}"), r.get(f"sog_{m}"), r.get(f"twa_{m}"),
+                                                         t5(f"vmg_{m}"), t5(f"sog_{m}"), t5(f"twa_{m}"), m == "popa")
+            for m in ("ceñida", "popa")}
 
 
 def _escora_camp(res, v, top5):
     e = res.get("escora")
     if not e:
         return None
-    t, b = e["todas"], e["barcos"]
-    mio = b.get(v) or {}
-    return {"ceñidas_juntas": t["ceñidas"], "concluyente": t["concluyente"],
-            "rango_desde_grados": t["rango"][0], "rango_hasta_grados": t["rango"][1],
-            "mejor_franja_desde_grados": t["mejor"][0], "mejor_franja_hasta_grados": t["mejor"][1],
-            "por_debajo_de_grados": (t.get("debajo") or {}).get("hasta_grados"),
-            "perdida_por_debajo_pct": (t.get("debajo") or {}).get("perdida_pct"),
-            "escora_mediana_del_barco_grados": mio.get("escora_mediana"),
-            "ceñidas_del_barco_con_escora_en_rango": mio.get("en_rango"), "ceñidas_del_barco": mio.get("ceñidas"),
-            "escora_mediana_top5_grados": _r(_mediana([(b.get(x) or {}).get("escora_mediana") for x in top5]), 1),
-            "nota": "todas las ceñidas del campeonato juntas; VMG relativa a los barcos vecinos por franja de 2° de escora"}
+    mio = e["barcos"].get(v) or {}
+    return {"escora_de_los_5_con_mas_vmg_grados": e["escora"], "ceñidas": e["ceñidas"],
+            "escora_media_del_barco_grados": mio.get("escora_media"),
+            "escora_del_barco_frente_a_ella_grados": mio.get("frente_optima"),
+            "ceñidas_del_barco_a_menos_de_2_grados": mio.get("en_rango"), "ceñidas_del_barco": mio.get("ceñidas"),
+            "segun_el_viento": [{"viento": x["tramo"], "escora_grados": x["escora"], "ceñidas": x["ceñidas"]} for x in e["por_viento"]] or None,
+            "nota": "estimada: en cada ceñida, media de la escora de los 5 barcos con más VMG; aquí, la media de todas las ceñidas"}
 
 
 def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None, clase: str | None = None) -> dict:
@@ -390,10 +402,8 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
     for k, u, d in (("vmg_ceñida", "kn", 2), ("vmg_popa", "kn", 2), ("sog_ceñida", "kn", 2), ("sog_popa", "kn", 2),
                     ("twa_ceñida", "grados", 1), ("twa_popa", "grados", 1), ("escora_ceñida", "grados", 0),
                     ("escora_popa", "grados", 0), ("perdida_virada_m", None, 1), ("perdida_trasluchada_m", None, 1)):
-        nombre = k if u is None else f"{k}_{u}"
-        rend[nombre] = _r(t["rend"].get(k), d)
+        # solo la diferencia con el top 5 (menos cifras: el texto tiene que poder leerse de un vistazo)
         t5 = media_top5(lambda x, k=k: x["rend"].get(k), d)
-        rend[(k.replace("_m", "_top5_m") if u is None else f"{k}_top5_{u}")] = t5
         if t["rend"].get(k) is not None and t5 is not None:
             rend[(k.replace("_m", "_frente_al_top5_m") if u is None else f"{k}_frente_al_top5_{u}")] = _r(t["rend"][k] - t5, d)
 
@@ -407,42 +417,48 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
     for k, p in enumerate(res["pruebas"]):
         pt = mia["puntos"][k]
         f = b["por_prueba"][k]
-        v5 = {m: _mediana([(res["barcos"][x]["por_prueba"][k] or {}).get("rend", {}).get(m) if res["barcos"][x]["por_prueba"][k]
-                           and res["barcos"][x]["por_prueba"][k].get("rend") else None for x in top5])
-              for m in ("vmg_ceñida", "vmg_popa")}
         mv = (f or {}).get("rend") or {}
-        fila_top5 = {
-            "vmg_media_de_las_ceñidas_top5_kn": _r(v5["vmg_ceñida"], 2),
-            "vmg_media_de_las_ceñidas_frente_al_top5_kn": _r(mv["vmg_ceñida"] - v5["vmg_ceñida"], 2) if mv.get("vmg_ceñida") is not None and v5["vmg_ceñida"] is not None else None,
-            "vmg_media_de_las_popas_top5_kn": _r(v5["vmg_popa"], 2),
-            "vmg_media_de_las_popas_frente_al_top5_kn": _r(mv["vmg_popa"] - v5["vmg_popa"], 2) if mv.get("vmg_popa") is not None and v5["vmg_popa"] is not None else None,
-        }
-        pruebas.append({
-            "prueba": p["numero"], "puntos": pt["pts"], "codigo": pt["cod"], "descartada": pt["desc"],
-            "llegadas": {"reconstruida": "reconstruidas", "estimada": "estimadas"}.get(p["estado"], "oficiales"),
-            "corriente_kn": (p.get("corriente") or {}).get("velocidad_kn"),
-            "corriente_confianza": (p.get("corriente") or {}).get("confianza"),
-            "viento_referencia_kn": p.get("viento_kn"),
-            "metricas": ("sí" if f is not None else "no: recorrido reconstruido dudoso (balizas estimadas mal situadas)"
-                         if p.get("recorrido_dudoso") else "no: prueba sin analizar"),
-            "vmg_media_de_las_ceñidas_kn": _r(f["rend"].get("vmg_ceñida"), 2) if f and f.get("rend") else None,
-            "vmg_media_de_las_ceñidas_mediana_flota_kn": _r((p.get("flota") or {}).get("vmg_ceñida"), 2),
-            "vmg_media_de_las_ceñidas_frente_a_la_mediana_kn": _dif(f, p, "vmg_ceñida"),
-            "vmg_media_de_las_popas_kn": _r(f["rend"].get("vmg_popa"), 2) if f and f.get("rend") else None,
-            "vmg_media_de_las_popas_mediana_flota_kn": _r((p.get("flota") or {}).get("vmg_popa"), 2),
-            "vmg_media_de_las_popas_frente_a_la_mediana_kn": _dif(f, p, "vmg_popa"),
-        } | fila_top5)
+        filas5 = [res["barcos"][x]["por_prueba"][k] for x in top5]
+        v5 = lambda m: _mediana([(x.get("rend") or {}).get(m) for x in filas5 if x])
+        fila = {"prueba": p["numero"], "puesto": pt["cod"] or pt["pts"],
+                "metricas": ("sí" if f is not None else "no: recorrido reconstruido dudoso (balizas estimadas mal situadas)"
+                             if p.get("recorrido_dudoso") else "no: prueba sin analizar")}
+        if p.get("viento_kn") is not None:
+            fila["viento_referencia_kn"] = p["viento_kn"]
+        if mv:
+            for m in ("ceñida", "popa"):
+                if mv.get(f"vmg_{m}") is not None and v5(f"vmg_{m}") is not None:
+                    fila[f"vmg_{m}_frente_al_top5_kn"] = _r(mv[f"vmg_{m}"] - v5(f"vmg_{m}"), 2)
+            fila |= _por_que(mv, v5)
+        pruebas.append(fila)
+
+    # Resumen de cada rumbo: en cuántas pruebas fue peor que el top 5 y por qué
+    def recuento(m):
+        xs = [x.get(f"vmg_{m}_frente_al_top5_por_que") for x in pruebas]
+        xs = [x for x in xs if x]
+        if not xs:
+            return None
+        peor = [x for x in xs if x["vmg"].startswith("peor")]
+        return {"pruebas_con_dato": len(xs), "peor_que_el_top5": len(peor),
+                "mejor_que_el_top5": sum(1 for x in xs if x["vmg"].startswith("mejor")),
+                "en_las_peores_por_velocidad": sum(1 for x in peor if "velocidad" in x.get("causa", "")),
+                "en_las_peores_por_angulo": sum(1 for x in peor if "ángulo" in x.get("causa", ""))}
+
+    tercio = mia["puesto"] / max(res["inscritos"], 1)
     h = {
         "tipo": "debrief del campeonato",
         "clase": clase,
         "campeonato": nombre_camp,
         "barco": _vela(v, nombres),
-        "general_calculada": {"puesto": mia["puesto"], "barcos": res["inscritos"], "puntos_netos": mia["neto"],
-                              "puntos_totales": mia["total"], "descartes": res["descartes"],
+        "general_calculada": {"puesto": mia["puesto"], "barcos": res["inscritos"],
+                              "lectura": ("primer tercio de la flota" if tercio <= 1 / 3 else "tercio central de la flota"
+                                          if tercio <= 2 / 3 else "último tercio de la flota"),
                               "nota": "sin penalizaciones ni decisiones del jurado"},
         "pruebas": pruebas,
-        "medias_del_campeonato": rend | {"pruebas_con_metricas": t["analizadas"],
-                                         "comparacion": "top5 = mediana de los 5 primeros de la general (sin contar este barco)"},
+        "vmg_frente_al_top5_prueba_a_prueba": {"ceñida": recuento("ceñida"), "popa": recuento("popa")},
+        "medias_del_campeonato": rend | _por_que(t["rend"], lambda k: media_top5(lambda x, k=k: x["rend"].get(k), 3))
+                                 | {"pruebas_con_metricas": t["analizadas"],
+                                    "comparacion": "top5 = mediana de los 5 primeros de la general (sin contar este barco)"},
         "top_15_de_la_flota": {"vmg_ceñida": top15("vmg_ceñida"), "vmg_popa": top15("vmg_popa"),
                                "perdida_virada": top15("perdida_virada_m"), "perdida_trasluchada": top15("perdida_trasluchada_m")},
         "top5_de_la_general": [_vela(x, nombres) for x in top5],
@@ -455,7 +471,7 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                     "posicion_media_en_la_linea_pct": _r(t["salida"]["posicion_linea_pct"]),
                     "posicion_en_la_linea_significa": "dónde sale en la línea: 0 % = extremo del comité, 100 % = pin (no es una nota)",
                     "veces_en_el_top_10_a_60_s": t["salida"]["top10_60"], "salidas_con_puesto_a_60_s": t["salida"]["con_60"],
-                    "ocs": t["salida"]["ocs"], "sobre_la_linea_gps": t["salida"]["sobre_linea_gps"]},
+                    "ocs_segun_el_comite": t["salida"]["ocs"]},
         "laylines": {"tramos_con_dato": n_lay, "correctas": lay["ok"], "sobrepasadas": lay["sobrepasadas"],
                      "sobrepasadas_por_trafico": lay.get("por_trafico"),
                      "sobrepasadas_por_calculo_o_sin_dato": lay["sobrepasadas"] - (lay.get("por_trafico") or 0),
@@ -482,7 +498,8 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
     d = dt.date.fromisoformat(dia)
     h["dia"] = f"{['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][d.weekday()]} {d.day}"
     dia_gen = h.pop("general_calculada")
-    h["resultado_del_dia"] = {"puntos_del_dia": dia_gen["puntos_totales"], "puesto_del_dia": dia_gen["puesto"],
+    h["resultado_del_dia"] = {"puntos_del_dia": next(f["total"] for f in res["general"] if f["vela"] == v),
+                              "puesto_del_dia": dia_gen["puesto"],
                               "barcos": dia_gen["barcos"], "pruebas_del_dia": len(res["pruebas"]),
                               "nota": "puesto por la suma de puntos de las pruebas del día, sin descartes"}
     h["top5_del_dia"] = h.pop("top5_de_la_general")
@@ -496,7 +513,8 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
         h["medias_del_dia"] = h.pop("medias_del_campeonato")
         h["medias_del_dia"]["comparacion"] = "top5 = mediana de los 5 primeros del día (sin contar este barco)"
     if h.get("escora_optima_en_ceñida"):
-        h["escora_optima_en_ceñida"]["nota"] = "todas las ceñidas del campeonato hasta hoy juntas (más datos que un solo día)"
+        h["escora_optima_en_ceñida"]["nota"] = ("estimada: media de la escora de los 5 barcos con más VMG de cada ceñida, "
+                                                "en todas las ceñidas del campeonato hasta hoy (más datos que un solo día)")
     h["nota"] = "salidas, laylines, puertas y medias se refieren solo a las pruebas de este día"
     return h
 
@@ -504,9 +522,9 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
 def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
     """Desglose por tramo de una prueba (de «de_prueba») con lo esencial, para el debrief del día."""
     claves = ("nombre", "tipo", "puesto_al_final", "puestos_ganados", "detras_del_primero_s", "calidad_de_datos",
-              "vmg_kn", "vmg_frente_al_top5_kn", "vmg_frente_a_la_mediana_kn", "sog_frente_al_top5_kn",
+              "vmg_kn", "vmg_frente_al_top5_kn", "vmg_frente_al_top5_por_que", "sog_frente_al_top5_kn",
               "twa_grados", "maniobras", "perdida_en_maniobras_m", "layline", "puerta", "modo")
-    claves_coach = ("sog_kn", "sog_frente_al_top5_kn", "sog_mediana_flota_kn", "twa_mediana_flota_grados", "escora_grados",
+    claves_coach = ("sog_kn", "escora_grados",
                     "escora_con_signo_grados", "escora_optima", "tactica", "maniobras_detalle", "viento", "parcial_s",
                     "frente_al_barco_fantasma_m", "top5", "regularidad_vmg_pct", "regularidad_vmg_top5_mediana_pct",
                     "twa_de_maxima_vmg_grados", "twa_de_maxima_vmg_top5_grados", "rodeo_final", "set_tras_barlovento", "offset")

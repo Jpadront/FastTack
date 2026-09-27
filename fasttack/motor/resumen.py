@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import statistics
 
-from . import escora as esc_mod
 
 METRICAS_REND = ("vmg_ceñida", "vmg_popa", "sog_ceñida", "sog_popa", "twa_ceñida", "twa_popa",
                  "escora_ceñida", "escora_popa", "cabeceo_ceñida", "cabeceo_popa",
@@ -100,7 +99,7 @@ def por_prueba(an: dict, puntos: dict[str, tuple[int, str | None]]) -> dict:
             "pts": pts, "cod": cod,
             "rend": {m: r.get(m) for m in METRICAS_REND} if r else None,
             "cobertura": r.get("cobertura") if r else None,
-            "salida": {k: sb.get(k) for k in ("margen_m", "pos_60", "posicion_linea_pct", "sobre_linea_gps", "en_salida")} if sb else None,
+            "salida": {k: sb.get(k) for k in ("margen_m", "pos_60", "posicion_linea_pct", "en_salida")} if sb else None,
             "laylines": {"ok": ok, "sobrepasadas": len(sob), "metros": _media(sob), "por_trafico": por_trafico},
             "puertas": {"buenas": sum(1 for p, f in pz_tot if p == f), "total": len(pz_tot)},
         }
@@ -141,8 +140,7 @@ def totales(filas: list[dict | None], vientos: list[float | None]) -> dict:
         "salida": {"pruebas": len(sal), "margen_m": _media([x.get("margen_m") for x in sal]),
                    "posicion_linea_pct": _media([x.get("posicion_linea_pct") for x in sal]),
                    "top10_60": sum(1 for p in con60 if p <= 10), "con_60": len(con60),
-                   "ocs": sum(1 for f, _ in hechas if f["cod"] == "OCS"),
-                   "sobre_linea_gps": sum(1 for x in sal if x.get("sobre_linea_gps"))},
+                   "ocs": sum(1 for f, _ in hechas if f["cod"] == "OCS")},
         "laylines": {"ok": sum(f["laylines"]["ok"] for f, _ in hechas), "sobrepasadas": n_sob,
                      "por_trafico": sum(f["laylines"].get("por_trafico", 0) for f, _ in hechas),
                      "metros": round(sum(n * m for n, m in sob if m is not None) / n_sob, 1) if n_sob else None},
@@ -153,36 +151,36 @@ def totales(filas: list[dict | None], vientos: list[float | None]) -> dict:
 
 
 def escora_campeonato(pruebas: list[dict], validos: dict[str, dict], inscritos: list[str]) -> dict | None:
-    """Escora óptima juntando todas las ceñidas del campeonato y, si hay viento de referencia, por
-    intensidad. Por barco: en cuántas ceñidas su escora mediana cayó dentro del rango."""
-    grupos, por_viento = [], {}
+    """Escora óptima en ceñida del campeonato: la media, en todas las ceñidas, de la escora de los 5
+    barcos con más VMG de cada ceñida (y por intensidad del viento, si hay viento de referencia).
+    Por barco: su escora media, cuánto se aparta de la de los más rápidos y en cuántas ceñidas quedó
+    a menos de 2°."""
+    tramos, por_viento = [], {}
     for p in pruebas:
         an = validos.get(p["clave"])
         if not an:
             continue
         for t in an["tramos"]:
             o = t.get("escora_optima")
-            if t.get("tipo") == "ceñida" and o and all("error_pct" in f for f in o["franjas"]):
-                grupos.append(o["franjas"])
+            if t.get("tipo") == "ceñida" and o and "escora" in o:
+                tramos.append((t, o["escora"]))
                 w = p.get("viento_kn")
                 if w is not None:
                     nombre = next(n for n, dentro in TRAMOS_VIENTO if dentro(w))
-                    por_viento.setdefault(nombre, []).append(o["franjas"])
-    todas = esc_mod.combinar(grupos) if len(grupos) >= 2 else None
-    if not todas:
+                    por_viento.setdefault(nombre, []).append(o["escora"])
+    if len(tramos) < 2:
         return None
-    lo, hi = todas["rango"]
-    en_rango = {}
+    barcos = {}
     for v in inscritos:
-        esc = [t["barcos"][v]["escora"] for an in validos.values() for t in an["tramos"]
-               if t.get("tipo") == "ceñida" and v in t["barcos"] and t["barcos"][v].get("escora") is not None]
-        if esc:
-            en_rango[v] = {"ceñidas": len(esc), "en_rango": sum(1 for e in esc if lo <= e < hi),
-                           "escora_mediana": round(float(statistics.median(esc)), 1)}
-    return {"todas": todas,
-            "por_viento": [{"tramo": n, **r} for n, _ in TRAMOS_VIENTO
-                           if n in por_viento and len(por_viento[n]) >= 2 and (r := esc_mod.combinar(por_viento[n]))],
-            "barcos": en_rango}
+        xs = [(t["barcos"][v]["escora"], opt) for t, opt in tramos if v in t["barcos"] and t["barcos"][v].get("escora") is not None]
+        if xs:
+            barcos[v] = {"ceñidas": len(xs), "escora_media": round(float(statistics.mean(e for e, _ in xs)), 1),
+                         "frente_optima": round(float(statistics.mean(e - o for e, o in xs)), 1),
+                         "en_rango": sum(1 for e, o in xs if abs(e - o) <= 2)}
+    return {"escora": round(float(statistics.mean(o for _, o in tramos)), 1), "ceñidas": len(tramos),
+            "por_viento": [{"tramo": n, "escora": round(float(statistics.mean(por_viento[n])), 1), "ceñidas": len(por_viento[n])}
+                           for n, _ in TRAMOS_VIENTO if len(por_viento.get(n, [])) >= 2],
+            "barcos": barcos}
 
 
 def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict], descartes: int | None) -> dict:

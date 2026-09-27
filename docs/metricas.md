@@ -89,23 +89,22 @@ Sin corredera, la corriente se estima con toda la flota (`fasttack/motor/corrien
 
 El HDG de cada Atlas puede estar en magnético o en verdadero y tener un error de montaje. El ajuste de la corriente estima un **desvío por barco** (COG − HDG que no explican la corriente ni el abatimiento). La media de la flota se fija en la **declinación magnética** del campo de regatas y la fecha (modelo magnético mundial WMM 2025, p. ej. −1,0° en Cascais en septiembre de 2026), porque la mayoría de los Atlas van en magnético. Para las brújulas descartadas (desvío > 15°), el desvío se calcula después con la corriente ya fija. **HDG corregido = HDG del dispositivo + desvío del barco** (rumbo verdadero); sin desvío estimado, solo se suma la declinación. En el Mundial, 15 de 96 barcos tienen desvíos > 5° (máx. 79°). La declinación también mejora la corriente transversal (antes se suponía desvío medio 0).
 
-## Escora óptima en ceñida (estimada)
+## Escora óptima (estimada)
 
-Para cada ceñida (`fasttack/motor/escora.py`):
+Desde el motor 0.17 (`fasttack/motor/analisis.py`), en cada ceñida y cada popa:
 
-1. **Segmentos de 30 s** por barco, fuera de los rodeos (20 s) y de las maniobras (30 s antes, 15 s después), con ≥ 70 % de datos y rumbo estable. En cada uno: escora = mediana de |roll − desviación del sensor|; VMG media.
-2. **VMG y SOG relativas a los vecinos**: VMG (y SOG) del segmento / mediana de las de los segmentos de otros barcos **en la misma amura** a < 300 m y ±30 s (≥ 3 barcos). Misma amura porque una rolada local favorece a una amura y perjudica a la otra. Los vecinos tienen el mismo viento: se quitan la presión y las roladas, también las locales. Comparar con toda la flota daba un óptimo falso, porque quien pilla una racha escora más y va más rápido aunque la escora no sea la causa.
-3. **Franjas de 2°** (≥ 30 segmentos y ≥ 8 barcos). La mejor franja es la de mayor VMG relativa menos su error típico (una franja con pocos datos no gana por ruido). **Rango óptimo**: franjas contiguas a la mejor que pierden < 1 %. Una franja es **claramente peor** si pierde ≥ 1 % y más de 2 errores típicos; se da la pérdida de la más cercana por debajo y por encima del rango.
-4. **VMG frente a SOG**: si por encima del rango la SOG sigue subiendo (≥ 1,5 puntos más que la VMG) pero la VMG baja, con más escora se va más rápido pero más abierto o con más abatimiento («sobreescora»); si bajan las dos, falta potencia. Ejemplo: Mundial P1, C1, a 20–22°: SOG 102,4 %, VMG 96,7 %.
-5. **Concluyente** si alguna franja es claramente peor; si no, «la escora no marca diferencias» en ese tramo. Por barco: % del tiempo dentro del rango (solo si es concluyente).
+1. Escora de cada barco en el tramo = mediana de |roll − desviación del sensor| navegando estable (en popa, con signo: + a sotavento, − a barlovento).
+2. **No cuentan los sensores que no cuadran con la flota**: a más de 6° (o de 3 MAD) de la mediana de la flota en ese tramo (p. ej. 3° en ceñida con 20 kn, u 85°: sensor mal montado o sin calibrar).
+3. **Escora óptima = media de la escora de los 5 barcos con más VMG del tramo** (VMG navegando estable; se necesitan al menos 3). Se guarda también el rango (mín–máx de esos 5) y quiénes son.
+4. Por barco: su escora menos la óptima (+ = más escorado) y el % del tiempo con la escora (media móvil de 10 s) a ±2° de la óptima.
 
-**Campeonato** (Resumen): se juntan las franjas de todas las ceñidas (cada una ya relativa a sus vecinos), con media ponderada por segmentos y error típico combinado, y se aplica la misma regla. Si hay viento de referencia, también por intensidad (< 10, 10–15, > 15 kn; ≥ 2 ceñidas). Por barco: cuántas de sus ceñidas tuvieron la escora mediana dentro del rango. Mundial (18 ceñidas, 13.658 segmentos de 30 s; según el equipo, casi todas con 20–25 kn): mejor franja 16–18°, rango 14–20°, −1,2 % a 12–14° y −6,6 % a 8–10°; ESP 1214, 16 de 17 ceñidas en el rango (mediana 16,5°); top 5, mediana 15°.
+**Campeonato** (Resumen): media de la óptima de todas las ceñidas y, si hay viento de referencia, por intensidad (≥ 2 ceñidas). Por barco: su escora media, la diferencia media con la óptima y en cuántas ceñidas quedó a menos de 2°. Mundial (19 ceñidas, 20–25 kn): 15,1°; ESP 1214, 16,2° (+1,4°), 13 de 19 ceñidas a menos de 2°.
 
-Con estos datos la relación es una **meseta**, no un pico (±1 % entre 12° y 20°): por eso se da un rango y no un valor único. Lo más claro y repetido es la **pérdida por escora baja**: por debajo de 10–14°, entre −2 % y −10 % de VMG frente a los vecinos. En el Mundial, la mejor franja es 16–18° en la mayoría de las ceñidas, y el top 5 navega dentro o al lado del rango. Es una asociación en la flota, no un experimento: la escora también depende del peso y del estilo de cada tripulación. Validado con datos sintéticos (óptimo conocido, sin efecto, pocos datos).
+Antes (motor ≤ 0.16) se buscaba el rango de escora con mejor VMG relativa a los vecinos por franjas de 2°: daba una meseta difícil de leer (±1 % entre 12° y 20°). La media de los 5 más rápidos es más directa y queda en el mismo sitio (el top 5 del Mundial navegaba a 15°).
 
-### Escora óptima en popa
+## VMG frente al top 5: velocidad o ángulo
 
-Igual que en ceñida, pero con la escora con signo: + a sotavento, − a barlovento (en popa se escora a barlovento a propósito con poco viento). Mundial P9, popa 1 (20–25 kn): rango óptimo 0–4°, escorar ≥ 6° a sotavento pierde un 3–5 % de VMG frente a los vecinos.
+`hechos.causa_vmg`: como VMG ≈ SOG·|cos TWA|, la diferencia con el top 5 se reparte en **velocidad** ((SOG − SOG top 5)·|cos TWA top 5|) y **ángulo** (SOG·(|cos TWA| − |cos TWA top 5|)). Por debajo de 0,03 kn (o del 1 %) es «igual que el top 5». La causa es la parte que va en el sentido de la diferencia y pesa al menos un 30 %; si pesan las dos, «velocidad y ángulo». El ángulo se da en palabras: en ceñida más abierto o más cerrado; en popa más alto o más profundo. Se calcula por tramo, por prueba y para las medias del campeonato, y el debrief del campeonato cuenta en cuántas pruebas fue peor y por qué. Mundial, ESP 1419 (68.º de 100): ceñida peor en 9 de 10 pruebas, por ángulo (más abierto; misma SOG); popa peor en 10 de 10, por velocidad.
 
 ## Métricas por barco y tramo
 

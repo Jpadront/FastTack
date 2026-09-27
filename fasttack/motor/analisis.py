@@ -18,13 +18,13 @@ from . import corriente as corr
 from . import trafico as traf
 from . import tactica as tac
 from . import rendimiento as rend
-from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.16.0"
+VERSION = "0.17.1"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
+ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
 
 
@@ -290,16 +290,40 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                    "sog_izq": _r(c.sog_izq), "sog_der": _r(c.sog_der),
                    "rumbos": [round(c.rumbos[0], 1), round(c.rumbos[1], 1)] if c.rumbos else None}
                   for k, c in enumerate(vt.cortes)]
-        # Escora óptima (solo ceñida): franjas de escora frente a la VMG relativa a la flota
+        # Escora óptima = la media de la escora de los 5 barcos con más VMG del tramo (navegando estable).
+        # En popa, con signo (+ a sotavento, − a barlovento). Fuera los sensores que no cuadran con la
+        # flota (p. ej. 3° en ceñida con 20 kn, u 85°: sensor mal montado o sin calibrar).
+        campo = "escora" if ceñida else "escora_sotavento"
+        cand = [(v, f) for v, f in filas.items() if f.get("calidad") in ("alta", "media") and f.get(campo) is not None
+                and (f.get("vmg_estable") or f.get("vmg"))]
+        if len(cand) >= 5:
+            todas = np.array([f[campo] for _, f in cand])
+            med_ = float(np.median(todas))
+            lim_ = max(ESCORA_ATIPICA, 3 * 1.4826 * float(np.median(np.abs(todas - med_))))
+            cand = [(v, f) for v, f in cand if abs(f[campo] - med_) <= lim_]
+        cand.sort(key=lambda x: -(x[1].get("vmg_estable") or x[1]["vmg"]))
         opt = None
-        if True:   # ceñida y popa (en popa, escora con signo: − = a barlovento)
-            opt = esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
-                                                   {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
-            if opt:
-                for v, pct in esc_mod.en_rango_por_barco(opt).items():
-                    if v in filas:
-                        filas[v]["escora_en_rango_pct"] = pct
-                opt.pop("_por_barco")
+        if len(cand) >= 3:
+            vals = [f[campo] for _, f in cand[:5]]
+            esc_opt = float(np.mean(vals))
+            opt = {"escora": round(esc_opt, 1), "rango": [round(min(vals), 1), round(max(vals), 1)],
+                   "barcos": [v for v, _ in cand[:5]], "con_signo": not ceñida}
+            for v, f in filas.items():
+                if f.get(campo) is None:
+                    continue
+                f["escora_frente_optima"] = round(f[campo] - esc_opt, 1)
+                tr = trazas[v]
+                e_, s_ = t["en_tramo"][v]
+                i_ = tr.tramo(e_ + 20_000, s_ - 20_000)
+                i_ = i_[tr.sog[i_] > vt.sog_min]
+                if len(i_) > 10:
+                    if ceñida:
+                        h_ = np.abs(tr.roll[i_] - offsets[v])
+                    else:
+                        al_ = dif(tr.cog[i_] - vt.twd_en(tr.ts[i_]))
+                        h_ = (tr.roll[i_] - offsets[v]) * np.sign(np.nan_to_num(al_))
+                    h_ = np.convolve(np.nan_to_num(h_, nan=esc_opt + 99), np.ones(20) / 20, mode="valid") if len(h_) > 20 else h_
+                    f["escora_en_rango_pct"] = round(float(np.mean(np.abs(h_ - esc_opt) <= 2)) * 100)
         salida_tramos.append({
             "escora_optima": opt,
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",

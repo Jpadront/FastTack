@@ -1,40 +1,21 @@
-import numpy as np
-
-from fasttack.motor.escora import optima
-
-RNG = np.random.default_rng(5)
+"""Diagnóstico de la VMG frente al top 5 (velocidad o ángulo)."""
+from fasttack.ia.hechos import causa_vmg
 
 
-def segs(perdida_por_grado, optimo=17.0, n=900):
-    """Segmentos de 30 s de 20 barcos: VMG = 4,5 kn × (1 − pérdida por grado × |escora − óptimo|) + ruido."""
-    out = []
-    for k in range(n):
-        h = RNG.uniform(8, 24)
-        vmg = 4.5 * (1 - perdida_por_grado * abs(h - optimo)) + RNG.normal(0, 0.05)
-        out.append((f"B{k % 20}", 1000 * k, h, vmg, RNG.uniform(0, 200), RNG.uniform(0, 200), 1.0, vmg / 0.77))
-    return out
+def test_ceñida_por_angulo():
+    # misma SOG, 3° más abierto: la VMG baja por el ángulo
+    c = causa_vmg(4.0, 5.6, 45.0, 4.2, 5.6, 42.0, popa=False)
+    assert c["vmg"] == "peor que el top 5" and c["causa"] == "ángulo" and c["angulo"].startswith("más abierto")
 
 
-def test_encuentra_el_optimo():
-    o = optima(segs(0.01))
-    assert o["concluyente"]
-    assert o["rango"][0] <= 17 <= o["rango"][1] and o["rango"][1] - o["rango"][0] <= 10
-    assert o["debajo"]["perdida_pct"] >= 1 and o["encima"]["perdida_pct"] >= 1
-    assert o["mejor"][0] <= 17 <= o["mejor"][1] + 2
+def test_popa_por_velocidad():
+    c = causa_vmg(7.4, 9.8, 142.0, 8.3, 10.7, 142.0, popa=True)
+    assert c["causa"] == "velocidad" and c["velocidad"] == "más lento"
 
 
-def test_sin_efecto_no_es_concluyente():
-    o = optima(segs(0.0))
-    assert not o["concluyente"]
+def test_igual():
+    assert causa_vmg(4.2, 5.6, 42.0, 4.21, 5.6, 42.0, popa=False) == {"vmg": "igual que el top 5"}
 
 
-def test_pocos_datos():
-    assert optima(segs(0.01, n=30)) is None
-
-
-def test_combinar_ceñidas():
-    from fasttack.motor.escora import combinar
-    a, b = optima(segs(0.01)), optima(segs(0.01))
-    c = combinar([a["franjas"], b["franjas"]])
-    assert c["ceñidas"] == 2 and c["segmentos"] == a["segmentos"] + b["segmentos"]
-    assert c["rango"][0] <= 17 <= c["rango"][1]
+def test_sin_datos():
+    assert causa_vmg(None, 5.6, 42.0, 4.2, 5.6, 42.0, popa=False) is None

@@ -251,7 +251,7 @@
           { k: 'dist_180', titulo: 'Δ180', num: true, est: true, fmt: fM },
           { k: 'primera_virada_s', titulo: '1.ª virada', num: true, est: true, fmt: fS },
           { k: 'pos_b1', titulo: 'Baliza 1', num: true, fmt: (v, f) => (v == null ? '—' : `${v}.º${f.gap_b1_s ? ' +' + f.gap_b1_s + ' s' : ''}`) },
-          { k: 'ocs', titulo: 'OCS', fmt: (v, f) => (v !== 'NO' ? 'sí' : f.sobre_linea_gps ? 'sobre la línea (GPS)' : 'no') },
+          { k: 'ocs', titulo: 'OCS', ayuda: 'Según el comité', fmt: (v) => (v !== 'NO' ? 'sí' : 'no') },
           { k: 'llegada_txt', titulo: 'Llegada', est: true, ayuda: 'Pronto: a menos de una eslora de la línea 10 s antes y lento en la señal. Tarde: a más de 2 esloras en la señal y cruzando 5 s después', fmt: (v) => v || '—' },
           { k: 'hueco_sotavento_esloras', titulo: 'Hueco sot.', num: true, est: true, ayuda: 'Esloras hasta el barco de sotavento a la par en la señal (vacío: nadie a menos de 6 esloras)', fmt: (v, f) => (v == null ? (f.diagnostico ? 'libre' : '—') : num(v, 1)) },
           { k: 'aire_sucio_pct', titulo: 'Aire sucio', num: true, est: true, ayuda: 'Tiempo de los primeros 90 s en la sombra de viento de otro barco (a ≤ 6 esloras de donde llega el viento aparente)', fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} %${v >= 30 && f.aire_sucio_de ? ' · ' + vc(f.aire_sucio_de) + (f.aire_sucio_lado === 'barlovento' ? ' (barl.)' : '') : ''}`) },
@@ -283,14 +283,14 @@
           { k: 'layline_txt', titulo: 'Layline', est: true },
           { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
           { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
-          ...(tr.escora_optima ? [{ k: 'escora_en_rango_pct', titulo: 'En rango', num: true, est: true, ayuda: 'Tiempo con la escora en el rango óptimo del tramo', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') }] : []),
+          ...(tr.escora_optima ? [{ k: 'escora_frente_optima', titulo: 'vs óptima', num: true, est: true, ayuda: 'Escora del barco menos la óptima (media de los 5 con más VMG del tramo): + = más escorado', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + '°') }] : []),
           { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
           { k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', PROFUNDO: 'profundo' })[v] || '—' },
           { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m · ${num(v, 1)} %`) },
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
       {#if tr.escora_optima}
-        <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
+        <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} nombres={vc} />
       {/if}
       <Polar tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
       <Maniobras tramo={tr} {ref} nombreRef={vc(ref)} senalMs={an.senal} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)}

@@ -114,7 +114,7 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
 - **Corriente estimada**: flecha y valor en la esquina del mapa (la de la vuelta en curso) y detalle con su confianza en las pestañas de ceñida y popa.
 - **Laylines**: si se sobrepasó, la columna «Motivo» dice si fue por **tráfico** (no podía virar por un barco cerca, o la layline ya estaba ocupada por barcos delante) o por **cálculo**; el resumen del campeonato cuenta cuántas fueron por tráfico.
-- **Escora óptima** (pestañas de ceñida): rango de escora con mejor VMG frente a los barcos de alrededor, cuánto se pierde por debajo o por encima, tu escora y la del top 5, y el % de tu tiempo dentro del rango (columna «En rango»).
+- **Escora óptima** (ceñidas y popas): la media de la escora de los 5 barcos con más VMG del tramo, tu escora frente a ella (columna «vs óptima») y el % de tu tiempo a ±2°.
 - **HDG corregido**: el rumbo de proa de cada barco sale en verdadero, con el desvío de su brújula y la declinación ya corregidos.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
 - **Gráficos**: en cada ceñida o popa, la evolución de TWD y presión; en *Rendimiento*, la métrica que elijas a lo largo de la prueba (pasa el cursor para ver valores).
@@ -130,7 +130,7 @@ En la página del campeonato, **Resumen del campeonato →**. La primera vez ana
 - **General calculada**: puntuación baja con los descartes que elijas (por defecto 1 a partir de 4 pruebas). No incluye decisiones del jurado, así que puede diferir algo de la oficial. «rec.» = llegadas reconstruidas.
 - **Comparar con**: tu barco solo, o frente al top 3/5/10 de la general.
 - **Gráficos por prueba**: puesto y la métrica que elijas (VMG, SOG, TWA, escora, cabeceo, pérdidas), con la mediana de la flota.
-- **Escora óptima del campeonato**: todas las ceñidas juntas (y por intensidad de viento si hay viento de referencia), con tu escora y la del top 5.
+- **Escora óptima del campeonato**: media de la óptima de todas las ceñidas (y por intensidad de viento si hay viento de referencia), con tu escora y en cuántas ceñidas quedaste a menos de 2°.
 - **Debrief del campeonato** al final (ver abajo).
 - **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
 
@@ -145,7 +145,7 @@ En cada prueba (pestaña **Debrief IA**) y al final del resumen del campeonato. 
 - El texto se guarda y se reutiliza. Si cambian las cifras (nueva versión del motor, viento de referencia…), avisa de que conviene regenerarlo.
 
 - **Tres debriefs**: de cada prueba (pestaña *Debrief IA*); **de cada día** y **del campeonato** (al final del Resumen, con un selector). El del día usa solo las pruebas de ese día (resultado del día, top 5 del día) y cómo quedas en la general al terminarlo; acaba con las claves para mañana. El del campeonato usa las pruebas disputadas y analizadas hasta ese momento: no hace falta que el campeonato termine; cuando haya pruebas nuevas avisa para regenerarlo.
-- **Un solo debrief, orientado a mejorar** (de la prueba, del día y del campeonato): lo que más tiempo costó y por qué (ordenado con «dónde se perdió la prueba» y los mejores y peores tramos, con el detalle de cada tramo: salida, velocidad y escora, maniobras, táctica y roladas), lo que funcionó y qué trabajar, con el rol responsable. Solo se genera cuando lo pides.
+- **Un solo debrief, orientado a mejorar** (de la prueba, del día y del campeonato): lo que más tiempo costó y por qué (ordenado con «dónde se perdió la prueba» y los mejores y peores tramos, con el detalle de cada tramo: salida, velocidad y escora, maniobras, táctica y roladas), lo que funcionó y qué trabajar, con el rol responsable. En el del campeonato: pocas cifras, si en ceñida y popa falló la velocidad o el ángulo frente al top 5, e hipótesis técnicas para mejorar (trimado, reglaje, timón, peso). Sin puntos ni descartes, y el OCS solo el del comité. Solo se genera cuando lo pides.
 - **Crónica de la prueba** (pestaña *Debrief IA* de cada prueba): qué pasó en el campo — salida, cada tramo y llegada — con los barcos que la marcaron, qué lado o decisión pagó y por qué, y dónde quedó tu barco. Solo cuando la pides.
 - **Referencia: el top 5.** Las conclusiones salen de comparar con los 5 primeros de la prueba (o de la general, en el campeonato); la mediana de la flota queda como contexto.
 

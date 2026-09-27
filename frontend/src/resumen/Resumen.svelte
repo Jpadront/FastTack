@@ -219,10 +219,10 @@
     {@const mio = e.barcos[ref]}
     <div class="bloque-ia">
       <EscoraOptima titulo="Escora óptima en ceñida · todo el campeonato" {ref} nombreRef={vc(ref)}
-        top5={general.filter((f) => f.vela !== ref).slice(0, 5).map((f) => f.vela)}
-        tramo={{ escora_optima: e.todas, barcos: Object.fromEntries(Object.entries(e.barcos).map(([v, x]) => [v, { escora: x.escora_mediana }])) }}
-        enRangoTexto={mio ? `${mio.en_rango} de ${mio.ceñidas} ceñidas con la escora mediana en el rango` : null}
-        nota={`Todas las ceñidas juntas (${e.todas.ceñidas} ceñidas, ${e.todas.segmentos} tramos de 30 s): vale si las pruebas fueron con un viento parecido. Si no, añade el viento de referencia de cada prueba y se separa por intensidad.${e.por_viento.length ? ' Por intensidad: ' + e.por_viento.map((x) => `${x.tramo}: ${x.rango[0]}–${x.rango[1]}° (${x.ceñidas} ceñidas)`).join(' · ') + '.' : ''} Top 5 = los 5 primeros de la general.`} />
+        tramo={{ tipo: 'ceñida', escora_optima: { escora: e.escora },
+                 barcos: mio ? { [ref]: { escora: mio.escora_media, escora_frente_optima: mio.frente_optima } } : {} }}
+        enRangoTexto={mio ? `${mio.en_rango} de ${mio.ceñidas} ceñidas` : null}
+        nota={`Media de las ${e.ceñidas} ceñidas; la del barco, la media de sus ceñidas.${e.por_viento.length ? ' Según el viento: ' + e.por_viento.map((x) => `${x.tramo}: ${num(x.escora, 1)}° (${x.ceñidas} ceñidas)`).join(' · ') + '.' : ''}`} />
     </div>
   {/if}
 
@@ -235,7 +235,7 @@
         { k: 'margen_m', titulo: 'Margen medio', num: true, fmt: fM },
         { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
         { k: 'top10_60', titulo: 'Top 10 a +60 s', num: true, est: true, fmt: (v, f) => (f.con_60 ? `${v} de ${f.con_60}` : '—') },
-        { k: 'ocs', titulo: 'OCS', num: true }, { k: 'sobre_linea_gps', titulo: 'Sobre la línea (GPS)', num: true },
+        { k: 'ocs', titulo: 'OCS', num: true, ayuda: 'Según el comité' },
       ]} />
     <Tabla titulo="Maniobras, laylines y puertas" {ref} {colores} filas={filasManiobras} ordenInicial="virada"
       nota="Pérdida media por maniobra con datos suficientes. Layline OK: tramos que llegan a la baliza sin sobrepasar la layline. Puerta favorecida: solo puertas con ventaja ≥ 5 m. * estimado."
