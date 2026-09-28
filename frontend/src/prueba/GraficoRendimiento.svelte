@@ -21,7 +21,7 @@
     { k: 'cab_c', t: 'Cabeceo en ceñida', campo: 'cabeceo', tipo: 'ceñida', u: '°', d: 0 },
     { k: 'cab_p', t: 'Cabeceo en popa', campo: 'cabeceo', tipo: 'popa', u: '°', d: 0 },
   ];
-  const MAX_BARCOS = 15, RODEO_MS = 20000, PASO = 5, VENT_TENDENCIA = 12; // tendencia: mediana móvil de 12 × 5 s = 60 s
+  const MAX_BARCOS = 15, RODEO_MS = 20000, PASO = 5, VENT_TENDENCIA = 12; // tendencia: mediana móvil de 12 × 5 s. = 60 s.
   let metrica = $state('vmg_c');
   let cont, plot, lectura = $state(null);
   const m = $derived(METRICAS.find((x) => x.k === metrica));
@@ -45,7 +45,7 @@
       for (let i = 0; i < b.t.length; i++) {
         const k = d.tramo[i];
         if (k < 0 || an.tramos[k].tipo !== m.tipo || b.t[i] < 0) continue;
-        // fuera los rodeos: 20 s tras entrar y antes de salir del tramo (según los pasos de ESTE barco)
+        // fuera los rodeos: 20 s. tras entrar y antes de salir del tramo (según los pasos de ESTE barco)
         const f = an.tramos[k].barcos[v], ms = an.senal + b.t[i] * 1000;
         if (ms - f.t_entrada < RODEO_MS || f.t_salida - ms < RODEO_MS) continue;
         const val = m.campo === 'sog' ? b.sog[i] : d[m.campo][i];
@@ -147,7 +147,7 @@
     {#if lectura}{fmtT(lectura.t)} · {#each lectura.vals as l, k}{k ? ' · ' : ''}{velaCorta(l.v, nombres)} {num(l.val, m.d)} {m.u}{/each}
     {:else}Pasa el cursor por el gráfico para ver los valores.{/if}
   </p>
-  <Nota>{m.maniobra ? 'Cada punto es una maniobra con datos suficientes para medir su pérdida.' : 'Datos crudos (medias de 5 s) en tenue; tendencia robusta (mediana móvil de 60 s) destacada. Solo tramos de ' + m.tipo + ' (sombreados), cada barco con sus propios pasos por baliza y sin los 20 s de cada rodeo. La línea vertical sigue al reproductor.'}</Nota>
+  <Nota>{m.maniobra ? 'Cada punto es una maniobra con datos suficientes para medir su pérdida.' : 'Datos crudos (medias de 5 s.) en tenue; tendencia robusta (mediana móvil de 60 s.) destacada. Solo tramos de ' + m.tipo + ' (sombreados), cada barco con sus propios pasos por baliza y sin los 20 s. de cada rodeo. La línea vertical sigue al reproductor.'}</Nota>
 </section>
 
 <style>

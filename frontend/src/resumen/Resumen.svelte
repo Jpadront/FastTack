@@ -123,7 +123,7 @@
 
   const fKn = (v) => num(v, 2);
   const fG = (d) => (v) => (v == null ? '—' : num(v, d) + '°');
-  const fM = (v) => (v == null ? '—' : num(v, 1) + ' m');
+  const fM = (v) => (v == null ? '—' : num(v, 1) + ' m.');
 </script>
 
 {#if error}
@@ -234,7 +234,7 @@
         { k: 'vela', titulo: 'Barco', fmt: vc }, { k: 'pruebas', titulo: 'Con datos', num: true },
         { k: 'margen_m', titulo: 'Margen medio', num: true, fmt: fM },
         { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
-        { k: 'top10_60', titulo: 'Top 10 a +60 s', num: true, est: true, fmt: (v, f) => (f.con_60 ? `${v} de ${f.con_60}` : '—') },
+        { k: 'top10_60', titulo: 'Top 10 a +60 s.', num: true, est: true, fmt: (v, f) => (f.con_60 ? `${v} de ${f.con_60}` : '—') },
         { k: 'ocs', titulo: 'OCS', num: true, ayuda: 'Según el comité' },
       ]} />
     <Tabla titulo="Maniobras, laylines y puertas" {ref} {colores} filas={filasManiobras} ordenInicial="virada"
@@ -243,7 +243,7 @@
         { k: 'vela', titulo: 'Barco', fmt: vc },
         { k: 'virada', titulo: 'Virada', num: true, est: true, fmt: fM }, { k: 'trasluchada', titulo: 'Trasluchada', num: true, est: true, fmt: fM },
         { k: 'lay_ok', titulo: 'Layline OK', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} % de ${f.lay_n}`) },
-        { k: 'lay_m', titulo: 'Sobrepasada', num: true, est: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' m') },
+        { k: 'lay_m', titulo: 'Sobrepasada', num: true, est: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' m.') },
         { k: 'lay_traf', titulo: 'Por tráfico', num: true, est: true, ayuda: 'Sobrepasadas en las que había tráfico (no podía virar o la layline estaba ocupada)', fmt: (v, f) => (f.lay_sob ? `${v} de ${f.lay_sob}` : '—') },
         { k: 'puertas', titulo: 'Puerta favorecida', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${v} de ${f.puertas_n}`) },
       ]} />

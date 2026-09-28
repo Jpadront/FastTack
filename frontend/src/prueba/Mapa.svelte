@@ -138,7 +138,7 @@
       const d = L.detras[ref], ux = Math.sin((L.dir * Math.PI) / 180), uy = Math.cos((L.dir * Math.PI) / 180);
       const A = px(p.x, p.y), B = px(p.x + ux * d, p.y + uy * d);
       ctx.strokeStyle = colorBarco(ref, ref); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
-      etiqueta(`${num(d, 0)} m`, (A[0] + B[0]) / 2 + 8, (A[1] + B[1]) / 2);
+      etiqueta(`${num(d, 0)} m.`, (A[0] + B[0]) / 2 + 8, (A[1] + B[1]) / 2);
     }
     ctx.globalAlpha = 1;
   }
@@ -203,7 +203,7 @@
       vals.sort((a, b) => a - b); sogLo = vals[Math.floor(vals.length * 0.05)] ?? 0; sogHi = vals[Math.floor(vals.length * 0.95)] ?? 1;
     }
     if (capa === 'sog' && (rangoSog[0] !== sogLo || rangoSog[1] !== sogHi)) rangoSog = [sogLo, sogHi];
-    // Trazas: los seleccionados desde el inicio de la ventana; con toda la flota, solo 3 min
+    // Trazas: los seleccionados desde el inicio de la ventana; con toda la flota, solo 3 min.
     const orden = [...sel].sort((a, b) => (a === ref) - (b === ref)); // el de referencia encima
     for (const v of orden) {
       const b = pistas.barcos[v];
@@ -258,21 +258,21 @@
   {:else if ll}
     <div class="lider-info">
       {#if ll.lider === ref}<b>{velaCorta(ref, nombres)}</b> lidera el tramo
-      {:else if ll.detras[ref] != null}<b class="num">{num(ll.detras[ref], 0)} m</b> por detrás de la línea de {velaCorta(ll.lider, nombres)}
+      {:else if ll.detras[ref] != null}<b class="num">{num(ll.detras[ref], 0)} m.</b> por detrás de la línea de {velaCorta(ll.lider, nombres)}
       {:else}Líder del tramo: {velaCorta(ll.lider, nombres)}{/if}
       <span class="est">est.</span>
     </div>
   {/if}
   {#if corr}
-    <div class="corr" title={`Corriente estimada (${corr.ambito}), confianza ${corr.confianza}: ${num(corr.velocidad_kn, 2)} kn hacia ${num(corr.hacia_grados, 0)}°`}>
+    <div class="corr" title={`Corriente estimada (${corr.ambito}), confianza ${corr.confianza}: ${num(corr.velocidad_kn, 2)} kn. hacia ${num(corr.hacia_grados, 0)}°`}>
       <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true" style:transform={`rotate(${corr.hacia_grados}deg)`}>
         <path d="M0 10 V-8 M-5 -3 L0 -9 L5 -3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
-      <span><b class="num">{num(corr.velocidad_kn, 1)} kn</b> corriente <span class="est">est.</span></span>
+      <span><b class="num">{num(corr.velocidad_kn, 1)} kn.</b> corriente <span class="est">est.</span></span>
     </div>
   {/if}
   {#if capa === 'sog'}
-    <div class="leyenda"><span class="num">{rangoSog[0].toFixed(1)}</span>{#each RAMPA_SOG as c}<i style:background={c}></i>{/each}<span class="num">{rangoSog[1].toFixed(1)} kn</span></div>
+    <div class="leyenda"><span class="num">{rangoSog[0].toFixed(1)}</span>{#each RAMPA_SOG as c}<i style:background={c}></i>{/each}<span class="num">{rangoSog[1].toFixed(1)} kn.</span></div>
   {:else if capa === 'rol'}
     <div class="leyenda"><i style:background={DIVERGENTE.favor}></i>en la amura favorecida <i style:background={DIVERGENTE.contra}></i>con la rolada en contra <i style:background={DIVERGENTE.neutro}></i>igual <span class="est">est.</span>
       {#if tramo?.barcos[ref]?.tactica?.amura_favorecida_pct != null}<span class="pct">· {velaCorta(ref, nombres)}: <b class="num">{num(tramo.barcos[ref].tactica.amura_favorecida_pct, 0)} %</b> del {tramo.nombre} en la favorecida</span>{/if}</div>

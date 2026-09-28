@@ -30,10 +30,10 @@
             <tr>
               <td class="num">{fmtT((m.t - senalMs) / 1000)}</td>
               {#if d}
-                <td class="n num">{n(d.perdida_m, 0, ' m')} · {n(d.perdida_s, 1, ' s')}</td>
-                <td class="n num">{n(d.duracion_giro_s, 0, ' s')}</td>
-                <td class="n num">{d.tiempo_aceleracion_s == null ? 'no llega' : n(d.tiempo_aceleracion_s, 0, ' s')}</td>
-                <td class="n num">{n(d.sog_entrada_kn, 1)} → {n(d.sog_minima_kn, 1)} → {n(d.sog_salida_estable_kn, 1)} kn</td>
+                <td class="n num">{n(d.perdida_m, 0, ' m.')} · {n(d.perdida_s, 1, ' s.')}</td>
+                <td class="n num">{n(d.duracion_giro_s, 0, ' s.')}</td>
+                <td class="n num">{d.tiempo_aceleracion_s == null ? 'no llega' : n(d.tiempo_aceleracion_s, 0, ' s.')}</td>
+                <td class="n num">{n(d.sog_entrada_kn, 1)} → {n(d.sog_minima_kn, 1)} → {n(d.sog_salida_estable_kn, 1)} kn.</td>
                 <td class="salida" title={d.salida || ''}>{#if d.salida_frente_al_top5_grados != null}<span class="num">{signo(d.salida_frente_al_top5_grados)}</span> {corta(d.salida)}{:else}—{/if}{#if d.encadenada} · encadenada{/if}</td>
               {:else}
                 <td colspan="5" class="tenue">sin datos suficientes (hueco de telemetría)</td>
@@ -43,11 +43,11 @@
         </tbody>
       </table></div>
       {#if refTop5 && refTop5.referencia !== 'su salida habitual'}
-        <p class="sub">Top 5 de la prueba ({refTop5.maniobras_top5} {tipo}s medidas): pérdida {n(refTop5.perdida_s_top5, 1, ' s')}, giro {n(refTop5.duracion_giro_s_top5, 0, ' s')}, acelera en {n(refTop5.tiempo_aceleracion_s_top5, 0, ' s')}, caída de velocidad {n(refTop5.caida_sog_pct_top5, 0, ' %')}.</p>
+        <p class="sub">Top 5 de la prueba ({refTop5.maniobras_top5} {tipo}s medidas): pérdida {n(refTop5.perdida_s_top5, 1, ' s.')}, giro {n(refTop5.duracion_giro_s_top5, 0, ' s.')}, acelera en {n(refTop5.tiempo_aceleracion_s_top5, 0, ' s.')}, caída de velocidad {n(refTop5.caida_sog_pct_top5, 0, ' %')}.</p>
       {/if}
       <Nota>
         <p><b>Giro</b>: desde que la proa se separa 6° del rumbo de entrada hasta que llega (o pasa) a 6° del rumbo de la nueva amura. <b>Acelera</b>: desde el final del giro hasta volver al 95 % de la SOG estable de salida durante 4 s. <b>Pérdida</b>: metros (y segundos) que se habrían avanzado sin maniobrar, desde el inicio del giro hasta estar acelerado; hasta la mitad del giro, a la VMG de entrada y después a la VMG estable de la nueva amura (una rolada o una racha no cuentan como pérdida).</p>
-        <p><b>Salida</b>: ángulo al viento en los 10 s tras el giro, respecto al que da más VMG en el tramo, comparado con cómo salen los 5 primeros. En ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa, más profundo tarda en acelerar y más alto pierde profundidad.</p>
+        <p><b>Salida</b>: ángulo al viento en los 10 s. tras el giro, respecto al que da más VMG en el tramo, comparado con cómo salen los 5 primeros. En ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa, más bajo tarda en acelerar y más alto no baja lo suficiente.</p>
       </Nota>
     {/if}
   </section>
@@ -56,9 +56,9 @@
     {#if tac}
       <dl class="datos">
         <dt>En la amura favorecida</dt><dd class="num">{n(tac.amura_favorecida_pct, 0, ' %')} <span class="tenue">· top 5 {n(fav5, 0, ' %')}</span></dd>
-        <dt>En la desfavorecida</dt><dd class="num">{n(tac.tiempo_en_amura_desfavorecida_s, 0, ' s')}</dd>
+        <dt>En la desfavorecida</dt><dd class="num">{n(tac.tiempo_en_amura_desfavorecida_s, 0, ' s.')}</dd>
         <dt>{tipo === 'virada' ? 'Viradas' : 'Trasluchadas'} con la rolada</dt><dd class="num">{tac.maniobras_a_favor_de_la_rolada} a favor · {tac.maniobras_en_contra_de_la_rolada} en contra · {tac.maniobras_neutras} neutras</dd>
-        <dt>Lado del campo</dt><dd>{tac.lado ?? '—'} <span class="tenue num">({n(tac.derecha_pct, 0, ' %')} a la derecha, hasta {n(tac.separacion_maxima_m, 0, ' m')} del eje)</span></dd>
+        <dt>Lado del campo</dt><dd>{tac.lado ?? '—'} <span class="tenue num">({n(tac.derecha_pct, 0, ' %')} a la derecha, hasta {n(tac.separacion_maxima_m, 0, ' m.')} del eje)</span></dd>
       </dl>
       <Nota>
         <p><b>Amura favorecida</b>: en cada momento, de las dos amuras posibles con la TWD de ese momento, la que apunta más cerca de la baliza. Navegar en la otra es ir con la rolada en contra. Con la TWD a menos de 3° de la dirección de la baliza, las dos valen igual (no cuenta). Maniobra <b>a favor</b>: pasa de la desfavorecida a la favorecida (virar en el rolón); <b>en contra</b>: al revés. Lado: mirando a barlovento, respecto a la recta entre las balizas del tramo. Depende del viento reconstruido de la flota, que no ve las roladas locales: es orientativo.</p>

@@ -1,1 +1,1 @@
-__version__ = "0.25.2"  # el fantasma sale de la línea amurado a estribor
+__version__ = "0.26.0"  # frente a tus vecinos (sin polar), modo bajo, unidades con punto, min. y s., tú

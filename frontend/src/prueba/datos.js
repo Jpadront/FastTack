@@ -197,6 +197,16 @@ export const fmtT = (seg) => {
 export const fmtDur = (seg) => (seg == null ? '—' : fmtT(seg).slice(1));
 export const num = (v, d = 1) => (v == null ? '—' : Number(v).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }));
 
+// Duración en segundos para leer: hasta 60 s. «54 s.»; más, «1 min. 25 s.» (con signo si se pide)
+export const tiempo = (s, d = 0, signo = false) => {
+  if (s == null) return '—';
+  const pre = signo ? (s > 0 ? '+' : s < 0 ? '−' : '') : s < 0 ? '−' : '';
+  const a = Math.abs(s);
+  if (a <= 60) return `${pre}${num(a, d)} s.`;
+  const m = Math.floor(Math.round(a) / 60), x = Math.round(a) % 60;
+  return `${pre}${m} min.${x ? ` ${x} s.` : ''}`;
+};
+
 // 'ESP1214' → 'ESP 1214' (texto corto para el mapa)
 export const velaCorta = (v, nombres = {}) => nombres[v]?.vela || v.replace(/^([A-Z]+)(\d)/, '$1 $2');
 
@@ -273,7 +283,7 @@ export function lineaLider(an, pistas, tramo, T) {
   for (const v of Object.keys(pistas.barcos)) {
     const b = pistas.barcos[v];
     const e = estado(b, T);
-    // en un hueco de datos, la última posición si es de hace ≤ 30 s (RaceSense pierde muchas muestras)
+    // en un hueco de datos, la última posición si es de hace ≤ 30 s. (RaceSense pierde muchas muestras)
     if (!e || (e.sinDatos && T - b.t[e.i] > 30)) continue;
     const d = derivados(an, pistas, v);
     if (!d || d.tramo[e.i] !== k) continue;

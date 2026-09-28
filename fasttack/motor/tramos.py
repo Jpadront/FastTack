@@ -233,7 +233,7 @@ def analizar_maniobra(tr: Traza, tm: int, viento: VientoTramo, siguiente: int | 
         "angulo_girado_grados": round(abs(float(dif(r_sal - r_ent)))),
         "twa_salida_grados": None if twa_sal is None else round(twa_sal, 1),
         "twa_objetivo_grados": None if objetivo_twa is None else round(objetivo_twa, 1),
-        "salida_frente_al_objetivo_grados": frente,   # + = más abierta en ceñida / más profunda en popa
+        "salida_frente_al_objetivo_grados": frente,   # + = más abierta en ceñida / más baja en popa
         "encadenada": bool(encadenada), "acelerado": bool(completa),
     }
 
@@ -241,7 +241,7 @@ def analizar_maniobra(tr: Traza, tm: int, viento: VientoTramo, siguiente: int | 
 def valorar_salidas(maniobras: dict[str, list[Maniobra]], referencia: list[str]) -> dict:
     """Ángulo de salida frente al del top 5 (mediana de sus salidas respecto a su propia TWA objetivo).
     En ceñida, más cerrada que el top 5 tarda más en acelerar y más abierta pierde altura; en popa al
-    revés: más profunda tarda en acelerar y más alta pierde profundidad. Devuelve la referencia."""
+    revés: más baja tarda en acelerar y más alta no baja lo suficiente. Devuelve la referencia."""
     ref_d = [m.detalle["salida_frente_al_objetivo_grados"] for v in referencia for m in maniobras.get(v, [])
              if m.detalle and m.detalle.get("salida_frente_al_objetivo_grados") is not None]
     con_datos = {v for v in referencia for m in maniobras.get(v, []) if m.detalle}
@@ -270,8 +270,8 @@ def valorar_salidas(maniobras: dict[str, list[Maniobra]], referencia: list[str])
                 m.detalle["salida"] = (f"más cerrada (alta) que {quien}: tarda más en acelerar" if x < 0
                                        else f"más abierta (baja) que {quien}: pierde altura")
             else:
-                m.detalle["salida"] = (f"más profunda que {quien}: tarda más en acelerar" if x > 0
-                                       else f"más alta que {quien}: pierde profundidad")
+                m.detalle["salida"] = (f"más baja que {quien}: tarda más en acelerar" if x > 0
+                                       else f"más alta que {quien}: no baja lo suficiente")
     return {"referencia": quien, "salida_top5_frente_al_objetivo_grados": round(ref, 1), "maniobras_top5": len(ref_d),
             **{f"{k}_top5": round(float(np.median(v)), 1) for k, v in ref5.items() if v}}
 
@@ -369,7 +369,7 @@ def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, c
             return "VELOCIDAD"
         return "VMG"
     if twa > med_twa + 3 and sog < med_sog:
-        return "PROFUNDO"
+        return "BAJO"
     if twa < med_twa - 3 and sog > med_sog:
         return "VELOCIDAD"
     return "VMG"

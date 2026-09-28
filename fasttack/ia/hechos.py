@@ -47,7 +47,7 @@ def causa_vmg(vmg, sog, twa, vmg5, sog5, twa5, popa: bool) -> dict | None:
     if "velocidad" in causa:
         out["velocidad"] = "más lento" if sog < sog5 else "más rápido"
     if "ángulo" in causa:
-        out["angulo"] = (("más profundo" if twa > twa5 else "más alto") if popa
+        out["angulo"] = (("más bajo" if twa > twa5 else "más alto") if popa
                          else ("más abierto (menos altura)" if twa > twa5 else "más cerrado (más altura)"))
     return out
 
@@ -89,10 +89,21 @@ def _offset(an, t, v, top5):
     return {"de_la_baliza_al_offset_s": _r(mio), "top5_mediana_s": _r(_mediana(t5)) if len(t5) >= 2 else None}
 
 
-def _twa_max(pol):
-    """TWA de la franja de la polar con más VMG (con ≥ 30 s)."""
-    pol = [x for x in (pol or []) if x["s"] >= 30]
-    return max(pol, key=lambda x: x["vmg"])["twa"] if pol else None
+def _vecinos(mio, top5, popa: bool):
+    """Ángulo, SOG y VMG del barco frente a los barcos de al lado (mismo viento), y lo mismo del top 5."""
+    if not mio:
+        return None
+    t5 = [x for x in top5 if x]
+    med = lambda k: _r(_mediana([x[k] for x in t5]), 1) if len(t5) >= 2 else None
+    return {"angulo_frente_a_sus_vecinos_grados": mio["twa_frente_vecinos"],
+            "angulo_top5_frente_a_sus_vecinos_grados": med("twa_frente_vecinos"),
+            "sog_frente_a_sus_vecinos_pct": mio["sog_frente_vecinos_pct"],
+            "sog_top5_frente_a_sus_vecinos_pct": med("sog_frente_vecinos_pct"),
+            "vmg_frente_a_sus_vecinos_pct": mio["vmg_frente_vecinos_pct"],
+            "vmg_top5_frente_a_sus_vecinos_pct": med("vmg_frente_vecinos_pct"),
+            "significa": ("mediana de tramos de 30 s frente a los barcos en la misma amura a menos de 300 m en esos 30 s "
+                          "(mismo viento); ángulo + = más " + ("bajo" if popa else "abierto") + " que ellos; % sobre la de ellos. "
+                          "No hay ángulo óptimo medido: sin anemómetro no se puede separar del viento local")}
 
 
 def _rodeo(r, top5):
@@ -151,7 +162,7 @@ def _maniobras(f, t, an, v):
            "sog_entrada_mediana_kn": d.get("sog_entrada_kn"), "sog_minima_mediana_kn": d.get("sog_minima_kn"),
            "angulo_de_salida_frente_al_top5_grados": d.get("salida_frente_al_top5_grados"),
            "angulo_de_salida_significa": ("+ = sale más abierto (baja, pierde altura), − = más cerrado (alta, tarda en acelerar)"
-                                          if tipo == "virada" else "+ = sale más profundo (tarda en acelerar), − = más alto (pierde profundidad)"),
+                                          if tipo == "virada" else "+ = sale más bajo (tarda en acelerar), − = más alto (no baja lo suficiente)"),
            "salidas": {x: salidas.count(x) for x in sorted(set(salidas))} or None,
            "top5_perdida_mediana_s": ref.get("perdida_s_top5"), "top5_duracion_del_giro_mediana_s": ref.get("duracion_giro_s_top5"),
            "top5_tiempo_en_acelerar_mediano_s": ref.get("tiempo_aceleracion_s_top5"),
@@ -308,8 +319,8 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "regularidad_vmg_pct": f.get("regularidad_pct"),
             "regularidad_vmg_top5_mediana_pct": _r(_mediana([(t["barcos"].get(x) or {}).get("regularidad_pct") for x in top5]), 1),
             "regularidad_significa": "variación de la VMG de cada 30 s frente a la de la flota en esos 30 s: cuanto menor, más regular",
-            "twa_de_maxima_vmg_grados": _twa_max(f.get("polar")),
-            "twa_de_maxima_vmg_top5_grados": _r(_mediana([_twa_max((t["barcos"].get(x) or {}).get("polar")) for x in top5]), 1),
+            "frente_a_sus_vecinos": _vecinos(f.get("vecinos"), [(t["barcos"].get(x) or {}).get("vecinos") for x in top5],
+                                            t["tipo"] == "popa"),
             "rodeo_final": _rodeo(f.get("rodeo"), [(t["barcos"].get(x) or {}).get("rodeo") for x in top5]),
             "set_tras_barlovento": _set(f.get("set"), [(t["barcos"].get(x) or {}).get("set") for x in top5]),
             "offset": _offset(an, t, v, top5),
@@ -527,7 +538,7 @@ def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
     claves_coach = ("sog_kn", "escora_grados",
                     "escora_con_signo_grados", "escora_optima", "tactica", "maniobras_detalle", "viento", "parcial_s",
                     "frente_al_barco_fantasma_m", "top5", "regularidad_vmg_pct", "regularidad_vmg_top5_mediana_pct",
-                    "twa_de_maxima_vmg_grados", "twa_de_maxima_vmg_top5_grados", "rodeo_final", "set_tras_barlovento", "offset")
+                    "frente_a_sus_vecinos", "rodeo_final", "set_tras_barlovento", "offset")
     out = []
     for t in dp.get("tramos", []):
         if t.get("sin_datos_del_barco"):

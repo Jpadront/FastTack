@@ -37,9 +37,10 @@ MIN_SEGMENTOS, MIN_BARCOS = 30, 8
 
 
 def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], viento: VientoTramo,
-              maniobras: dict[str, list[int]], offsets: dict[str, float]) -> list[tuple]:
+              maniobras: dict[str, list[int]], offsets: dict[str, float],
+              tras_maniobra_ms: int = TRAS_MANIOBRA_MS) -> list[tuple]:
+    """(vela, t centro, escora °, VMG kn, x, y, amura ±1, SOG kn, TWA °) de cada segmento válido."""
     ceñida = viento.ceñida
-    """(vela, t centro, escora °, VMG kn, x, y, amura ±1, SOG kn) de cada segmento válido."""
     out = []
     for v, (e, s) in barcos.items():
         x = trazas.get(v)
@@ -50,7 +51,7 @@ def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], vien
         a = e + MARGEN_RODEO_MS
         while a + SEGMENTO_MS <= s - MARGEN_RODEO_MS:
             b = a + SEGMENTO_MS
-            if not any(a - TRAS_MANIOBRA_MS < m < b + ANTES_MANIOBRA_MS for m in mans) and x.cobertura(a, b) >= 0.7:
+            if not any(a - tras_maniobra_ms < m < b + ANTES_MANIOBRA_MS for m in mans) and x.cobertura(a, b) >= 0.7:
                 i = x.tramo(a, b)
                 i = i[~np.isnan(x.cog[i]) & (x.sog[i] > viento.sog_min)]
                 if len(i) >= 8:
@@ -64,7 +65,7 @@ def segmentos(trazas: dict[str, Traza], barcos: dict[str, tuple[int, int]], vien
                         esc = float(np.median((x.roll[i] - off) * np.sign(al_viento)))
                     out.append((v, (a + b) / 2, esc, vmg,
                                 float(np.mean(x.x[i])), float(np.mean(x.y[i])), float(np.sign(np.median(rel))),
-                                float(np.mean(x.sog[i]))))
+                                float(np.mean(x.sog[i])), float(np.mean(np.abs(al_viento)))))
             a = b
     return out
 

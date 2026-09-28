@@ -21,6 +21,7 @@ NUMERO = re.compile(
 ETIQUETA = re.compile(r"(?:\bP|[Cc]eñidas?|[Pp]opas?|[Oo]ffsets?|[Bb]alizas?|[Pp]ruebas?|[Rr]egatas?|[Tt]op|"
                       r"[Tt]ramos?|J/|\b(?!VMG|SOG|TWA|TWD|TWS|COG|HDG)[A-Z]{3}|[Pp]uertas?|RRS|[Aa]pp?)\s*$")
 LISTA = re.compile(r"^\s*(?:[-*]\s*)?$")
+MIN_SEG = re.compile(r"(?<![\w/.,])(\d+)\s*(?:min|minutos?)\.?\s*(?:y\s*)?(\d{1,2})\s*(?:s|seg|segundos?)(?![\wáéíóúñ])")
 
 
 def cifras(datos) -> list[tuple[float, str | None]]:
@@ -49,6 +50,8 @@ def no_verificadas(texto: str, datos) -> list[str]:
     base = cifras(datos)
     malas = []
     for linea in texto.splitlines():
+        # «1 min. 25 s.» (o «1 min 25 s», «1 minuto y 25 segundos») = 1:25
+        linea = MIN_SEG.sub(lambda m: f"{m[1]}:{int(m[2]):02d}", linea)
         for m in NUMERO.finditer(linea):
             antes = linea[:m.start()]
             if ETIQUETA.search(antes):

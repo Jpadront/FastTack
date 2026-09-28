@@ -3,7 +3,7 @@
   // reglaje fue mejor por franja de viento. Solo pruebas ya analizadas; las pendientes se analizan aquí.
   import { onMount } from 'svelte';
   import { api, velaBonita, horaLocal } from './api.js';
-  import { num, COLOR_YO } from './prueba/datos.js';
+  import { num, tiempo, COLOR_YO } from './prueba/datos.js';
   import GraficoPruebas from './resumen/GraficoPruebas.svelte';
   import Nota from './Nota.svelte';
 
@@ -42,7 +42,7 @@
     return { n: ds.length, partes: [['Salida', m('salida_s')], ['Velocidad', m('velocidad_s')], ['Maniobras', m('maniobras_s')], ['Táctica y resto', m('tactica_s')]], total: m('total_s') };
   });
   const campeonatos = $derived(t ? new Set(t.filas.map((f) => f.campeonato)).size : 0);
-  const txt = (s) => (s == null ? 'sin datos' : `${s > 0 ? '+' : '−'}${num(Math.abs(s), 0)} s`);
+  const txt = (s) => (s == null ? 'sin datos' : tiempo(s, 0, true));
   const fmt = (v, d = 2) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, d));
 </script>
 
@@ -79,7 +79,7 @@
         <div class="rodillo"><table class="mini">
           <thead><tr><th>Ajuste</th><th>Valor</th><th>Viento</th><th class="n">Pruebas</th><th class="n">VMG ceñida vs top 5</th><th class="n">VMG popa vs top 5</th><th class="n">Puesto</th></tr></thead>
           <tbody>{#each t.reglajes as r}<tr><td>{r.ajuste}</td><td>{r.valor}</td><td>{r.franja}</td><td class="n num">{r.pruebas}</td>
-            <td class="n num">{fmt(r.vmg_ceñida_frente_top5)} kn</td><td class="n num">{fmt(r.vmg_popa_frente_top5)} kn</td>
+            <td class="n num">{fmt(r.vmg_ceñida_frente_top5)} kn.</td><td class="n num">{fmt(r.vmg_popa_frente_top5)} kn.</td>
             <td class="n num">{r.puesto_relativo == null ? '—' : num(r.puesto_relativo * 100, 0) + ' %'}</td></tr>{/each}</tbody>
         </table></div>
         <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian.</p></Nota>
@@ -94,7 +94,7 @@
         <tbody>{#each [...t.filas].reverse() as f}<tr>
           <td class="num">{f.dia.split('-').reverse().join('/')}</td><td>{f.nombre}</td>
           <td class="n"><a href={`#/c/${encodeURIComponent(f.campeonato)}/p/${f.clave}`}>P{f.numero}</a></td>
-          <td class="n num">{f.puesto}/{f.barcos}</td><td class="num">{f.viento_kn ? num(f.viento_kn, 0) + ' kn' : '—'}</td>
+          <td class="n num">{f.puesto}/{f.barcos}</td><td class="num">{f.viento_kn ? num(f.viento_kn, 0) + ' kn.' : '—'}</td>
           <td class="tenue">{Object.entries(f.reglaje).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</td></tr>{/each}</tbody>
       </table></div>
     </section>

@@ -29,12 +29,12 @@
   </div>
   <div class="kv">
     <div><i>TWD <span class="est">est.</span></i><b class="num">{num(inst.twd, 0)}°</b><small class="num">{dif(inst.twd - mediaTwd) >= 0 ? '+' : ''}{num(dif(inst.twd - mediaTwd), 1)}° vs media</small></div>
-    <div><i>TWS <span class="est">est.</span></i>{#if tws != null}<b class="num">{num(tws, 1)} kn</b>{:else}<b class="tenue sin">sin calibrar</b><small>añade el viento de referencia</small>{/if}</div>
+    <div><i>TWS <span class="est">est.</span></i>{#if tws != null}<b class="num">{num(tws, 1)} kn.</b>{:else}<b class="tenue sin">sin calibrar</b><small>añade el viento de referencia</small>{/if}</div>
     <div><i>Tramo</i><b>{tr.nombre}</b><small class="num">{num(progreso, 0)} % del líder</small></div>
   </div>
   <div class="lr">
     <i>Presión izq.–dcha. <span class="est">est.</span></i>
-    {#if lr}<span>{lr.lado ? 'más presión a la ' + lr.lado : 'equilibrada'} <span class="num tenue">({lr.d >= 0 ? '+' : ''}{num(lr.d, 2)} kn de SOG, mirando a barlovento)</span></span>
+    {#if lr}<span>{lr.lado ? 'más presión a la ' + lr.lado : 'equilibrada'} <span class="num tenue">({lr.d >= 0 ? '+' : ''}{num(lr.d, 2)} kn. de SOG, mirando a barlovento)</span></span>
     {:else}<span class="tenue">pocos barcos con datos en el tramo</span>{/if}
   </div>
   <div class="rodillo">

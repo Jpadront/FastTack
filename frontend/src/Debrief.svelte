@@ -91,7 +91,7 @@
     <div class="acciones">
       {#if estado.claude_code}
         <button class="boton" onclick={generar} disabled={generando}>
-          {#if generando}<span class="rueda" aria-hidden="true"></span>Escribiendo… (30–60 s){:else}{d ? 'Regenerar' : 'Generar'} con Claude Code{/if}
+          {#if generando}<span class="rueda" aria-hidden="true"></span>Escribiendo… (30–60 s.){:else}{d ? 'Regenerar' : 'Generar'} con Claude Code{/if}
         </button>
       {/if}
       <button class="boton claro" onclick={() => (manual = !manual)} aria-expanded={manual}>{estado.claude_code ? 'O con Claude.ai…' : 'Generar con Claude.ai…'}</button>

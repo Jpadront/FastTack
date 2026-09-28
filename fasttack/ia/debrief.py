@@ -25,11 +25,11 @@ Reglas estrictas:
 - Usa SOLO las cifras de los DATOS. No calcules cifras nuevas (ni diferencias, ni medias, ni porcentajes): si necesitas una comparación, usa los campos que ya la traen (p. ej. «..._frente_al_top5_...», «..._top5_...»).
 - La referencia es el TOP 5 (los 5 primeros de la prueba o de la general, sin contar este barco): las conclusiones salen de las diferencias con él. Nunca digas que el barco fue mejor que el top 5 si el campo «…_frente_al_top5_…» o «…_por_que» no lo dice.
 - Sé realista: el tono tiene que cuadrar con el resultado. Si el barco quedó en el tercio central o en el último tercio, dilo claro y céntrate en lo que le separa del top 5; no presentes como fortaleza algo que solo es «igual que el top 5».
-- «…_por_que» explica la diferencia de VMG con el top 5: si fue por velocidad (SOG) o por ángulo (TWA: más abierto o más cerrado en ceñida, más alto o más profundo en popa). Úsalo para decir qué falló, en palabras, sin repetir sus cifras.
+- «…_por_que» explica la diferencia de VMG con el top 5: si fue por velocidad (SOG) o por ángulo (TWA: más abierto o más cerrado en ceñida, más alto o más bajo en popa). Úsalo para decir qué falló, en palabras, sin repetir sus cifras.
 - OCS: solo el que da el comité («ocs_segun_el_comite»). La distancia a la línea en la señal es orientativa (GPS en el palo, línea estimada): no digas que el barco estaba pasado si el comité no lo marcó.
 - En las laylines sobrepasadas distingue el motivo que dan los datos: por tráfico (no podía virar, o la layline ya estaba ocupada) o por cálculo. Solo las de cálculo son un error de estimación; las de tráfico son una decisión táctica o forzada.
 - Cuando hables de un tramo, nómbralo siempre con su nombre concreto y la prueba («Popa 2 de la prueba 3»). Si la cifra es una media de varios tramos («vmg_media_de_las_popas…»), dilo así («media de las dos popas»); no la atribuyas a un tramo.
-- Cita las cifras tal cual o redondeadas, con coma decimal y un espacio antes de la unidad (4,06 kn; 87 m; 54 s; 10,5°; 66 %). Los tiempos, en segundos o como mm:ss. La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
+- Cita las cifras tal cual o redondeadas, con coma decimal, un espacio antes de la unidad y un punto detrás de las unidades abreviadas, que ayuda a leer (4,06 kn.; 87 m.; 54 s.; 10,5°; 66 %). Los tiempos de hasta 60 s., en segundos (54 s.); los de más de 60 s., en minutos y segundos (1 min. 25 s.). La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
 - La corriente es ESTIMADA y tiene un nivel de confianza: si es baja, no la uses para explicar resultados. Úsala para explicar laylines o la ventaja de un lado solo si la confianza es alta o media.
 - Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO por FastTack a partir del GPS de los barcos (no hay anemómetro): no lo presentes como medido ni lo atribuyas a RaceSense. Basta con decirlo una vez.
 - Los huecos de telemetría y la calidad de datos son limitaciones de RaceSense, no errores de la tripulación: menciónalos solo como límite del análisis.
@@ -42,6 +42,8 @@ Reglas estrictas:
 - El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
 - «donde_se_perdio_la_prueba» reparte el tiempo perdido frente al top 5 en salida, velocidad, maniobras y táctica y resto: úsalo para ordenar qué pesó más (y di que es estimado).
 - «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
+- El barco de los DATOS («barco») es el de quien lee: háblale de tú («saliste», «tu popa», «perdiste 20 m.»), sin su número de vela ni su nombre. Los demás barcos, por su vela.
+- «frente_a_sus_vecinos»: ángulo, SOG y VMG frente a los barcos que tenía al lado (mismo viento). Úsalo para decir si navegaba más abierto o más cerrado (en popa, más bajo o más alto) y más rápido o más lento que los de al lado, comparándolo con el top 5. No hay ángulo óptimo medido: no lo inventes.
 - Sin introducción ni despedida. Formato Markdown exactamente con estos encabezados:
 """
 
@@ -51,8 +53,8 @@ Eres el entrenador del equipo. El objetivo es mejorar: céntrate en lo que más 
 - Ordena por impacto con «donde_se_perdio_la_prueba» (segundos frente al top 5 por salida, velocidad, maniobras y táctica y resto) y, en el día, con «mejores_tramos» y «peores_tramos» (vienen ordenados por el motor).
 - Cada punto nombra su tramo y prueba concretos y la causa que muestran los datos (salida y posicionamiento, velocidad y escora frente a la óptima, maniobras con giro, aceleración y ángulo de salida, táctica con roladas, amura favorecida, lado y laylines).
 - Roles: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (no como un hecho medido): táctico → salida, lado, roladas, laylines y puertas; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora y aceleración tras las maniobras; proa → maniobras y rodeos.
-- En las maniobras, el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa al revés: más profundo tarda en acelerar y más alto pierde profundidad.
-- Si hay «reglaje_apuntado», relaciónalo solo como hipótesis.
+- En las maniobras, el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa al revés: más bajo tarda en acelerar y más alto no baja lo suficiente.
+- Vocabulario: en popa se dice «bajo» (modo bajo, navegar más bajo), nunca «profundo».- Si hay «reglaje_apuntado», relaciónalo solo como hipótesis.
 - Escora óptima = la media de la escora de los 5 barcos con más VMG (estimada). Menciónala solo si el barco se aparta claramente (más de 2°) o pasa poco tiempo cerca de ella.
 """
 
@@ -85,7 +87,7 @@ Máximo 450 palabras.
 COACH = DIA   # compatibilidad: el antiguo «debrief de coach del día» es ahora el debrief del día
 
 CRONICA = COMUN + """
-Esto es la crónica de la prueba: qué pasó en el campo, para entenderla. No es un debrief del barco: cuenta la prueba (salida, cada tramo, llegada) con los barcos que la marcaron, qué lado o qué decisión pagó y por qué según los datos (roladas, presión, viento en la línea, puertas, sets), y en una línea por tramo dónde quedó el barco de referencia. No des consejos ni «claves».
+Esto es la crónica de la prueba: qué pasó en el campo, para entenderla. No es un debrief del barco: cuenta la prueba (salida, cada tramo, llegada) con los barcos que la marcaron, qué lado o qué decisión pagó y por qué según los datos (roladas, presión, viento en la línea, puertas, sets), y en una línea por tramo dónde quedaste tú (el barco de los datos, siempre de tú). No des consejos ni «claves».
 
 ## La prueba en dos frases
 ## Salida

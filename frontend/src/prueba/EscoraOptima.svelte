@@ -68,14 +68,14 @@
         {@const f = fr[hover]}
         <g transform={`translate(${Math.min(X(f.hasta) + 6, W - 206)}, ${M.t + 30})`}><rect width="200" height="34" rx="3" class="tip" />
           <text x="6" y="14" class="tiptxt">{f.desde}–{f.hasta}°: VMG {num(f.vmg_rel_pct, 1)} % · SOG {num(f.sog_rel_pct, 1)} %</text>
-          <text x="6" y="27" class="tiptxt">{f.segmentos} tramos de 30 s · {f.barcos} barcos</text></g>
+          <text x="6" y="27" class="tiptxt">{f.segmentos} tramos de 30 s. · {f.barcos} barcos</text></g>
       {/if}
     </svg>
   </div>
   {/if}
   {#if o.barcos?.length}<p class="sub">Los 5 con más VMG: {o.barcos.map(nombres).join(', ')}.</p>{/if}
   {#if nota}<p class="sub">{nota}</p>{/if}
-  <Nota>Óptima = la media de la escora de los 5 barcos con más VMG del tramo, navegando estable (sin maniobras ni rodeos; no cuentan los sensores a más de 6° de la mediana de la flota). El gráfico da el contexto: cada punto es la VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos (misma amura, a menos de 300 m, en los mismos 30 s: así se quitan la presión y las roladas). Si con más escora la SOG sube y la VMG baja, se va más rápido pero más abierto; si bajan las dos, falta potencia. Sombreado: franjas sin pérdida clara frente a la mejor. Es una referencia: la escora también depende del peso y del estilo de cada tripulación.</Nota>
+  <Nota>Óptima = la media de la escora de los 5 barcos con más VMG del tramo, navegando estable (sin maniobras ni rodeos; no cuentan los sensores a más de 6° de la mediana de la flota). El gráfico da el contexto: cada punto es la VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos (misma amura, a menos de 300 m., en los mismos 30 s: así se quitan la presión y las roladas). Si con más escora la SOG sube y la VMG baja, se va más rápido pero más abierto; si bajan las dos, falta potencia. Sombreado: franjas sin pérdida clara frente a la mejor. Es una referencia: la escora también depende del peso y del estilo de cada tripulación.</Nota>
 </section>
 
 <style>

@@ -44,7 +44,7 @@
 <section class="tarjeta bloque">
   <h3>Evolución del viento <span class="est">estimado</span></h3>
   <div bind:clientWidth={W}>
-  {#each [['TWD (°)', sTwd, eTwd, twd, (v) => num(((v % 360) + 360) % 360, 0) + '°'], [calibrada ? 'TWS (kn)' : 'Presión: SOG mediano de la flota (kn)', sPres, ePres, pres, (v) => num(v, calibrada ? 1 : 2) + ' kn']] as [titulo, s, e, vals, fmt]}
+  {#each [['TWD (°)', sTwd, eTwd, twd, (v) => num(((v % 360) + 360) % 360, 0) + '°'], [calibrada ? 'TWS (kn)' : 'Presión: SOG mediano de la flota (kn)', sPres, ePres, pres, (v) => num(v, calibrada ? 1 : 2) + ' kn.']] as [titulo, s, e, vals, fmt]}
     <div class="g">
       <div class="tit">{titulo}</div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={titulo} onpointermove={mover} onpointerleave={() => (hover = null)}>

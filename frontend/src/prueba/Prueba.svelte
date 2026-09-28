@@ -2,7 +2,7 @@
   import Nota from '../Nota.svelte';
   import { onMount, untrack } from 'svelte';
   import { api, horaLocal, clave as claveVela } from '../api.js';
-  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, velaCorta, tramoEn, twdEn, faseEn, corrienteEn } from './datos.js';
+  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, tiempo, velaCorta, tramoEn, twdEn, faseEn, corrienteEn } from './datos.js';
   import Mapa from './Mapa.svelte';
   import Reproductor from './Reproductor.svelte';
   import Panel from './Panel.svelte';
@@ -105,7 +105,7 @@
     .map(([v, f]) => ({ vela: v, ...f, baja: f.calidad === 'baja' || f.calidad === 'insuficiente',
       motivo_txt: f.layline?.estado !== 'SOBREPASADA' ? '' : ({ no_podia_virar: 'tráfico: no podía virar', layline_con_trafico: 'tráfico en la layline', calculo: 'cálculo' })[f.layline.trafico?.motivo] || 'sin datos',
       amura_fav: f.tactica?.amura_favorecida_pct ?? null,
-      layline_txt: f.layline?.estado === 'SOBREPASADA' ? `${f.layline.lado === 'DERECHA' ? 'Dcha' : 'Izda'} +${num(f.layline.metros, 0)} m` : f.layline?.estado === 'OK' ? 'OK' : '—' })) : []);
+      layline_txt: f.layline?.estado === 'SOBREPASADA' ? `${f.layline.lado === 'DERECHA' ? 'Dcha' : 'Izda'} +${num(f.layline.metros, 0)} m.` : f.layline?.estado === 'OK' ? 'OK' : '—' })) : []);
   function filasPaso(cid) {
     const pasos = Object.entries(an.pasos).filter(([, p]) => p[cid]).map(([v, p]) => ({ vela: v, ...p[cid] }));
     pasos.sort((a, b) => a.t - b.t);
@@ -120,9 +120,9 @@
 
   const fBarco = (v) => vc(v);
   const fGrados = (d = 0) => (v) => (v == null ? '—' : num(v, d) + '°');
-  const fM = (v) => (v == null ? '—' : num(v, 0) + ' m');
+  const fM = (v) => (v == null ? '—' : num(v, 0) + ' m.');
   const fKn = (v) => num(v, 2);
-  const fS = (v) => (v == null ? '—' : `${num(v, 0)} s`);
+  const fS = (v) => tiempo(v);
 </script>
 
 {#if error}
@@ -139,8 +139,8 @@
       <p class="meta">
         {camp.clase} · {an.clasificacion.length} llegadas · {an.vueltas} vueltas
         {#if p.estado === 'reconstruida'}<span class="chip reconstruida">reconstruida</span>{/if}
-        {#if an.tws_fuente?.startsWith('modelo')}<span class="chip" title={an.tws_fuente === 'modelo' ? 'Intensidad del viento del modelo meteorológico (Open-Meteo), hora a hora' : `Evolución del modelo meteorológico escalada al viento de referencia (${num(p.viento_kn, 1)} kn)`}>viento del modelo{p.viento_kn ? ` · ref. ${num(p.viento_kn, 1)} kn` : ''}</span>
-        {:else if p.viento_kn}<span class="chip">viento ref. {num(p.viento_kn, 1)} kn</span>
+        {#if an.tws_fuente?.startsWith('modelo')}<span class="chip" title={an.tws_fuente === 'modelo' ? 'Intensidad del viento del modelo meteorológico (Open-Meteo), hora a hora' : `Evolución del modelo meteorológico escalada al viento de referencia (${num(p.viento_kn, 1)} kn.)`}>viento del modelo{p.viento_kn ? ` · ref. ${num(p.viento_kn, 1)} kn.` : ''}</span>
+        {:else if p.viento_kn}<span class="chip">viento ref. {num(p.viento_kn, 1)} kn.</span>
         {:else}<span class="chip">viento sin calibrar</span>{/if}
         <span class="tenue">· motor {an.version}</span>
       </p>
@@ -148,12 +148,12 @@
         <p class="meteo">
           <span class="etiqueta">Modelo meteo</span>
           {#if meteo.viento}
-            <span class:tachado={meteo.viento.coincide === false}>viento <b class="num">{num(meteo.viento.kn, 0)} kn</b> de {meteo.viento.desde_grados}° <span class="tenue num">({num(meteo.viento.min_kn, 0)}–{num(meteo.viento.max_kn, 0)}{meteo.viento.rachas_kn ? `, rachas ${num(meteo.viento.rachas_kn, 0)}` : ''})</span></span>
+            <span class:tachado={meteo.viento.coincide === false}>viento <b class="num">{num(meteo.viento.kn, 0)} kn.</b> de {meteo.viento.desde_grados}° <span class="tenue num">({num(meteo.viento.min_kn, 0)}–{num(meteo.viento.max_kn, 0)}{meteo.viento.rachas_kn ? `, rachas ${num(meteo.viento.rachas_kn, 0)}` : ''})</span></span>
             {#if meteo.viento.coincide === false}<span class="aviso-meteo">no coincide con la dirección de la flota ({meteo.twd_flota_grados}°, {meteo.viento.diferencia_con_la_flota_grados}° de diferencia): no lo uses como referencia</span>
 {/if}
           {:else}<span class="tenue" title={meteo.aviso || ''}>sin viento del modelo{meteo.aviso?.includes('limit') ? ' (límite diario de Open-Meteo: se reintentará)' : ''}</span>{/if}
-          {#if meteo.corriente}· corriente <b class="num">{num(meteo.corriente.kn, 1)} kn</b> hacia {meteo.corriente.hacia_grados}°{#if meteo.corriente_estimada}<span class="tenue"> (estimada con la flota: {num(meteo.corriente_estimada.velocidad_kn, 1)} kn hacia {num(meteo.corriente_estimada.hacia_grados, 0)}°)</span>{/if}{/if}
-          <span class="tenue">· Open-Meteo, {meteo.horas[0]}–{meteo.horas[meteo.horas.length - 1]} UTC; viento a 10 m del modelo, puede diferir del del campo</span>
+          {#if meteo.corriente}· corriente <b class="num">{num(meteo.corriente.kn, 1)} kn.</b> hacia {meteo.corriente.hacia_grados}°{#if meteo.corriente_estimada}<span class="tenue"> (estimada con la flota: {num(meteo.corriente_estimada.velocidad_kn, 1)} kn. hacia {num(meteo.corriente_estimada.hacia_grados, 0)}°)</span>{/if}{/if}
+          <span class="tenue">· Open-Meteo, {meteo.horas[0]}–{meteo.horas[meteo.horas.length - 1]} UTC; viento a 10 m. del modelo, puede diferir del del campo</span>
         </p>
       {:else if meteoError}
         <p class="meteo tenue">Modelo meteo no disponible: {meteoError}</p>
@@ -197,7 +197,7 @@
         <div class="indic num">
           <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
           {#if faseAhora}<span>· {faseAhora.tipo.toLowerCase()}{faseAhora.primero && faseAhora.primero !== 'flota' ? ' (primero ' + lado(faseAhora.primero) + ')' : ''}</span>{/if}
-          {#if corrAhora}<span>· corriente {num(corrAhora.velocidad_kn, 1)} kn hacia {num(corrAhora.hacia_grados, 0)}° <span class="est">est.</span></span>{:else}<span class="tenue">· corriente sin estimar</span>{/if}
+          {#if corrAhora}<span>· corriente {num(corrAhora.velocidad_kn, 1)} kn. hacia {num(corrAhora.hacia_grados, 0)}° <span class="est">est.</span></span>{:else}<span class="tenue">· corriente sin estimar</span>{/if}
         </div>
       </div>
       <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} {lider} {fantasma} tramoFijo={tab?.tipo === 'tramo' ? tab.tramo : null} /></div>
@@ -213,10 +213,10 @@
       {@const s = an.salida}
       <section class="tarjeta resumen">
         <div><i>Comité · pin</i><b class="num">{an.controles[0].sn.slice().reverse().map((x) => x ?? '—').join(' · ')}</b></div>
-        <div><i>Sesgo de la línea <span class="est">est.</span></i><b>{num(s.sesgo.grados, 1)}° {s.sesgo.extremo === 'PIN' ? 'pin' : 'comité'} · {num(s.sesgo.metros, 0)} m</b></div>
-        <div><i>Viento en el disparo <span class="est">est.</span></i><b>{num(s.twd_disparo, 0)}° · {s.tws_disparo ? num(s.tws_disparo, 1) + ' kn' : 'sin calibrar'}</b></div>
-        <div><i>Línea</i><b>{num(s.sesgo.largo_linea_m, 0)} m</b></div>
-        <div><i>Corriente <span class="est">est.</span></i>{#if an.corriente}<b>{num(an.corriente.velocidad_kn, 2)} kn hacia {num(an.corriente.hacia_grados, 0)}°</b><small class="tenue">confianza {an.corriente.confianza}</small>{:else}<b class="tenue">sin estimar</b>{/if}</div>
+        <div><i>Sesgo de la línea <span class="est">est.</span></i><b>{num(s.sesgo.grados, 1)}° {s.sesgo.extremo === 'PIN' ? 'pin' : 'comité'} · {num(s.sesgo.metros, 0)} m.</b></div>
+        <div><i>Viento en el disparo <span class="est">est.</span></i><b>{num(s.twd_disparo, 0)}° · {s.tws_disparo ? num(s.tws_disparo, 1) + ' kn.' : 'sin calibrar'}</b></div>
+        <div><i>Línea</i><b>{num(s.sesgo.largo_linea_m, 0)} m.</b></div>
+        <div><i>Corriente <span class="est">est.</span></i>{#if an.corriente}<b>{num(an.corriente.velocidad_kn, 2)} kn. hacia {num(an.corriente.hacia_grados, 0)}°</b><small class="tenue">confianza {an.corriente.confianza}</small>{:else}<b class="tenue">sin estimar</b>{/if}</div>
       </section>
       {@const zl = (s.viento_en_la_linea || []).filter((z) => z.twd != null)}
       {#if zl.length >= 2}
@@ -230,12 +230,12 @@
                 <i>{z.zona}{z.zona === miZona ? ` · ${vc(ref)}` : ''}</i>
                 {#if z.twd != null}
                   <b class="num">{Math.abs(z.rolada) < 1 ? 'como la media' : `${num(Math.abs(z.rolada), 1)}° ${z.rolada > 0 ? 'derecha' : 'izquierda'}`}</b>
-                  <small class="tenue num">SOG {num(z.sog, 1)} kn · {z.barcos} barcos</small>
+                  <small class="tenue num">SOG {num(z.sog, 1)} kn. · {z.barcos} barcos</small>
                 {:else}<b class="tenue">sin datos</b><small class="tenue">{z.barcos} barcos</small>{/if}
               </div>
             {/each}
           </div>
-          <p class="nota-z">Rolada de cada tercio respecto a la TWD del disparo, de +10 a +60 s, con los rumbos de los barcos que salieron por él (a su ángulo al viento de la ceñida). Derecha = el viento viene más de la derecha mirando a barlovento.</p>
+          <p class="nota-z">Rolada de cada tercio respecto a la TWD del disparo, de +10 a +60 s., con los rumbos de los barcos que salieron por él (a su ángulo al viento de la ceñida). Derecha = el viento viene más de la derecha mirando a barlovento.</p>
         </section>
       {/if}
       <Tabla titulo="Comparativa de apertura" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
@@ -243,20 +243,20 @@
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
           { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
-          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : num(v, 1) + ' m') },
+          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : num(v, 1) + ' m.') },
           { k: 'sog_disparo', titulo: 'SOG disparo', num: true, fmt: fKn },
-          { k: 'cruce_s', titulo: 'Cruce GPS', num: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' s') },
-          { k: 'vmg_0_90', titulo: 'VMG 0–90 s', num: true, est: true, fmt: fKn },
+          { k: 'cruce_s', titulo: 'Cruce GPS', num: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' s.') },
+          { k: 'vmg_0_90', titulo: 'VMG 0–90 s.', num: true, est: true, fmt: fKn },
           { k: 'pos_60', titulo: '+60', num: true, est: true },
           { k: 'dist_60', titulo: 'Δ60', num: true, est: true, fmt: fM },
           { k: 'pos_180', titulo: '+180', num: true, est: true },
           { k: 'dist_180', titulo: 'Δ180', num: true, est: true, fmt: fM },
           { k: 'primera_virada_s', titulo: '1.ª virada', num: true, est: true, fmt: fS },
-          { k: 'pos_b1', titulo: 'Baliza 1', num: true, fmt: (v, f) => (v == null ? '—' : `${v}.º${f.gap_b1_s ? ' +' + f.gap_b1_s + ' s' : ''}`) },
+          { k: 'pos_b1', titulo: 'Baliza 1', num: true, fmt: (v, f) => (v == null ? '—' : `${v}.º${f.gap_b1_s ? ' +' + f.gap_b1_s + ' s.' : ''}`) },
           { k: 'ocs', titulo: 'OCS', ayuda: 'Según el comité', fmt: (v) => (v !== 'NO' ? 'sí' : 'no') },
-          { k: 'llegada_txt', titulo: 'Llegada', est: true, ayuda: 'Pronto: a menos de una eslora de la línea 10 s antes y lento en la señal. Tarde: a más de 2 esloras en la señal y cruzando 5 s después', fmt: (v) => v || '—' },
+          { k: 'llegada_txt', titulo: 'Llegada', est: true, ayuda: 'Pronto: a menos de una eslora de la línea 10 s. antes y lento en la señal. Tarde: a más de 2 esloras en la señal y cruzando 5 s. después', fmt: (v) => v || '—' },
           { k: 'hueco_sotavento_esloras', titulo: 'Hueco sot.', num: true, est: true, ayuda: 'Esloras hasta el barco de sotavento a la par en la señal (vacío: nadie a menos de 6 esloras)', fmt: (v, f) => (v == null ? (f.diagnostico ? 'libre' : '—') : num(v, 1)) },
-          { k: 'aire_sucio_pct', titulo: 'Aire sucio', num: true, est: true, ayuda: 'Tiempo de los primeros 90 s en la sombra de viento de otro barco (a ≤ 6 esloras de donde llega el viento aparente)', fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} %${v >= 30 && f.aire_sucio_de ? ' · ' + vc(f.aire_sucio_de) + (f.aire_sucio_lado === 'barlovento' ? ' (barl.)' : '') : ''}`) },
+          { k: 'aire_sucio_pct', titulo: 'Aire sucio', num: true, est: true, ayuda: 'Tiempo de los primeros 90 s. en la sombra de viento de otro barco (a ≤ 6 esloras de donde llega el viento aparente)', fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} %${v >= 30 && f.aire_sucio_de ? ' · ' + vc(f.aire_sucio_de) + (f.aire_sucio_lado === 'barlovento' ? ' (barl.)' : '') : ''}`) },
         ]} />
     {:else if tab.tipo === 'tramo'}
       {@const tr = tab.tramo}
@@ -280,15 +280,15 @@
           { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
           { k: 'maniobras', titulo: 'Man.', num: true, est: true },
           { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
-          { k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') },
+          { k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') },
           { k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
           { k: 'layline_txt', titulo: 'Layline', est: true },
           { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
           { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
           ...(tr.escora_optima ? [{ k: 'escora_frente_optima', titulo: 'vs óptima', num: true, est: true, ayuda: 'Escora del barco menos la óptima (media de los 5 con más VMG del tramo): + = más escorado', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + '°') }] : []),
           { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
-          { k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', PROFUNDO: 'profundo' })[v] || '—' },
-          { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m · ${num(v, 1)} %`) },
+          { k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' },
+          { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) },
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
       {#if tr.escora_optima}
@@ -305,7 +305,7 @@
             <thead><tr><th class="n">Tramo</th><th class="n">TWD</th><th class="n">{tr.viento.tws_calibrada ? 'TWS' : 'Presión (SOG)'}</th><th class="n">TWA flota</th><th class="n">Confianza</th></tr></thead>
             <tbody>{#each tr.viento.cortes as c}<tr class:tenue={c.fuente === 'arrastre'}>
               <td class="n num">{c.pct} %</td><td class="n num">{num(c.twd, 0)}°</td>
-              <td class="n num">{tr.viento.tws_calibrada ? num(c.tws, 1) + ' kn' : num(c.sog_mediana, 2) + ' kn'}</td>
+              <td class="n num">{tr.viento.tws_calibrada ? num(c.tws, 1) + ' kn.' : num(c.sog_mediana, 2) + ' kn.'}</td>
               <td class="n num">{c.twa_flota == null ? '—' : num(c.twa_flota, 0) + '°'}</td>
               <td class="n num">{c.fuente === 'arrastre' ? 'sin datos' : num(c.confianza * 100, 0) + ' %'}</td></tr>{/each}</tbody>
           </table></div>
@@ -322,17 +322,17 @@
       </div>
       {#if an.corriente}
         {@const c = an.corriente}
-        {@const comp = (x, pos, neg) => `${num(Math.abs(x), 2)} kn ${x >= 0 ? pos : neg}`}
+        {@const comp = (x, pos, neg) => `${num(Math.abs(x), 2)} kn. ${x >= 0 ? pos : neg}`}
         <section class="tarjeta bloque">
           <h3>Corriente <span class="est">estimada</span></h3>
           <div class="rodillo"><table class="mini"><thead><tr><th>Periodo</th><th class="n">Corriente</th><th class="n">A lo largo del recorrido</th><th class="n">Transversal</th><th>Confianza</th></tr></thead>
             <tbody>
-              <tr><td>Toda la prueba</td><td class="n num">{num(c.velocidad_kn, 2)} kn → {num(c.hacia_grados, 0)}°</td><td class="n num">{comp(c.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(c.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{c.confianza}</td></tr>
+              <tr><td>Toda la prueba</td><td class="n num">{num(c.velocidad_kn, 2)} kn. → {num(c.hacia_grados, 0)}°</td><td class="n num">{comp(c.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(c.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{c.confianza}</td></tr>
               {#each c.por_vuelta || [] as v}{#if v.confianza}
-                <tr><td>Vuelta {v.vuelta}</td><td class="n num">{num(v.velocidad_kn, 2)} kn → {num(v.hacia_grados, 0)}°</td><td class="n num">{comp(v.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(v.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{v.confianza}</td></tr>
+                <tr><td>Vuelta {v.vuelta}</td><td class="n num">{num(v.velocidad_kn, 2)} kn. → {num(v.hacia_grados, 0)}°</td><td class="n num">{comp(v.a_favor_kn, 'hacia barlovento', 'hacia sotavento')}</td><td class="n num">{comp(v.derecha_kn, 'hacia la derecha', 'hacia la izquierda')}</td><td>{v.confianza}</td></tr>
               {/if}{/each}
             </tbody></table></div>
-          <Nota>Sin corredera: sale de comparar el rumbo de proa (brújula del Atlas) con el rumbo sobre el fondo de toda la flota, descontando el desvío de cada brújula y el abatimiento ({num(c.abatimiento_grados, 1)}°). Se comprueba con la diferencia de velocidad entre amuras en ceñida (transversal {c.transversal_velocidades_kn == null ? 'sin dato' : num(c.transversal_velocidades_kn, 2) + ' kn'}): confianza alta si coinciden (±0,15 kn). {c.barcos} barcos{c.brujulas_descartadas.length ? `; ${c.brujulas_descartadas.length} brújula(s) descartada(s) por desvío > 15°` : ''}. Derecha/izquierda mirando a barlovento. Las laylines sobre el fondo ya la incluyen; TWD y TWA son sobre el fondo.</Nota>
+          <Nota>Sin corredera: sale de comparar el rumbo de proa (brújula del Atlas) con el rumbo sobre el fondo de toda la flota, descontando el desvío de cada brújula y el abatimiento ({num(c.abatimiento_grados, 1)}°). Se comprueba con la diferencia de velocidad entre amuras en ceñida (transversal {c.transversal_velocidades_kn == null ? 'sin dato' : num(c.transversal_velocidades_kn, 2) + ' kn.'}): confianza alta si coinciden (±0,15 kn.). {c.barcos} barcos{c.brujulas_descartadas.length ? `; ${c.brujulas_descartadas.length} brújula(s) descartada(s) por desvío > 15°` : ''}. Derecha/izquierda mirando a barlovento. Las laylines sobre el fondo ya la incluyen; TWD y TWA son sobre el fondo.</Nota>
         </section>
       {/if}
     {:else if tab.tipo === 'baliza'}
@@ -340,7 +340,7 @@
         {#if c.puerta}
           <section class="tarjeta resumen">
             <div><i>Puerta favorecida <span class="est">est.</span></i><b>{lado(c.puerta.favorecida)} <small class="tenue">(mirando a sotavento)</small></b></div>
-            <div><i>Ventaja <span class="est">est.</span></i><b>{num(c.puerta.ventaja_m, 0)} m</b></div>
+            <div><i>Ventaja <span class="est">est.</span></i><b>{num(c.puerta.ventaja_m, 0)} m.</b></div>
             <div><i>TWD en el paso <span class="est">est.</span></i><b>{num(c.puerta.twd, 0)}°</b></div>
             <div><i>Cómo se mide</i><b class="peq">metros a barlovento que gana la baliza favorecida con la TWD del paso</b></div>
           </section>

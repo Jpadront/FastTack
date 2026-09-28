@@ -1,74 +1,47 @@
 <script>
-  // Polar del tramo: VMG según el ángulo al viento (TWA) del barco de referencia frente al top 5,
-  // con el ángulo de máxima VMG marcado. Un eje (VMG, kn); la SOG va en la etiqueta al pasar el ratón.
-  import { num, mediana, COLOR_YO } from './datos.js';
+  // Frente a tus vecinos: ángulo al viento, SOG y VMG del barco de referencia frente a los barcos que
+  // tenía al lado (misma amura, a menos de 300 m., en los mismos 30 s.: mismo viento), y lo mismo del
+  // top 5. Sustituye a la polar: sin anemómetro, el ángulo de máxima VMG no se puede medir (ver Nota).
+  import Nota from '../Nota.svelte';
+  import { num, mediana } from './datos.js';
 
   let { tramo, ref, nombreRef = '', top5 = [] } = $props();
-  const W0 = 520, H = 170, M = { l: 40, r: 12, t: 10, b: 28 };
-  let W = $state(W0);
-  const mia = $derived((tramo.barcos[ref]?.polar || []).filter((x) => x.s >= 15));
-  // top 5: mediana por franja de los que tienen esa franja
-  const t5 = $derived.by(() => {
-    const por = {};
-    for (const v of top5) for (const x of tramo.barcos[v]?.polar || []) (por[x.twa] ||= []).push(x);
-    return Object.entries(por).filter(([, xs]) => xs.length >= 2)
-      .map(([twa, xs]) => ({ twa: +twa, vmg: mediana(xs.map((x) => x.vmg)), sog: mediana(xs.map((x) => x.sog)), n: xs.length }))
-      .sort((a, b) => a.twa - b.twa);
-  });
-  const todos = $derived([...mia, ...t5]);
-  const xLo = $derived(Math.min(...todos.map((p) => p.twa)) - 1), xHi = $derived(Math.max(...todos.map((p) => p.twa)) + 1);
-  const yLo = $derived(Math.min(...todos.map((p) => p.vmg)) - 0.1), yHi = $derived(Math.max(...todos.map((p) => p.vmg)) + 0.1);
-  const X = (a) => M.l + ((a - xLo) / (xHi - xLo || 1)) * (W - M.l - M.r);
-  const Y = (v) => H - M.b - ((v - yLo) / (yHi - yLo || 1)) * (H - M.t - M.b);
-  const maxDe = (xs) => (xs.filter((x) => (x.s ?? 30) >= 30).length ? xs.filter((x) => (x.s ?? 30) >= 30) : xs).reduce((m, x) => (x.vmg > m.vmg ? x : m), { vmg: -Infinity });
-  const mMia = $derived(mia.length ? maxDe(mia) : null), m5 = $derived(t5.length ? maxDe(t5) : null);
-  const linea = (xs) => xs.map((p, k) => `${k ? 'L' : 'M'}${X(p.twa).toFixed(1)},${Y(p.vmg).toFixed(1)}`).join(' ');
-  let hover = $state(null);
+  const popa = $derived(tramo.tipo === 'popa');
+  const mio = $derived(tramo.barcos[ref]?.vecinos ?? null);
+  const de5 = $derived(top5.map((v) => tramo.barcos[v]?.vecinos).filter(Boolean));
+  const t5 = $derived(de5.length >= 2 ? {
+    twa_frente_vecinos: mediana(de5.map((x) => x.twa_frente_vecinos)),
+    sog_frente_vecinos_pct: mediana(de5.map((x) => x.sog_frente_vecinos_pct)),
+    vmg_frente_vecinos_pct: mediana(de5.map((x) => x.vmg_frente_vecinos_pct)),
+  } : null);
+  const ang = (d) => (d == null ? '—' : Math.abs(d) < 0.5 ? 'igual' : `${num(Math.abs(d), 1)}° más ${d > 0 ? (popa ? 'bajo' : 'abierto') : (popa ? 'alto' : 'cerrado')}`);
+  const pct = (p) => (p == null ? '—' : Math.abs(p) < 0.5 ? 'igual' : `${p > 0 ? '+' : '−'}${num(Math.abs(p), 1)} %`);
 </script>
 
-{#if mia.length >= 3}
+{#if mio}
 <section class="tarjeta bloque">
-  <h3>Polar del tramo <span class="est">estimada</span></h3>
-  <p class="titular">{nombreRef}: más VMG a <b class="num">{num(mMia.twa, 0)}°</b> de TWA ({num(mMia.vmg, 2)} kn){#if m5 && m5.vmg > -Infinity}&nbsp;· top 5 a <b class="num">{num(m5.twa, 0)}°</b> ({num(m5.vmg, 2)} kn){/if}.</p>
-  <div class="leyenda"><span><i style:background={COLOR_YO}></i>{nombreRef}</span>{#if t5.length}<span><i class="t5"></i>top 5 (mediana)</span>{/if}</div>
-  <div bind:clientWidth={W}>
-    <svg viewBox={`0 0 ${W} ${H}`} style:height={H + 'px'} role="img" aria-label="VMG según el ángulo al viento">
-      {#each [0, 0.5, 1] as f}
-        {@const v = yLo + f * (yHi - yLo)}
-        <line x1={M.l} x2={W - M.r} y1={Y(v)} y2={Y(v)} class="rejilla" />
-        <text x={M.l - 6} y={Y(v) + 4} class="eje" text-anchor="end">{num(v, 1)}</text>
-      {/each}
-      {#each todos.map((p) => p.twa).filter((a, k, xs) => xs.indexOf(a) === k && Math.round(a) % (tramo.tipo === 'ceñida' ? 4 : 10) < 2) as a}
-        <text x={X(a)} y={H - 8} class="eje" text-anchor="middle">{num(a, 0)}°</text>
-      {/each}
-      {#if t5.length}<path d={linea(t5)} class="t5l" />{/if}
-      <path d={linea(mia)} class="yo" style:stroke={COLOR_YO} />
-      {#each mia as p}<circle cx={X(p.twa)} cy={Y(p.vmg)} r="4" style:fill={COLOR_YO} class="punto" role="presentation"
-        onmouseenter={() => (hover = p)} onmouseleave={() => (hover = null)} />{/each}
-      {#if mMia}<line x1={X(mMia.twa)} x2={X(mMia.twa)} y1={M.t} y2={H - M.b} class="marca" style:stroke={COLOR_YO} />{/if}
-      {#if m5 && m5.vmg > -Infinity}<line x1={X(m5.twa)} x2={X(m5.twa)} y1={M.t} y2={H - M.b} class="marca t5m" />{/if}
-    </svg>
-  </div>
-  {#if hover}<p class="sub num">TWA {num(hover.twa, 0)}° · VMG {num(hover.vmg, 2)} kn · SOG {num(hover.sog, 2)} kn · {hover.s} s</p>
-  {:else}<p class="sub">VMG mediana por franja de ángulo al viento ({tramo.tipo === 'ceñida' ? '2°' : '5°'}), navegando estable (sin maniobras ni rodeos). Sin anemómetro, vale para el viento de este tramo.</p>{/if}
+  <h3>Frente a tus vecinos <span class="est">estimado</span></h3>
+  <table>
+    <thead><tr><th></th><th>Ángulo al viento</th><th>SOG</th><th>VMG</th></tr></thead>
+    <tbody>
+      <tr class="yo"><td>{nombreRef}</td><td class="num">{ang(mio.twa_frente_vecinos)}</td><td class="num" class:mal={mio.sog_frente_vecinos_pct <= -1} class:bien={mio.sog_frente_vecinos_pct >= 1}>{pct(mio.sog_frente_vecinos_pct)}</td><td class="num" class:mal={mio.vmg_frente_vecinos_pct <= -1} class:bien={mio.vmg_frente_vecinos_pct >= 1}>{pct(mio.vmg_frente_vecinos_pct)}</td></tr>
+      {#if t5}<tr><td>Top 5</td><td class="num">{ang(t5.twa_frente_vecinos)}</td><td class="num">{pct(t5.sog_frente_vecinos_pct)}</td><td class="num">{pct(t5.vmg_frente_vecinos_pct)}</td></tr>{/if}
+    </tbody>
+  </table>
+  <p class="sub">Mediana de {mio.segmentos} tramos de 30 s. navegando estable, frente a los barcos en tu misma amura a menos de 300 m. en esos mismos 30 s. (tienen tu mismo viento).</p>
+  <Nota>Sustituye a la polar del tramo. Sin anemómetro, el ángulo de máxima VMG no se puede medir: comparando cada barco consigo mismo, cuando parece ir 4–8° más cerrado que sus vecinos su SOG apenas cambia y su VMG sube un 5–11 %. Un barco que de verdad ciñe 8° más cerrado pierde mucha velocidad, así que esas diferencias son viento local (roles que los de al lado no tienen), no el timón, y la «polar» siempre daba la máxima VMG en el ángulo más cerrado. Lo que sí es fiable, con muchos tramos de 30 s., es si navegas más abierto o más cerrado, más rápido o más lento, que los barcos que tienes al lado.</Nota>
 </section>
 {/if}
 
 <style>
   .bloque { padding: 10px 12px; min-width: 0; }
-  h3 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); margin: 0 0 4px; }
+  h3 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); margin: 0 0 6px; }
   .est { color: var(--estimado); font-size: 11px; }
-  .titular { margin: 0 0 4px; font-size: 15px; }
-  .sub { margin: 4px 0 0; font-size: 13px; color: var(--tinta-2); }
-  .leyenda { display: flex; gap: 12px; font-size: 13px; color: var(--tinta-2); }
-  .leyenda i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
-  .leyenda i.t5 { background: var(--tinta-3); }
-  svg { width: 100%; display: block; }
-  .rejilla { stroke: var(--rejilla); }
-  .eje { font-size: 11px; fill: var(--tinta-3); }
-  .yo { fill: none; stroke-width: 2; }
-  .t5l { fill: none; stroke: var(--tinta-3); stroke-width: 2; stroke-dasharray: 4 3; }
-  .punto { stroke: var(--panel); stroke-width: 1.5; }
-  .marca { stroke-width: 1; stroke-dasharray: 2 3; }
-  .t5m { stroke: var(--tinta-3); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th { text-align: left; font: 600 12px var(--display); color: var(--tinta-3); text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px 4px 0; }
+  td { padding: 4px 8px 4px 0; border-top: 1px solid var(--rejilla); }
+  tr.yo td { font-weight: 600; }
+  .mal { color: var(--error, #c62828); }
+  .bien { color: #1c5cab; }
+  .sub { margin: 6px 0 0; font-size: 13px; color: var(--tinta-2); }
 </style>

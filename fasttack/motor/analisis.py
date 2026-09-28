@@ -23,7 +23,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.18.1"
+VERSION = "0.19.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -261,7 +261,6 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                                      t["p_ini"], t["eje"], mans)
             f["puerta"] = paso_fin.puerta if paso_fin else None
             man_t = [m.t for m in mans]
-            f["polar"] = rend.polar(tr, e, s, vt, man_t)
             f["vmg_estable"] = _r(rend.vmg_estable(tr, e, s, vt, man_t), 3)
             pm = rend.segundos_en_maniobras(mans)
             f["perdida_man_s"] = None if pm is None else round(pm, 1)
@@ -351,6 +350,13 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         if curva:
             curva.pop("_por_barco", None)
             opt = (opt or {}) | {"curva": curva}
+        # Ángulo, SOG y VMG de cada barco frente a sus vecinos (mismo viento): sustituye a la polar,
+        # que con la TWD reconstruida confundía las roladas locales con el ángulo (ver rendimiento)
+        fv = rend.frente_a_vecinos(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+                                                     {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()},
+                                                     offsets, tras_maniobra_ms=25_000))
+        for v, f in filas.items():
+            f["vecinos"] = fv.get(v)
         salida_tramos.append({
             "escora_optima": opt,
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",

@@ -1,6 +1,6 @@
 """Rendimiento del barco en un tramo, más allá de las medias (estimado; ver docs/metricas.md).
 
-- Polar del tramo: SOG mediana por franja de ángulo al viento (TWA), navegando estable.
+- Frente a los vecinos: ángulo, SOG y VMG de cada barco frente a los barcos de al lado (mismo viento).
 - Regularidad: dispersión de la VMG de cada tramo de 30 s respecto a la de la flota en esos
   mismos 30 s (así las rachas y los roles, que tiene toda la flota, no cuentan).
 - Set tras la baliza de barlovento: si traslucha nada más rodear o sigue en la misma banda.
@@ -18,8 +18,6 @@ from .trazas import Traza
 
 MARGEN_RODEO_MS = 20_000
 MARGEN_MANIOBRA_MS = 15_000
-FRANJA_CEÑIDA, FRANJA_POPA = 2, 5
-FRANJA_MIN_S = 15
 VENTANA_MS = 30_000
 MIN_VENTANAS = 5
 SET_VENTANA_MS = 45_000        # trasluchada dentro de los 45 s tras el rodeo = set trasluchando
@@ -38,25 +36,56 @@ def estables(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]):
     return i if len(i) >= 10 else None
 
 
-def polar(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> list[dict] | None:
-    """[{twa, sog, vmg, s}] por franja de TWA (2° en ceñida, 5° en popa) con ≥ 15 s de datos."""
-    i = estables(tr, e, s, vt, maniobras_t)
-    if i is None:
-        return None
-    twd = vt.twd_en(tr.ts[i])
-    twa = np.abs(dif(tr.cog[i] - twd))
-    v = vmg(tr, i, twd, vt.ceñida)
-    w = np.minimum(np.diff(tr.ts[i], append=tr.ts[i][-1]), 5_000) / 1000
-    paso = FRANJA_CEÑIDA if vt.ceñida else FRANJA_POPA
-    franja = np.floor(twa / paso)
-    out = []
-    for f in np.unique(franja):
-        m = franja == f
-        if w[m].sum() < FRANJA_MIN_S:
-            continue
-        out.append({"twa": round(float((f + 0.5) * paso), 1), "sog": round(float(np.median(tr.sog[i][m])), 2),
-                    "vmg": round(float(np.median(v[m])), 2), "s": round(float(w[m].sum()))})
-    return out or None
+VECINOS_MS, VECINOS_M, MIN_VECINOS = 30_000, 300.0, 3
+MIN_SEGMENTOS = 3
+
+
+def frente_a_vecinos(segs: list[tuple]) -> dict[str, dict]:
+    """Ángulo, SOG y VMG de cada barco frente a sus vecinos en el tramo.
+
+    Cada segmento de 30 s navegando estable (sin rodeos, ni 30 s antes ni 25 s después de una
+    maniobra) se compara con sus vecinos: otros barcos en la misma amura a < 300 m y ±30 s (al menos
+    3), que tienen el mismo viento. Por barco, la mediana de sus segmentos:
+    - ΔTWA (°): + = más abierto en ceñida / más bajo en popa que sus vecinos;
+    - SOG y VMG en % de las de sus vecinos (100 = igual).
+    No se da un «ángulo de máxima VMG»: comparando cada barco consigo mismo, cuando parece ir 4–8°
+    más cerrado que sus vecinos su SOG apenas cambia (−0,3 %) y la VMG sube un 5–11 %; un barco que de
+    verdad ciñe 8° más cerrado pierde mucha velocidad, así que esas diferencias son viento local
+    (roles que los vecinos a 300 m no tienen), no timón. Sin anemómetro, el ángulo óptimo no se puede
+    medir; la mediana de muchos segmentos sí dice si un barco navega más abierto o más cerrado que
+    los que tiene al lado. Devuelve {vela: {twa_frente_vecinos, sog_frente_vecinos_pct,
+    vmg_frente_vecinos_pct, segmentos}}."""
+    if len(segs) < 10:
+        return {}
+    velas = np.array([s[0] for s in segs])
+    t = np.array([s[1] for s in segs])
+    v = np.array([s[3] for s in segs])
+    x = np.array([s[4] for s in segs])
+    y = np.array([s[5] for s in segs])
+    amura = np.array([s[6] for s in segs])
+    sog = np.array([s[7] for s in segs])
+    twa = np.array([s[8] for s in segs])
+    n = len(segs)
+    r_twa, r_vmg, r_sog = np.full(n, np.nan), np.full(n, np.nan), np.full(n, np.nan)
+    for k in range(n):
+        m = ((np.abs(t - t[k]) <= VECINOS_MS) & (np.hypot(x - x[k], y - y[k]) <= VECINOS_M)
+             & (velas != velas[k]) & (amura == amura[k]))
+        if len(set(velas[m])) >= MIN_VECINOS:
+            r_twa[k], r_vmg[k], r_sog[k] = np.median(twa[m]), np.median(v[m]), np.median(sog[m])
+    ok = ~np.isnan(r_twa) & (np.nan_to_num(r_vmg) > 0.5) & (np.nan_to_num(r_sog) > 0.5)
+    d = twa - np.where(ok, r_twa, 0)
+    rel_v, rel_s = v / np.where(ok, r_vmg, 1), sog / np.where(ok, r_sog, 1)
+    # fuera lo que no es navegar en rumbo (restos de maniobra, un rodeo, un barco parado)
+    ok &= (np.abs(d) <= 15) & (rel_v > 0.6) & (rel_v < 1.4)
+    out = {}
+    for b in np.unique(velas[ok]):
+        m = ok & (velas == b)
+        if m.sum() >= MIN_SEGMENTOS:
+            out[str(b)] = {"twa_frente_vecinos": round(float(np.median(d[m])), 1),
+                           "sog_frente_vecinos_pct": round(float(np.median(rel_s[m]) - 1) * 100, 1),
+                           "vmg_frente_vecinos_pct": round(float(np.median(rel_v[m]) - 1) * 100, 1),
+                           "segmentos": int(m.sum())}
+    return out
 
 
 def vmg_por_ventanas(tr: Traza, e: int, s: int, vt, maniobras_t: list[int], t0: int) -> dict[int, float]:
