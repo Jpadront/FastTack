@@ -1,1 +1,1 @@
-__version__ = "0.25.1"  # mapa: «Líder» sin repetir la vela
+__version__ = "0.25.2"  # el fantasma sale de la línea amurado a estribor

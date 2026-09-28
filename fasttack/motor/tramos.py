@@ -376,7 +376,7 @@ def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, c
 
 
 def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: float | None,
-             p_ini: tuple[float, float] | None = None) -> dict | None:
+             p_ini: tuple[float, float] | None = None, estribor_inicial_s: float = 0.0) -> dict | None:
     """Barco fantasma: el camino más corto de la baliza de salida a la de llegada conociendo de
     antemano las roladas del tramo (viento igual en todo el campo), con los rumbos sobre el fondo de
     la flota en cada corte (incluyen la corriente; sin ellos, TWD ± TWA de la flota).
@@ -391,6 +391,9 @@ def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: f
     (desplazamiento lateral total 0): un problema lineal con una sola restricción, que se resuelve
     exactamente llenando primero los trozos en que cambiar de amura cuesta menos por metro lateral.
     Así el fantasma aprovecha cada rolada y llega a la baliza, como tendría que hacer un barco.
+    estribor_inicial_s: en la ceñida que sale de la línea, el fantasma sale amurado a estribor (no
+    puede salir a babor entre la flota) y no vira hasta pasados esos segundos (lo que tarda la flota
+    en poder virar): esos trozos quedan fijos en la amura de estribor (la de la izquierda en ceñida).
 
     Devuelve {"m": distancia, "camino": [[x, y, s], ...]} con s = segundos desde el inicio a la SOG
     mediana de la flota en cada corte (el camino solo si se da p_ini)."""
@@ -409,21 +412,29 @@ def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: f
         # la zona sin rumbo (o de popa demasiado cerrada) es el arco entre las dos amuras que contiene
         # el viento (o el viento + 180 en popa): si es el arco corto (< 180°) y contiene el eje, hay que bordear
         trozos.append((max(a[0], -89.0), min(a[1], 89.0)) if a[0] < 0 < a[1] and a[1] - a[0] < 180 else None)
-    # empezando todo en la amura derecha, cuánto hay que corregir hacia la izquierda
-    lat0 = sum(d * math.tan(math.radians(t[1])) for t in trozos if t)
-    f = [0.0] * n
+    # salida amurado a estribor: avance a lo largo del eje que queda fijo en la amura izquierda
+    fijo_m = 0.0
+    if estribor_inicial_s > 0 and viento.ceñida and trozos[0]:
+        sog0 = viento.cortes[0].sog_mediana or 0.0
+        fijo_m = estribor_inicial_s * sog0 * KN * math.cos(math.radians(trozos[0][0]))
+    minimo = [(max(0.0, min(1.0, (fijo_m - k * d) / d)) if t else 0.0) for k, t in enumerate(trozos)]
+    # empezando en la amura derecha (salvo lo fijo), cuánto hay que corregir hacia la izquierda
+    f = list(minimo)
+    falta = 0.0
     opciones = []
     for k, t in enumerate(trozos):
         if t:
             dy = d * (math.tan(math.radians(t[1])) - math.tan(math.radians(t[0])))   # > 0
             dc = d * (1 / math.cos(math.radians(t[0])) - 1 / math.cos(math.radians(t[1])))
-            opciones.append((dc / dy, k, dy))
-    falta = lat0
+            falta += d * math.tan(math.radians(t[1])) - f[k] * dy
+            if f[k] < 1:
+                opciones.append((dc / dy, k, dy))
     for _, k, dy in sorted(opciones):
         if falta <= 1e-9:
             break
-        f[k] = min(1.0, falta / dy)
-        falta -= f[k] * dy
+        extra = min(1.0 - f[k], falta / dy)
+        f[k] += extra
+        falta -= extra * dy
     total, piernas = 0.0, []   # (ángulo con el eje, avance a lo largo del eje, corte)
     lado = None
     for k, t in enumerate(trozos):

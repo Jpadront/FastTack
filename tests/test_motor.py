@@ -111,6 +111,20 @@ def test_fantasma_aprovecha_las_roladas():
     assert f["camino"][1][0] < 0
 
 
+def test_fantasma_sale_amurado_a_estribor():
+    # con la rolada a la izquierda al principio lo mejor sería salir a babor (derecha); desde la línea sale a
+    # estribor (izquierda) y aguanta 60 s (6 kn → ~142 m a lo largo del eje con 40°) antes de virar
+    vt = viento_fijo(twd=0.0)
+    for k, c in enumerate(vt.cortes):   # primero rolado a la izquierda (babor favorecida), luego a la derecha
+        c.twd = 350.0 if k < 5 else 10.0
+    libre = tm.fantasma(1000.0, vt, 0.0, 40.0, (0.0, 0.0))
+    assert libre["camino"][1][0] > 0
+    f = tm.fantasma(1000.0, vt, 0.0, 40.0, (0.0, 0.0), estribor_inicial_s=60)
+    assert f["camino"][1][0] < 0 and f["camino"][1][1] >= 60 * 6 * 1852 / 3600 * math.cos(math.radians(50)) - 1
+    assert f["camino"][-1][:2] == pytest.approx([0.0, 1000.0], abs=0.5)
+    assert f["m"] >= libre["m"] - 0.5
+
+
 def test_fantasma_va_derecho_si_alcanza_la_baliza():
     f = tm.fantasma(1000.0, viento_fijo(twd=60.0), 0.0, 40.0, (0.0, 0.0))
     assert f["m"] == pytest.approx(1000.0, abs=0.5) and len(f["camino"]) == 2
