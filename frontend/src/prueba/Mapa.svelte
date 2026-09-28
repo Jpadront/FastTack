@@ -201,8 +201,14 @@
         const rumbo = ((e.hdg ?? e.cog ?? 0) * Math.PI) / 180;
         ctx.save(); ctx.translate(X, Y); ctx.rotate(rumbo);
         const s = v === ref ? 1.3 : 1;
-        ctx.beginPath(); ctx.moveTo(0, -9 * s); ctx.lineTo(5 * s, 6 * s); ctx.lineTo(-5 * s, 6 * s); ctx.closePath();
-        ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fill(); ctx.restore();
+        // Silueta de casco visto desde arriba: proa en punta, costados curvos y espejo de popa recto
+        ctx.beginPath(); ctx.moveTo(0, -11 * s);
+        ctx.bezierCurveTo(3.6 * s, -6.5 * s, 4.4 * s, -1 * s, 3.6 * s, 7 * s);
+        ctx.lineTo(-3.6 * s, 7 * s);
+        ctx.bezierCurveTo(-4.4 * s, -1 * s, -3.6 * s, -6.5 * s, 0, -11 * s); ctx.closePath();
+        ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fill();
+        // palo (punto) para distinguir proa y popa también de lejos
+        ctx.beginPath(); ctx.arc(0, -2.5 * s, 1.2 * s, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill(); ctx.restore();
       }
       if (!todos || v === ref) {
         ctx.font = `${v === ref ? 700 : 600} 12px "Barlow Semi Condensed", Arial, sans-serif`;
