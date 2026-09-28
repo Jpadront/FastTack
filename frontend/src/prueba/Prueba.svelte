@@ -79,6 +79,11 @@
   const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Amura favorecida'], ['sog', 'SOG']];
   let lider = $state(false);
   let fantasma = $state(false);
+  // métrica elegida en el gráfico de rendimiento → su columna en «Medias de la prueba» (resaltada)
+  let metricaRend = $state('vmg_c');
+  const COLUMNA_METRICA = { vmg_c: 'vmg_ceñida', vmg_p: 'vmg_popa', sog_c: 'sog_ceñida', sog_p: 'sog_popa',
+    twa_c: 'twa_ceñida', twa_p: 'twa_popa', vir: 'perdida_virada_m', tra: 'perdida_trasluchada_m',
+    esc_c: 'escora_ceñida', esc_p: 'escora_popa', cab_c: 'cabeceo_ceñida', cab_p: 'cabeceo_popa' };
   let cronica = $state(false);
   const lado = (v) => ({ IZQUIERDA: 'izquierda', DERECHA: 'derecha', flota: 'toda la flota' })[v] || '—';
   const desfase = $derived(camp?.tz_offset_ms || 0);
@@ -366,8 +371,8 @@
           { k: 'gap', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
         ]} />
     {:else if tab.tipo === 'rendimiento'}
-      <GraficoRendimiento {an} {pistas} {sel} {ref} {T} {colores} {nombres} />
-      <Tabla titulo="Medias de la prueba" {ref} {colores} filas={filasRend} ordenInicial="pos"
+      <GraficoRendimiento {an} {pistas} {sel} {ref} {T} {colores} {nombres} bind:metrica={metricaRend} />
+      <Tabla titulo="Medias de la prueba" {ref} {colores} filas={filasRend} ordenInicial="pos" destacada={COLUMNA_METRICA[metricaRend]}
         nota="Pulsa una columna para ordenar. Medias ponderadas por el tiempo de cada tramo con datos. El gráfico de arriba muestra la evolución de cada métrica a lo largo de la prueba."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },

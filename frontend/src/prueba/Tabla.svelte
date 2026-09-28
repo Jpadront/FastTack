@@ -1,7 +1,7 @@
 <script>
   import Nota from '../Nota.svelte';
   // columnas: [{ k, titulo, fmt?, num?, est? (estimado), ayuda? }]; filas: objetos con .vela
-  let { columnas, filas, ref, colores = {}, titulo = '', nota = '', ordenInicial = null } = $props();
+  let { columnas, filas, ref, colores = {}, titulo = '', nota = '', ordenInicial = null, destacada = null } = $props();
   let orden = $state(ordenInicial);
   let asc = $state(true);
 
@@ -28,7 +28,7 @@
       <thead>
         <tr>
           {#each columnas as c, i}
-            <th class:n={c.num} class:fija={i === 0} title={c.ayuda || ''}>
+            <th class:n={c.num} class:fija={i === 0} class:dest={c.k === destacada} title={c.ayuda || ''}>
               <button onclick={() => ordenar(c.k)} aria-label={`Ordenar por ${c.titulo}`}>
                 {c.titulo}{#if c.est}<span class="est" title="Estimado">*</span>{/if}{#if orden === c.k}<span aria-hidden="true">{asc ? ' ↑' : ' ↓'}</span>{/if}
               </button>
@@ -40,7 +40,7 @@
         {#each vista as f (f.vela)}
           <tr class:yo={f.vela === ref} class:tenue={f.baja}>
             {#each columnas as c, i}
-              <td class:n={c.num} class:fija={i === 0} class:num={c.num}>
+              <td class:n={c.num} class:fija={i === 0} class:num={c.num} class:dest={c.k === destacada}>
                 {#if i === 0 && colores[f.vela]}<span class="punto" style:background={colores[f.vela]}></span>{/if}{c.fmt ? c.fmt(f[c.k], f) : (f[c.k] ?? '—')}
               </td>
             {/each}
@@ -65,6 +65,11 @@
   .fija { position: sticky; left: 0; z-index: 1; }
   th.fija { background: var(--panel); }
   tr.yo td { background: color-mix(in srgb, var(--yo) 14%, var(--panel)); font-weight: 600; }
+  /* columna de la métrica elegida en el gráfico */
+  th.dest { background: color-mix(in srgb, #2a78d6 16%, var(--panel)); }
+  th.dest button { color: #1c5cab; }
+  td.dest { background: color-mix(in srgb, #2a78d6 9%, var(--panel)); }
+  tr.yo td.dest { background: color-mix(in srgb, #2a78d6 14%, color-mix(in srgb, var(--yo) 14%, var(--panel))); }
   tr.tenue td { color: var(--tinta-3); }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .est { color: var(--estimado); margin-left: 1px; }

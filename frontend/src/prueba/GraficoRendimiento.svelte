@@ -5,7 +5,7 @@
   import 'uplot/dist/uPlot.min.css';
   import { derivados, fmtT, num, velaCorta, mediana } from './datos.js';
 
-  let { an, pistas, sel, ref, T, colores, nombres = {} } = $props();
+  let { an, pistas, sel, ref, T, colores, nombres = {}, metrica = $bindable('vmg_c') } = $props();
 
   const METRICAS = [
     { k: 'vmg_c', t: 'VMG en ceñida', campo: 'vmg', tipo: 'ceñida', u: 'kn', d: 2, est: true },
@@ -22,7 +22,6 @@
     { k: 'cab_p', t: 'Cabeceo en popa', campo: 'cabeceo', tipo: 'popa', u: '°', d: 0 },
   ];
   const MAX_BARCOS = 15, RODEO_MS = 20000, PASO = 5, VENT_TENDENCIA = 12; // tendencia: mediana móvil de 12 × 5 s. = 60 s.
-  let metrica = $state('vmg_c');
   let cont, plot, lectura = $state(null);
   const m = $derived(METRICAS.find((x) => x.k === metrica));
   const barcos = $derived([...sel].filter((v) => pistas.barcos[v]).sort((a, b) => (a === ref ? -1 : b === ref ? 1 : 0)).slice(0, MAX_BARCOS));
