@@ -219,7 +219,7 @@
     {@const mio = e.barcos[ref]}
     <div class="bloque-ia">
       <EscoraOptima titulo="Escora óptima en ceñida · todo el campeonato" {ref} nombreRef={vc(ref)}
-        tramo={{ tipo: 'ceñida', escora_optima: { escora: e.escora },
+        tramo={{ tipo: 'ceñida', escora_optima: { escora: e.escora, curva: e.curva },
                  barcos: mio ? { [ref]: { escora: mio.escora_media, escora_frente_optima: mio.frente_optima } } : {} }}
         enRangoTexto={mio ? `${mio.en_rango} de ${mio.ceñidas} ceñidas` : null}
         nota={`Media de las ${e.ceñidas} ceñidas; la del barco, la media de sus ceñidas.${e.por_viento.length ? ' Según el viento: ' + e.por_viento.map((x) => `${x.tramo}: ${num(x.escora, 1)}° (${x.ceñidas} ceñidas)`).join(' · ') + '.' : ''}`} />

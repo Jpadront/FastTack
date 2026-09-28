@@ -13,6 +13,7 @@ General calculada (puntuación baja, RRS apéndice A), sin penalizaciones ni dec
 from __future__ import annotations
 
 import statistics
+from . import escora as esc_mod
 
 
 METRICAS_REND = ("vmg_ceñida", "vmg_popa", "sog_ceñida", "sog_popa", "twa_ceñida", "twa_popa",
@@ -170,6 +171,11 @@ def escora_campeonato(pruebas: list[dict], validos: dict[str, dict], inscritos: 
                     por_viento.setdefault(nombre, []).append(o["escora"])
     if len(tramos) < 2:
         return None
+    # curva de todas las ceñidas juntas, para el gráfico
+    grupos = [t["escora_optima"]["curva"]["franjas"] for p in pruebas if (an := validos.get(p["clave"]))
+              for t in an["tramos"] if t.get("tipo") == "ceñida" and (t.get("escora_optima") or {}).get("curva")
+              and all("error_pct" in f for f in t["escora_optima"]["curva"]["franjas"])]
+    curva = esc_mod.combinar(grupos) if len(grupos) >= 2 else None
     barcos = {}
     for v in inscritos:
         xs = [(t["barcos"][v]["escora"], opt) for t, opt in tramos if v in t["barcos"] and t["barcos"][v].get("escora") is not None]
@@ -180,7 +186,7 @@ def escora_campeonato(pruebas: list[dict], validos: dict[str, dict], inscritos: 
     return {"escora": round(float(statistics.mean(o for _, o in tramos)), 1), "ceñidas": len(tramos),
             "por_viento": [{"tramo": n, "escora": round(float(statistics.mean(por_viento[n])), 1), "ceñidas": len(por_viento[n])}
                            for n, _ in TRAMOS_VIENTO if len(por_viento.get(n, [])) >= 2],
-            "barcos": barcos}
+            "barcos": barcos, "curva": curva}
 
 
 def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict], descartes: int | None) -> dict:

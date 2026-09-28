@@ -100,7 +100,7 @@ Desde el motor 0.17 (`fasttack/motor/analisis.py`), en cada ceñida y cada popa:
 
 **Campeonato** (Resumen): media de la óptima de todas las ceñidas y, si hay viento de referencia, por intensidad (≥ 2 ceñidas). Por barco: su escora media, la diferencia media con la óptima y en cuántas ceñidas quedó a menos de 2°. Mundial (19 ceñidas, 20–25 kn): 15,1°; ESP 1214, 16,2° (+1,4°), 13 de 19 ceñidas a menos de 2°.
 
-Antes (motor ≤ 0.16) se buscaba el rango de escora con mejor VMG relativa a los vecinos por franjas de 2°: daba una meseta difícil de leer (±1 % entre 12° y 20°). La media de los 5 más rápidos es más directa y queda en el mismo sitio (el top 5 del Mundial navegaba a 15°).
+**Gráfico** (acompaña a la cifra, no la sustituye): VMG y SOG relativas a los vecinos por franjas de 2° de escora (`fasttack/motor/escora.py`: tramos de 30 s sin maniobras ni rodeos, vecinos en la misma amura a < 300 m y ±30 s; sombreadas las franjas sin pérdida clara frente a la mejor), con la óptima de los 5 con más VMG y la escora del barco marcadas. En el campeonato se juntan las franjas de todas las ceñidas. Con los datos del Mundial es una meseta (±1 % entre 12° y 20°) y la pérdida clara aparece por debajo de 10–14°.
 
 ## VMG frente al top 5: velocidad o ángulo
 

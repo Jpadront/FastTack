@@ -18,11 +18,12 @@ from . import corriente as corr
 from . import trafico as traf
 from . import tactica as tac
 from . import rendimiento as rend
+from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.17.2"
+VERSION = "0.17.3"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -335,6 +336,13 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                     h_ = np.convolve(np.nan_to_num(h_, nan=esc_opt + 99), np.ones(20) / 20, mode="same")
                     h_ = h_[np.isin(i_, ie)]
                     f["escora_en_rango_pct"] = round(float(np.mean(np.abs(h_ - esc_opt) <= 2)) * 100)
+        # Curva para el gráfico: VMG relativa a los vecinos por franja de 2° de escora (sin maniobras
+        # ni rodeos). La óptima sigue siendo la media de los 5 con más VMG; la curva la acompaña.
+        curva = esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+                                                 {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
+        if curva:
+            curva.pop("_por_barco", None)
+            opt = (opt or {}) | {"curva": curva}
         salida_tramos.append({
             "escora_optima": opt,
             "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
