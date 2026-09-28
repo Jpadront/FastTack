@@ -237,6 +237,18 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         nombre = f"FastTack_prueba{n}_{barco}.pdf"
         return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{nombre}"'})
 
+    @app.get("/api/campeonatos/{camp_id:path}/informe.pdf")
+    def informe_resumen(camp_id: str, ambito: str, barco: str):
+        from ..informe import resumen as informe_resumen_mod
+        try:
+            pdf = informe_resumen_mod.generar(alm, camp_id, ambito, barco)
+        except KeyError as e:
+            raise HTTPException(404, "Campeonato no encontrado") from e
+        except (ValueError, servicio.PruebaNoAnalizable) as e:
+            raise HTTPException(422, str(e)) from e
+        nombre = f"FastTack_{'campeonato' if ambito == 'campeonato' else ambito[4:]}_{barco}.pdf"
+        return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{nombre}"'})
+
     @app.get("/api/campeonatos/{camp_id:path}/resumen")
     def resumen_(camp_id: str, descartes: int | None = None):
         try:

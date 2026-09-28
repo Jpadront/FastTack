@@ -1,1 +1,1 @@
-__version__ = "0.28.1"  # dónde se perdió, en el orden de la prueba
+__version__ = "0.29.0"  # informe PDF del campeonato y del día

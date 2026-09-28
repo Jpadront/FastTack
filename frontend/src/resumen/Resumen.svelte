@@ -283,8 +283,9 @@
         <p class="nota">Con las {res.pruebas.length} pruebas disputadas hasta ahora; si hay pruebas nuevas, avisa para regenerarlo.</p>
 
       {:else}
-        <p class="nota">Lo que más costó ese día, lo que funcionó y qué trabajar (con el rol responsable), a partir del detalle de cada tramo. Solo las pruebas de ese día ({res.pruebas.filter((p) => 'dia:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}), comparadas con el top 5 del día, y cómo quedas en la general al terminarlo.</p>
+        <p class="nota">Lo que más costó ese día, lo que funcionó y qué trabajar (con el puesto a bordo responsable), a partir del detalle de cada tramo. Solo las pruebas de ese día ({res.pruebas.filter((p) => 'dia:' + p.dia === ambitoIA).map((p) => 'P' + p.numero).join(', ')}), comparadas con el top 5 del día, y cómo quedas en la general al terminarlo.</p>
       {/if}
+      <p class="informe"><a class="boton claro" href={api.informeResumen(campId, ambitoIA, ref)} target="_blank" rel="noopener">Informe PDF · {ambitoIA === 'campeonato' ? 'campeonato' : nombreDia(ambitoIA.slice(4))} · {vc(ref)}</a></p>
     </section>
     {#key ambitoIA}
       <div class="bloque-ia"><Debrief {campId} ambito={ambitoIA} barco={ref}
@@ -302,6 +303,9 @@
   .meta { margin: 4px 0 0; font-size: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   select { font: 500 14px var(--texto); padding: 3px 6px; border: 1px solid var(--linea); border-radius: 4px; background: var(--panel); color: var(--tinta); }
   .seleccion { display: grid; gap: 4px; }
+  .informe { margin: 8px 0 0; }
+  .informe a { font-size: 14px; padding: 5px 12px; text-decoration: none; display: inline-block; }
+  .informe a::first-letter { text-transform: uppercase; }
   .modos { display: flex; gap: 4px; flex-wrap: wrap; }
   .modos button { font: 600 13px var(--display); padding: 5px 9px; border-radius: 4px; border: 1px solid var(--linea); background: var(--panel); }
   .modos button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
