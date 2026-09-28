@@ -71,3 +71,9 @@ def test_pulir_tiempos():
     assert pulir("perdiste 339 s. y 45 s.") == "perdiste 5 min. 39 s. y 45 s."
     assert pulir("−125 s y 120 segundos") == "−2 min. 5 s. y 2 min."
     assert pulir("en los primeros 90 s. y 3,5 s") == "en los primeros 90 s. y 3,5 s"
+
+
+def test_formatos_del_informe():
+    from fasttack.informe.prueba import con_signo, num, tiempo
+    assert num(1234.5, 1) == "1.234,5" and num(-0.004, 2) == "0,00" and num(-3.25, 1) == "−3,2"
+    assert con_signo(0.69, 2) == "+0,69" and tiempo(339) == "5 min. 39 s." and tiempo(-21, True) == "−21 s."

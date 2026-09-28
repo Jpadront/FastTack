@@ -1,6 +1,6 @@
 [project]
 name = "fasttack"
-version = "0.27.2"
+version = "0.28.0"
 description = "Análisis post-regata de vela con datos de Vakaros RaceSense o archivos .vkx del Atlas 2"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,6 +12,7 @@ dependencies = [
     "pyarrow>=16",
     "qrcode>=7.4",
     "pygeomag>=1.1.0",
+    "fpdf2>=2.8.8",
 ]
 
 [project.scripts]

@@ -1,1 +1,1 @@
-__version__ = "0.27.2"  # «role en contra»; resumen: métrica resaltada en las medias
+__version__ = "0.28.0"  # informe PDF de la prueba: rendimiento y debrief

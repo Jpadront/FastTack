@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -222,6 +222,20 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
             raise HTTPException(422, str(e)) from e
         except ErrorRaceSense as e:
             raise HTTPException(502, str(e)) from e
+
+    @app.get("/api/campeonatos/{camp_id:path}/pruebas/{clave}/informe.pdf")
+    def informe_prueba(camp_id: str, clave: str, barco: str):
+        from ..informe import prueba as informe_prueba_mod
+        try:
+            pdf = informe_prueba_mod.generar(alm, camp_id, clave, barco)
+        except KeyError as e:
+            raise HTTPException(404, "Prueba no encontrada") from e
+        except (ValueError, servicio.PruebaNoAnalizable) as e:
+            raise HTTPException(422, str(e)) from e
+        c = camp_mod.leer(alm, camp_id) or {}
+        n = next((p.get("numero") for p in c.get("pruebas", []) if p["clave"] == clave), None) or clave
+        nombre = f"FastTack_prueba{n}_{barco}.pdf"
+        return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{nombre}"'})
 
     @app.get("/api/campeonatos/{camp_id:path}/resumen")
     def resumen_(camp_id: str, descartes: int | None = None):

@@ -30,6 +30,7 @@ export const api = {
   meteo: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/meteo`),
   pistas: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/pistas`),
   resumen: (c, descartes) => pedir('GET', `/api/campeonatos/${id(c)}/resumen${descartes != null ? '?descartes=' + descartes : ''}`),
+  informePrueba: (c, clave, barco) => `/api/campeonatos/${id(c)}/pruebas/${clave}/informe.pdf?barco=${encodeURIComponent(barco)}`,
   debrief: (c, ambito, barco) => pedir('GET', `/api/campeonatos/${id(c)}/debrief?ambito=${encodeURIComponent(ambito)}&barco=${encodeURIComponent(barco)}`),
   generarDebrief: (c, ambito, barco, texto) => pedir('POST', `/api/campeonatos/${id(c)}/debrief`, { ambito, barco, ...(texto != null ? { texto } : {}) }),
   crearSesion: (nombre, clase) => pedir('POST', '/api/sesiones', { nombre, clase, zona: Intl.DateTimeFormat().resolvedOptions().timeZone }),

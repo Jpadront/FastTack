@@ -371,6 +371,7 @@
           { k: 'gap', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
         ]} />
     {:else if tab.tipo === 'rendimiento'}
+      <p class="informe"><a class="boton claro" href={api.informePrueba(campId, clave, ref)} target="_blank" rel="noopener">Informe PDF · rendimiento y debrief de {vc(ref)}</a></p>
       <GraficoRendimiento {an} {pistas} {sel} {ref} {T} {colores} {nombres} bind:metrica={metricaRend} />
       <Tabla titulo="Medias de la prueba" {ref} {colores} filas={filasRend} ordenInicial="pos" destacada={COLUMNA_METRICA[metricaRend]}
         nota="Pulsa una columna para ordenar. Medias ponderadas por el tiempo de cada tramo con datos. El gráfico de arriba muestra la evolución de cada métrica a lo largo de la prueba."
@@ -396,6 +397,7 @@
         <button class:activo={!cronica} aria-pressed={!cronica} onclick={() => (cronica = false)}>Debrief de {vc(ref)}</button>
         <button class:activo={cronica} aria-pressed={cronica} onclick={() => (cronica = true)}>Crónica de la prueba</button>
       </div>
+      {#if !cronica}<p class="informe"><a class="boton claro" href={api.informePrueba(campId, clave, ref)} target="_blank" rel="noopener">Informe PDF · rendimiento y debrief de {vc(ref)}</a></p>{/if}
       {#key cronica}
         <Debrief {campId} ambito={cronica ? 'cronica:' + clave : clave} barco={ref}
           titulo={cronica ? `Crónica de la prueba ${p.numero ?? ''} · IA` : `Debrief de la prueba ${p.numero ?? ''} · ${vc(ref)} · IA`} />
@@ -440,6 +442,8 @@
   .zona.mia { outline: 2px solid color-mix(in srgb, var(--yo) 60%, transparent); }
   .zona i { font-style: normal; font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-2); }
   .nota-z { font-size: 13px; color: var(--tinta-3); margin: 6px 0 0; }
+  .informe { margin: 0 0 8px; }
+  .informe a { font-size: 14px; padding: 5px 12px; text-decoration: none; display: inline-block; }
   .modos-ia { display: flex; gap: 6px; margin-bottom: 8px; }
   .modos-ia button { font: 600 14px var(--display); padding: 5px 12px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); cursor: pointer; }
   .modos-ia button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
