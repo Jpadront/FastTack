@@ -1,1 +1,1 @@
-__version__ = "0.29.0"  # informe PDF del campeonato y del día
+__version__ = "0.29.1"  # general calculada: solo los barcos comparados

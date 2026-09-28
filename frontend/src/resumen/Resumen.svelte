@@ -72,7 +72,8 @@
 
   // ---------- general
   const filasGeneral = $derived.by(() => {
-    const visibles = verFlota ? general : general.filter((f) => comparados.includes(f.vela) || f.puesto <= 10);
+    // solo los barcos con los que comparas (con «Solo mi barco», el top 10 para tener contexto)
+    const visibles = verFlota ? general : general.filter((f) => comparados.includes(f.vela) || (comparar === 'solo' && f.puesto <= 10));
     return visibles.map((f) => ({ vela: f.vela, puesto: f.puesto, neto: f.neto, total: f.total,
       ...Object.fromEntries(f.puntos.map((p, k) => [`p${k}`, p])) }));
   });
@@ -176,7 +177,7 @@
   <div id="r-general" class="ancla"></div>
   <Tabla titulo="General calculada" {ref} colores={colores} filas={filasGeneral} ordenInicial="puesto" columnas={columnasGeneral}
     nota={`Puntuación baja sin penalizaciones ni decisiones del jurado (DSQ, redress…): puede diferir de la oficial. OCS (solo con la lista del comité fiable) y sin llegada (DNF) = ${res.inscritos + 1} puntos. Entre paréntesis, los descartes. «rec.»: llegadas reconstruidas desde la telemetría. Empates: RRS A8.`} />
-  <button class="boton claro mas" onclick={() => (verFlota = !verFlota)}>{verFlota ? 'Ver solo el top 10 y los comparados' : `Ver toda la flota (${general.length})`}</button>
+  <button class="boton claro mas" onclick={() => (verFlota = !verFlota)}>{verFlota ? (comparar === 'solo' ? 'Ver solo el top 10 y mi barco' : 'Ver solo los barcos comparados') : `Ver toda la flota (${general.length})`}</button>
 
   <div id="r-puestos" class="ancla"></div>
   <section class="tarjeta bloque">
