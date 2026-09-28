@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from . import roles
 from .geo import a_ejes, dif
 from .trazas import Traza
 
@@ -23,9 +24,14 @@ MARGEN_RODEO_MS = 20_000
 MARGEN_MANIOBRA_MS = 10_000
 VENTANA_MANIOBRA_MS = 40_000
 CENTRO_M = 50.0
+ROLON_MIN_MS = 20_000        # en la amura desfavorecida al menos 20 s seguidos = ha entrado un rolón
+HUECO_ROLON_MS = 15_000      # huecos (maniobras, datos) que no cortan un rolón
 
 
-def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float, maniobras: list) -> dict | None:
+def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float, maniobras: list,
+          viento_local=None) -> dict | None:
+    """viento_local: (ts, TWD) del viento en el sitio del barco (roles.viento_local); sin él, la TWD
+    de los cortes, igual en todo el campo."""
     i = tr.tramo(e + MARGEN_RODEO_MS, s - MARGEN_RODEO_MS)
     if len(i) < 10:
         return None
@@ -35,7 +41,7 @@ def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float
     i = i[ok]
     if len(i) < 10:
         return None
-    twd = vt.twd_en(tr.ts[i])
+    twd = roles.twd_en(viento_local, tr.ts[i], vt)
     ref = twd if ceñida else (twd + 180) % 360            # dirección a la que se avanza con viento cuadrado
     rel = dif(tr.cog[i] - ref)
     off = float(np.median(np.abs(rel)))                    # medio ángulo entre amuras del barco
@@ -68,7 +74,32 @@ def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float
             en_contra += 1
         else:
             neutras += 1
+    # Reacción a los rolones: cuando el barco queda en la amura desfavorecida al menos ROLON_MIN_MS
+    # seguidos, cuánto tarda en virar (o trasluchar). Sin maniobra antes del final del tramo: sin responder.
+    t_ok = tr.ts[i][util]
+    malo = ~en_fav[util]
+    rolones, respuestas, sin_resp = 0, [], 0
+    k = 0
+    mts = sorted(m.t for m in maniobras)
+    while k < len(t_ok):
+        if not malo[k]:
+            k += 1
+            continue
+        j = k
+        while j + 1 < len(t_ok) and malo[j + 1] and t_ok[j + 1] - t_ok[j] <= HUECO_ROLON_MS:
+            j += 1
+        if t_ok[j] - t_ok[k] >= ROLON_MIN_MS:
+            rolones += 1
+            sig = next((m for m in mts if m >= t_ok[k]), None)
+            if sig is not None and sig <= t_ok[j] + VENTANA_MANIOBRA_MS:
+                respuestas.append((sig - t_ok[k]) / 1000)
+            else:
+                sin_resp += 1
+        k = j + 1
     out = {"amura_favorecida_pct": None if fav_pct is None else round(fav_pct, 0),
+           "rolones": rolones, "rolones_sin_responder": sin_resp,
+           "respuesta_a_rolones_mediana_s": round(float(np.median(respuestas))) if respuestas else None,
+           "viento": "local" if viento_local else "cortes",
            "tiempo_en_amura_desfavorecida_s": round(float(dt[util & ~en_fav].sum())),
            "tiempo_neutro_pct": round(float(dt[neutro].sum() / dt.sum() * 100), 0) if dt.sum() > 0 else None,
            "maniobras_a_favor_de_la_rolada": a_favor, "maniobras_en_contra_de_la_rolada": en_contra,

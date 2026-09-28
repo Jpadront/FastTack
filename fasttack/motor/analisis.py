@@ -18,12 +18,13 @@ from . import corriente as corr
 from . import trafico as traf
 from . import tactica as tac
 from . import rendimiento as rend
+from . import roles as viento_loc_mod
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.19.0"
+VERSION = "0.20.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -184,6 +185,9 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         vt, ceñida = t["viento"], t["ceñida"]
         twas = [c.twa_flota for c in vt.cortes if c.twa_flota]
         twa_flota = float(np.median(twas)) if twas else None
+        # Roles locales: el viento en el sitio de cada barco, sacado del rumbo de la flota (roles.py)
+        viento_loc = viento_loc_mod.viento_local(trazas, dict(t["en_tramo"]), vt,
+                                        {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, ceñida)
         filas = {}
         ventanas = {}
         rejilla = None
@@ -258,7 +262,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             lay.pop("_cono", None)
             lay.pop("_tp", None)
             f["tactica"] = tac.tramo(tr, e, s, vt, ceñida, marca if marca is not None else _punto(fin_ctrl, s),
-                                     t["p_ini"], t["eje"], mans)
+                                     t["p_ini"], t["eje"], mans, viento_loc.get(v))
             f["puerta"] = paso_fin.puerta if paso_fin else None
             man_t = [m.t for m in mans]
             f["vmg_estable"] = _r(rend.vmg_estable(tr, e, s, vt, man_t), 3)

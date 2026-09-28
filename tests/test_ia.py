@@ -64,3 +64,10 @@ def test_validador_punto_de_miles():
     datos = {"parcial_s": 1533, "vmg_kn": 5.44}
     assert no_verificadas("Parcial de 1.533 s a 5,44 kn.", datos) == []
     assert no_verificadas("Parcial de 1.534 s.", datos) == ["1.534 s"]
+
+
+def test_pulir_tiempos():
+    from fasttack.ia.debrief import pulir
+    assert pulir("perdiste 339 s. y 45 s.") == "perdiste 5 min. 39 s. y 45 s."
+    assert pulir("−125 s y 120 segundos") == "−2 min. 5 s. y 2 min."
+    assert pulir("en los primeros 90 s. y 3,5 s") == "en los primeros 90 s. y 3,5 s"

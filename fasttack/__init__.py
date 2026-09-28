@@ -1,1 +1,1 @@
-__version__ = "0.26.0"  # frente a tus vecinos (sin polar), modo bajo, unidades con punto, min. y s., tú
+__version__ = "0.27.0"  # roles locales: viento en el sitio de cada barco sacado del rumbo de la flota

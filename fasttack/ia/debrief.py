@@ -29,7 +29,7 @@ Reglas estrictas:
 - OCS: solo el que da el comité («ocs_segun_el_comite»). La distancia a la línea en la señal es orientativa (GPS en el palo, línea estimada): no digas que el barco estaba pasado si el comité no lo marcó.
 - En las laylines sobrepasadas distingue el motivo que dan los datos: por tráfico (no podía virar, o la layline ya estaba ocupada) o por cálculo. Solo las de cálculo son un error de estimación; las de tráfico son una decisión táctica o forzada.
 - Cuando hables de un tramo, nómbralo siempre con su nombre concreto y la prueba («Popa 2 de la prueba 3»). Si la cifra es una media de varios tramos («vmg_media_de_las_popas…»), dilo así («media de las dos popas»); no la atribuyas a un tramo.
-- Cita las cifras tal cual o redondeadas, con coma decimal, un espacio antes de la unidad y un punto detrás de las unidades abreviadas, que ayuda a leer (4,06 kn.; 87 m.; 54 s.; 10,5°; 66 %). Los tiempos de hasta 60 s., en segundos (54 s.); los de más de 60 s., en minutos y segundos (1 min. 25 s.). La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
+- Cita las cifras tal cual o redondeadas, con coma decimal, un espacio antes de la unidad y un punto detrás de las unidades abreviadas, que ayuda a leer (4,06 kn.; 87 m.; 54 s.; 10,5°; 66 %). Los tiempos de hasta 60 s., en segundos (54 s.); los de más de 60 s., SIEMPRE en minutos y segundos: pásalos tú (339 s. → 5 min. 39 s.; 181 s. → 3 min. 1 s.); esta conversión no es una cifra nueva y es obligatoria. La unidad de cada campo va en su nombre: _kn, _m, _s, _grados (°), _pct (%).
 - La corriente es ESTIMADA y tiene un nivel de confianza: si es baja, no la uses para explicar resultados. Úsala para explicar laylines o la ventaja de un lado solo si la confianza es alta o media.
 - Todo lo relativo al viento, VMG, TWA, maniobras, laylines y barco fantasma es ESTIMADO por FastTack a partir del GPS de los barcos (no hay anemómetro): no lo presentes como medido ni lo atribuyas a RaceSense. Basta con decirlo una vez.
 - Los huecos de telemetría y la calidad de datos son limitaciones de RaceSense, no errores de la tripulación: menciónalos solo como límite del análisis.
@@ -52,7 +52,8 @@ MEJORA = """
 Eres el entrenador del equipo. El objetivo es mejorar: céntrate en lo que más tiempo costó y en lo que hay que entrenar, no en contarlo todo. Sé breve y concreto.
 - Ordena por impacto con «donde_se_perdio_la_prueba» (segundos frente al top 5 por salida, velocidad, maniobras y táctica y resto) y, en el día, con «mejores_tramos» y «peores_tramos» (vienen ordenados por el motor).
 - Cada punto nombra su tramo y prueba concretos y la causa que muestran los datos (salida y posicionamiento, velocidad y escora frente a la óptima, maniobras con giro, aceleración y ángulo de salida, táctica con roladas, amura favorecida, lado y laylines).
-- Roles: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (no como un hecho medido): táctico → salida, lado, roladas, laylines y puertas; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora y aceleración tras las maniobras; proa → maniobras y rodeos.
+- Roles del viento (roladas): en «tactica», el viento de cada momento está sacado del rumbo de los barcos cercanos (roles locales, estimado). Di si navegaste en la amura favorecida, si viraste en el role y cuánto tardaste en responder a los rolones, siempre frente al top 5; si el top 5 no lo hizo mejor, no lo presentes como la causa del resultado.
+- Puestos a bordo: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (no como un hecho medido): táctico → salida, lado, roladas, laylines y puertas; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora y aceleración tras las maniobras; proa → maniobras y rodeos.
 - En las maniobras, el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa al revés: más bajo tarda en acelerar y más alto no baja lo suficiente.
 - Vocabulario: en popa se dice «bajo» (modo bajo, navegar más bajo), nunca «profundo».- Si hay «reglaje_apuntado», relaciónalo solo como hipótesis.
 - Escora óptima = la media de la escora de los 5 barcos con más VMG (estimada). Menciónala solo si el barco se aparta claramente (más de 2°) o pasa poco tiempo cerca de ella.
@@ -66,7 +67,7 @@ PRUEBA = COMUN + MEJORA + """
 ## Lo que funcionó
 (lista de 1–2 puntos)
 ## Qué trabajar
-(lista numerada de 3 prioridades concretas, cada una con el rol responsable entre paréntesis)
+(lista numerada de 3 prioridades concretas, cada una con el puesto a bordo responsable entre paréntesis)
 
 Máximo 350 palabras.
 """
@@ -79,7 +80,7 @@ DIA = COMUN + MEJORA + """
 ## Lo que funcionó
 (lista de 2 puntos, con su tramo y prueba)
 ## Qué trabajar
-(lista numerada de 3 prioridades concretas para el próximo día; cada una con el rol responsable entre paréntesis)
+(lista numerada de 3 prioridades concretas para el próximo día; cada una con el puesto a bordo responsable entre paréntesis)
 
 Máximo 450 palabras.
 """
@@ -113,7 +114,7 @@ Para la velocidad usa «vmg_frente_al_top5_prueba_a_prueba» (en cuántas prueba
 ## Lo que funcionó
 (lista de 1–2 puntos; solo lo que los datos muestran claramente mejor o igual que el top 5)
 ## Qué entrenar
-(lista numerada de 3 a 4 ejercicios concretos, ordenados por impacto, cada uno con el rol responsable entre paréntesis)
+(lista numerada de 3 a 4 ejercicios concretos, ordenados por impacto, cada uno con el puesto a bordo responsable entre paréntesis)
 
 Máximo 500 palabras.
 """
@@ -169,7 +170,22 @@ def leer(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict | None:
     return d
 
 
+_SEGUNDOS = re.compile(r"(?<!primeros )(?<![\d.,:])([-−+]?)(\d{2,5})\s*(?:s|seg|segundos)\b\.?")
+
+
+def pulir(texto: str) -> str:
+    """Tiempos de más de 60 s en minutos y segundos («339 s.» → «5 min. 39 s.»): la IA no siempre lo hace."""
+    def a_min(m):
+        n = int(m[2])
+        if n <= 60:
+            return m[0]
+        mi, s = divmod(n, 60)
+        return f"{m[1]}{mi} min." + (f" {s} s." if s else "")
+    return _SEGUNDOS.sub(a_min, texto)
+
+
 def guardar(alm: Almacen, camp_id: str, ambito: str, barco: str, datos: dict, texto: str, origen: str) -> dict:
+    texto = pulir(texto)
     avisos = no_verificadas(texto, datos)
     alm.sql("insert into debrief (campeonato, ambito, barco, huella, texto, origen, avisos, creado_en) "
             "values (?, ?, ?, ?, ?, ?, ?, ?) on conflict(campeonato, ambito, barco) do update set "

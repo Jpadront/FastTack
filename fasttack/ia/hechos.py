@@ -133,16 +133,22 @@ def _tactica(tac, top5):
     t5 = [x for x in top5 if x]
     out = {
         "amura_favorecida_pct": tac.get("amura_favorecida_pct"),
-        "amura_favorecida_significa": "tiempo navegando en la amura que apuntaba más a la baliza con la rolada de cada momento",
+        "amura_favorecida_significa": ("tiempo navegando en la amura que apuntaba más a la baliza con el viento de cada momento "
+                                       "en el sitio del barco (roles locales, sacados del rumbo de los barcos cercanos)"),
         "tiempo_en_la_amura_desfavorecida_s": tac.get("tiempo_en_amura_desfavorecida_s"),
         "maniobras_a_favor_de_la_rolada": tac.get("maniobras_a_favor_de_la_rolada"),
         "maniobras_en_contra_de_la_rolada": tac.get("maniobras_en_contra_de_la_rolada"),
+        "rolones": tac.get("rolones"), "rolones_sin_responder": tac.get("rolones_sin_responder"),
+        "respuesta_a_los_rolones_mediana_s": tac.get("respuesta_a_rolones_mediana_s"),
+        "rolones_significa": ("rolón = al menos 20 s seguidos en la amura desfavorecida; respuesta = segundos hasta virar "
+                              "o trasluchar; viento local sacado del rumbo de los barcos cercanos (estimado)"),
         "lado_del_campo": tac.get("lado"), "tiempo_a_la_derecha_pct": tac.get("derecha_pct"),
         "separacion_maxima_del_eje_m": tac.get("separacion_maxima_m"),
     }
     if len(t5) >= 2:
         out["top5_amura_favorecida_mediana_pct"] = _r(_mediana([x.get("amura_favorecida_pct") for x in t5]))
         out["top5_tiempo_a_la_derecha_mediano_pct"] = _r(_mediana([x.get("derecha_pct") for x in t5]))
+        out["top5_respuesta_a_los_rolones_mediana_s"] = _r(_mediana([x.get("respuesta_a_rolones_mediana_s") for x in t5]))
         lados = [x.get("lado") for x in t5 if x.get("lado")]
         out["top5_lados"] = {l: lados.count(l) for l in ("izquierda", "centro", "derecha") if lados.count(l)}
     return out

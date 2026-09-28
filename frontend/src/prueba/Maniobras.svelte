@@ -2,7 +2,7 @@
   // Maniobras del barco de referencia en un tramo, fase a fase, frente al top 5 de la prueba,
   // y cómo jugó las roladas y el lado del campo (táctica).
   import Nota from '../Nota.svelte';
-  import { num, fmtT, mediana } from './datos.js';
+  import { num, fmtT, mediana, tiempo } from './datos.js';
 
   let { tramo, ref, nombreRef, top5 = [], refTop5 = null, senalMs } = $props();
   const f = $derived(tramo.barcos[ref] || {});
@@ -10,6 +10,7 @@
   const tac = $derived(f.tactica);
   const tac5 = $derived(top5.map((v) => tramo.barcos[v]?.tactica).filter(Boolean));
   const fav5 = $derived(mediana(tac5.map((t) => t.amura_favorecida_pct).filter((x) => x != null)));
+  const resp5 = $derived(mediana(tac5.map((t) => t.respuesta_a_rolones_mediana_s).filter((x) => x != null)));
   const tipo = $derived(tramo.tipo === 'ceñida' ? 'virada' : 'trasluchada');
   const n = (v, d = 1, u = '') => (v == null ? '—' : num(v, d) + u);
   const corta = (t) => (t || '').split(' que ')[0].split(':')[0].replace(' (alta)', '').replace(' (baja)', '');
@@ -56,12 +57,14 @@
     {#if tac}
       <dl class="datos">
         <dt>En la amura favorecida</dt><dd class="num">{n(tac.amura_favorecida_pct, 0, ' %')} <span class="tenue">· top 5 {n(fav5, 0, ' %')}</span></dd>
-        <dt>En la desfavorecida</dt><dd class="num">{n(tac.tiempo_en_amura_desfavorecida_s, 0, ' s.')}</dd>
+        <dt>En la desfavorecida</dt><dd class="num">{tiempo(tac.tiempo_en_amura_desfavorecida_s)}</dd>
         <dt>{tipo === 'virada' ? 'Viradas' : 'Trasluchadas'} con la rolada</dt><dd class="num">{tac.maniobras_a_favor_de_la_rolada} a favor · {tac.maniobras_en_contra_de_la_rolada} en contra · {tac.maniobras_neutras} neutras</dd>
+        {#if tac.rolones != null}<dt>Rolones</dt><dd class="num">{tac.rolones}{#if tac.rolones} · {tac.rolones_sin_responder} sin responder · respondes en {tiempo(tac.respuesta_a_rolones_mediana_s)}{/if} <span class="tenue">· top 5 en {tiempo(resp5)}</span></dd>{/if}
         <dt>Lado del campo</dt><dd>{tac.lado ?? '—'} <span class="tenue num">({n(tac.derecha_pct, 0, ' %')} a la derecha, hasta {n(tac.separacion_maxima_m, 0, ' m.')} del eje)</span></dd>
       </dl>
       <Nota>
-        <p><b>Amura favorecida</b>: en cada momento, de las dos amuras posibles con la TWD de ese momento, la que apunta más cerca de la baliza. Navegar en la otra es ir con la rolada en contra. Con la TWD a menos de 3° de la dirección de la baliza, las dos valen igual (no cuenta). Maniobra <b>a favor</b>: pasa de la desfavorecida a la favorecida (virar en el rolón); <b>en contra</b>: al revés. Lado: mirando a barlovento, respecto a la recta entre las balizas del tramo. Depende del viento reconstruido de la flota, que no ve las roladas locales: es orientativo.</p>
+        <p><b>Viento de cada momento, en tu sitio</b>: un barco navegando estable mantiene casi constante su ángulo real al viento, así que su rumbo mide los roles. Cada 5 s., el rumbo de cada barco menos su ángulo habitual da una muestra de viento; el viento en tu sitio es la media de las de los barcos a menos de 300 m. (tú incluido) en ±30 s. Se hace dos veces: la segunda, con el ángulo habitual medido frente a ese viento local.</p>
+        <p><b>Amura favorecida</b>: de las dos amuras posibles con ese viento, la que apunta más cerca de la baliza. Navegar en la otra es ir con el role en contra. Con el viento a menos de 3° de la dirección de la baliza, las dos valen igual (no cuenta). Maniobra <b>a favor</b>: pasa de la desfavorecida a la favorecida (virar en el rolón); <b>en contra</b>: al revés. <b>Rolón</b>: al menos 20 s. seguidos en la amura desfavorecida; la respuesta es lo que tardas en virar (o trasluchar). Lado: mirando a barlovento, respecto a la recta entre las balizas del tramo. Es orientativo: en el Mundial (20–25 kn.) el tiempo en la amura favorecida no explicaba quién fue más rápido en cada ceñida; mandaron la velocidad y la presión.</p>
       </Nota>
     {:else}
       <p class="tenue">Sin datos suficientes en este tramo.</p>
