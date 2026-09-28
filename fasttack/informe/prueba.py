@@ -180,8 +180,7 @@ class _PDF(FPDF):
 MEDIAS = (("VMG en ceñida", "vmg_ceñida", "kn", 2, True), ("VMG en popa", "vmg_popa", "kn", 2, True),
           ("SOG en ceñida", "sog_ceñida", "kn", 2, True), ("SOG en popa", "sog_popa", "kn", 2, True),
           ("TWA en ceñida", "twa_ceñida", "grados", 1, None), ("TWA en popa", "twa_popa", "grados", 1, None),
-          ("Escora en ceñida", "escora_ceñida", "grados", 0, None), ("Escora en popa", "escora_popa", "grados", 0, None),
-          ("Pérdida por virada", "perdida_virada", "m", 0, False), ("Pérdida por trasluchada", "perdida_trasluchada", "m", 0, False))
+          ("Escora en ceñida", "escora_ceñida", "grados", 0, None), ("Escora en popa", "escora_popa", "grados", 0, None))
 UNIDAD = {"kn": " kn.", "grados": "°", "m": " m."}
 
 
@@ -231,6 +230,46 @@ def _markdown(pdf: _PDF, texto: str):
         else:
             pdf.multi_cell(0, 5.2, cuerpo, new_x="LMARGIN", new_y="NEXT", markdown=True)
         pdf.ln(0.6)
+
+
+def _maniobras(pdf: _PDF, tramos: list[dict]):
+    """Fases de las maniobras de cada tramo tal como las da el motor (mediana de las medidas del tramo)
+    frente a la referencia del top 5 de la prueba: los mismos datos que la web y el debrief."""
+    filas, col = [], []
+    for t in tramos:
+        d = t.get("maniobras_detalle")
+        if not d:
+            continue
+        def par(k, k5, fmt):
+            yo, t5 = d.get(k), d.get(k5)
+            return (fmt(yo) if yo is not None else "—") + " / " + (fmt(t5) if t5 is not None else "—"), yo, t5
+        seg = lambda x: f"{num(x, 1)} s."
+        fila, c = [t["nombre"], f"{d.get('medidas', 0)} de {t.get('maniobras', '—')}"], [None, None]
+        for k, k5, fmt in (("perdida_mediana_s", "top5_perdida_mediana_s", seg),
+                           ("duracion_del_giro_mediana_s", "top5_duracion_del_giro_mediana_s", seg),
+                           ("tiempo_en_acelerar_mediano_s", "top5_tiempo_en_acelerar_mediano_s", seg),
+                           ("caida_de_velocidad_mediana_pct", "top5_caida_de_velocidad_mediana_pct", lambda x: f"{num(x, 0)} %")):
+            txt, yo, t5 = par(k, k5, fmt)
+            fila.append(txt)
+            c.append(None if yo is None or t5 is None or abs(yo - t5) < 0.1 * max(abs(t5), 1) else ROJO if yo > t5 else AZUL)
+        sal = d.get("angulo_de_salida_frente_al_top5_grados")
+        fila.append("—" if sal is None else con_signo(sal, 1) + "°")
+        c.append(None if sal is None or abs(sal) < 2 else ROJO)
+        filas.append(fila)
+        col.append(c)
+    if not filas:
+        return
+    pdf.seccion("Maniobras", "Por tramo: mediana de las maniobras medidas (tú / top 5 de la prueba). Pérdida frente a lo que "
+                "habría avanzado sin maniobrar con la VMG de cada amura; giro; tiempo hasta el 95 % de la velocidad estable; "
+                "caída de velocidad; ángulo de salida frente al del top 5 (en ceñida + = más abierta, pierde altura, y − = más "
+                "cerrada, tarda en acelerar; en popa + = más baja y − = más alta). No se miden las encadenadas, las de más de 115° "
+                "ni las que caen en huecos de datos.")
+    pdf.tabla(["Tramo", "Medidas", "Pérdida", "Giro", "Aceleración", "Caída vel.", "Salida"], filas,
+              [20, 18, 32, 30, 32, 28, 18], ["L", "R", "R", "R", "R", "R", "R"], col, tam=8)
+    for t in tramos:
+        sal = (t.get("maniobras_detalle") or {}).get("salidas")
+        if sal:
+            pdf.texto(f"**{t['nombre']}**, salidas: " + " · ".join(f"{c} {x}" for x, c in sal.items()) + ".", tam=8.5, color=TINTA2, alto=4.3)
 
 
 def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
@@ -335,6 +374,9 @@ def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
             pdf.ln(1.5)
             for m, x in pq:
                 pdf.texto(f"**VMG en {m}:** {_por_que(x)}.", tam=9.5, alto=5)
+
+    # Maniobras: fases de cada virada y trasluchada (motor/tramos.py, analizar_maniobra) frente al top 5
+    _maniobras(pdf, [t for t in h.get("tramos", []) if not t.get("sin_datos_del_barco")])
 
     # Tramo a tramo
     tramos = [t for t in h.get("tramos", []) if not t.get("sin_datos_del_barco")]

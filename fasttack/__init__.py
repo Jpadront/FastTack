@@ -1,1 +1,1 @@
-__version__ = "0.29.1"  # general calculada: solo los barcos comparados
+__version__ = "0.29.2"  # informe PDF: maniobras por fases, con los datos del motor
