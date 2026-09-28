@@ -1,1 +1,1 @@
-__version__ = "0.25.0"  # barco fantasma en el mapa: camino perfecto que llega a la baliza
+__version__ = "0.25.1"  # mapa: «Líder» sin repetir la vela

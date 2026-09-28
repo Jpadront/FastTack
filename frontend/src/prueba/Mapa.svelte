@@ -128,7 +128,9 @@
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(texto, X, Y); ctx.fillStyle = '#10222b'; ctx.fillText(texto, X, Y);
     };
     const [LX, LY] = px(L.x, L.y);
-    etiqueta(`Líder: ${velaCorta(L.lider, nombres)}`, LX + 10, LY - 12);
+    // si el barco ya lleva su nombre al lado, basta con «Líder»
+    const conNombre = sel.has(L.lider) && (sel.size <= 20 || L.lider === ref);
+    etiqueta(conNombre ? 'Líder' : `Líder: ${velaCorta(L.lider, nombres)}`, LX + 10, LY - 12);
     const p = L.pos[ref];
     if (p && L.lider !== ref) {
       linea(p.x, p.y, [6, 5], colorBarco(ref, ref), 1.5);
