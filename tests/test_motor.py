@@ -87,10 +87,33 @@ def test_layline_sobrepasada_y_ok():
 
 def test_fantasma_sin_rolada_es_el_zigzag_teorico():
     vt = viento_fijo(twd=0.0)
-    assert tm.fantasma(1000.0, vt, 0.0, 40.0) == pytest.approx(1000 / math.cos(math.radians(40)), abs=0.5)
-    # con rolada de 10° en todos los cortes, el fantasma aprovecha la amura favorecida
-    vt2 = viento_fijo(twd=10.0)
-    assert tm.fantasma(1000.0, vt2, 0.0, 40.0) < 1000 / math.cos(math.radians(40))
+    f = tm.fantasma(1000.0, vt, 0.0, 40.0, (0.0, 0.0))
+    assert f["m"] == pytest.approx(1000 / math.cos(math.radians(40)), abs=0.5)
+    # el camino acaba en la baliza (0, 1000) y su tiempo va a la SOG mediana (6 kn)
+    assert f["camino"][-1][:2] == pytest.approx([0.0, 1000.0], abs=0.5)
+    assert f["camino"][-1][2] == pytest.approx(f["m"] / (6 * 1852 / 3600), abs=1)
+    # viento rolado 10° todo el tramo: dos bordos (−30° y +50° con el eje), llegando a la baliza
+    f2 = tm.fantasma(1000.0, viento_fijo(twd=10.0), 0.0, 40.0, (0.0, 0.0))
+    fl = math.tan(math.radians(50)) / (math.tan(math.radians(50)) + math.tan(math.radians(30)))
+    assert f2["m"] == pytest.approx(1000 * (fl / math.cos(math.radians(30)) + (1 - fl) / math.cos(math.radians(50))), abs=0.5)
+    assert f2["camino"][-1][:2] == pytest.approx([0.0, 1000.0], abs=0.5)
+
+
+def test_fantasma_aprovecha_las_roladas():
+    # rolada oscilante ±10°: navega en la amura favorecida de cada momento y recorre menos que sin roladas
+    vt = viento_fijo(twd=0.0)
+    for k, c in enumerate(vt.cortes):
+        c.twd = 10.0 if k < 5 else 350.0
+    f = tm.fantasma(1000.0, vt, 0.0, 40.0, (0.0, 0.0))
+    assert f["m"] < 1000 / math.cos(math.radians(40)) - 20
+    assert f["camino"][-1][:2] == pytest.approx([0.0, 1000.0], abs=0.5)
+    # con el viento rolado a la derecha (10°) va en la amura de −30° con el eje: hacia la izquierda
+    assert f["camino"][1][0] < 0
+
+
+def test_fantasma_va_derecho_si_alcanza_la_baliza():
+    f = tm.fantasma(1000.0, viento_fijo(twd=60.0), 0.0, 40.0, (0.0, 0.0))
+    assert f["m"] == pytest.approx(1000.0, abs=0.5) and len(f["camino"]) == 2
 
 
 def test_fases_de_rolada():

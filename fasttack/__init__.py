@@ -1,1 +1,1 @@
-__version__ = "0.24.3"  # vuelve el gráfico de escora (con la óptima de los 5 con más VMG)
+__version__ = "0.25.0"  # barco fantasma en el mapa: camino perfecto que llega a la baliza

@@ -23,7 +23,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.17.3"
+VERSION = "0.18.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -282,7 +282,8 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         buenas = [f for f in filas.values() if f["twa"] is not None]
         med_twa = float(np.median([f["twa"] for f in buenas])) if buenas else None
         med_sog = float(np.median([f["sog"] for f in buenas])) if buenas else None
-        fant = tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota)
+        fant_d = tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"])
+        fant = fant_d["m"] if fant_d else None
         for f in filas.values():
             f["modo"] = tm.modo(f["twa"], f["sog"], med_twa, med_sog, ceñida) if buenas else None
             if fant and f["distancia_m"]:
@@ -353,6 +354,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             "fases_rolada": fr,
             "fases_presion": fp,
             "fantasma_m": fant,
+            "fantasma_camino": (fant_d or {}).get("camino"),
             "barcos": filas,
             "maniobras": {v: [{"t": m.t, "tipo": m.tipo, "perdida_m": m.perdida_m, **({"detalle": m.detalle} if m.detalle else {})} for m in ms]
                           for v, ms in man_por_tramo[t["id"]].items()},

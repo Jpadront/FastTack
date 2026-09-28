@@ -375,27 +375,91 @@ def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, c
     return "VMG"
 
 
-def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: float | None) -> float | None:
-    """Distancia del barco fantasma: recorre el tramo siempre en la amura favorecida por la rolada
-    de cada corte. En el corte k avanza largo/10 a lo largo del eje y navega (largo/10) / cos(a),
-    con a = ángulo con el eje del rumbo sobre el fondo de la amura favorecida (el de la flota en ese
-    corte, que incluye la corriente). Sin rumbos por amura: a = α − |δk|, con α el ángulo de la flota
-    y δk = TWD del corte − rumbo del eje (en popa, con la dirección del viento + 180)."""
-    if not twa_flota or not largo_m:
+def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: float | None,
+             p_ini: tuple[float, float] | None = None) -> dict | None:
+    """Barco fantasma: el camino más corto de la baliza de salida a la de llegada conociendo de
+    antemano las roladas del tramo (viento igual en todo el campo), con los rumbos sobre el fondo de
+    la flota en cada corte (incluyen la corriente; sin ellos, TWD ± TWA de la flota).
+
+    El tramo se parte en tantos trozos iguales a lo largo del eje como cortes de viento. En el trozo k
+    el fantasma navega con el viento del corte k:
+    - si el eje queda fuera de la zona sin rumbo entre las dos amuras (ceñida) o del ángulo entre las
+      dos trasluchadas (popa), va derecho;
+    - si no, reparte el avance del trozo entre las dos amuras (fracción f en la izquierda): recorre
+      f·d/cos a_izq + (1−f)·d/cos a_der y se desplaza de lado f·d·tan a_izq + (1−f)·d·tan a_der.
+    Se elige el reparto que minimiza la distancia total con la condición de acabar en la baliza
+    (desplazamiento lateral total 0): un problema lineal con una sola restricción, que se resuelve
+    exactamente llenando primero los trozos en que cambiar de amura cuesta menos por metro lateral.
+    Así el fantasma aprovecha cada rolada y llega a la baliza, como tendría que hacer un barco.
+
+    Devuelve {"m": distancia, "camino": [[x, y, s], ...]} con s = segundos desde el inicio a la SOG
+    mediana de la flota en cada corte (el camino solo si se da p_ini)."""
+    if not twa_flota or not largo_m or not viento.cortes:
         return None
+    n = len(viento.cortes)
+    d = largo_m / n
     alpha = twa_flota if viento.ceñida else 180 - twa_flota
-    total = 0.0
+    trozos = []   # (ángulo izq, ángulo der) con el eje, o None si va derecho
     for c in viento.cortes:
         if c.rumbos is not None:
-            # rumbos sobre el fondo de las dos amuras (con la corriente, como las laylines): el fantasma
-            # navega en la que forma menos ángulo con el eje del tramo
-            a = min(abs(float(dif(c.rumbos[0] - eje_tramo))), abs(float(dif(c.rumbos[1] - eje_tramo))))
-            a = min(a, 89.0)
+            a = sorted(float(dif(r - eje_tramo)) for r in c.rumbos)
         else:
             ref = c.twd if viento.ceñida else (c.twd + 180) % 360
-            a = alpha - min(abs(float(dif(ref - eje_tramo))), alpha - 1)
-        total += (largo_m / len(viento.cortes)) / math.cos(math.radians(a))
-    return round(total, 1)
+            a = sorted(float(dif(ref + sg * alpha - eje_tramo)) for sg in (-1, 1))
+        # la zona sin rumbo (o de popa demasiado cerrada) es el arco entre las dos amuras que contiene
+        # el viento (o el viento + 180 en popa): si es el arco corto (< 180°) y contiene el eje, hay que bordear
+        trozos.append((max(a[0], -89.0), min(a[1], 89.0)) if a[0] < 0 < a[1] and a[1] - a[0] < 180 else None)
+    # empezando todo en la amura derecha, cuánto hay que corregir hacia la izquierda
+    lat0 = sum(d * math.tan(math.radians(t[1])) for t in trozos if t)
+    f = [0.0] * n
+    opciones = []
+    for k, t in enumerate(trozos):
+        if t:
+            dy = d * (math.tan(math.radians(t[1])) - math.tan(math.radians(t[0])))   # > 0
+            dc = d * (1 / math.cos(math.radians(t[0])) - 1 / math.cos(math.radians(t[1])))
+            opciones.append((dc / dy, k, dy))
+    falta = lat0
+    for _, k, dy in sorted(opciones):
+        if falta <= 1e-9:
+            break
+        f[k] = min(1.0, falta / dy)
+        falta -= f[k] * dy
+    total, piernas = 0.0, []   # (ángulo con el eje, avance a lo largo del eje, corte)
+    lado = None
+    for k, t in enumerate(trozos):
+        if not t:
+            piernas.append((0.0, d, k))
+            total += d
+            continue
+        partes = [(t[0], f[k] * d), (t[1], (1 - f[k]) * d)]
+        if lado == 1:   # empieza el trozo en la amura en que acabó el anterior (menos viradas)
+            partes.reverse()
+        for ang, av in partes:
+            if av > 1e-6:
+                piernas.append((ang, av, k))
+                total += av / math.cos(math.radians(ang))
+                lado = 0 if ang == t[0] else 1
+    out = {"m": round(total, 1)}
+    if p_ini is not None:
+        e = math.radians(eje_tramo)
+        u, nor = (math.sin(e), math.cos(e)), (math.cos(e), -math.sin(e))   # a lo largo del eje y a su derecha
+        sog_ref = [c.sog_mediana for c in viento.cortes if c.sog_mediana]
+        x = y = seg = 0.0
+        camino = [[round(p_ini[0], 1), round(p_ini[1], 1), 0.0]]
+        for ang, av, k in piernas:
+            largo = av / math.cos(math.radians(ang))
+            x += av
+            y += av * math.tan(math.radians(ang))
+            sog = viento.cortes[k].sog_mediana or (float(np.median(sog_ref)) if sog_ref else None)
+            seg += largo / (sog * KN) if sog else 0.0
+            px, py = p_ini[0] + x * u[0] + y * nor[0], p_ini[1] + x * u[1] + y * nor[1]
+            if camino and len(camino) > 1 and abs(ang - ultimo) < 1e-6:
+                camino[-1] = [round(px, 1), round(py, 1), round(seg, 1)]   # misma amura: alarga la pierna
+            else:
+                camino.append([round(px, 1), round(py, 1), round(seg, 1)])
+            ultimo = ang
+        out["camino"] = camino
+    return out
 
 
 def rumbo_tramo(ini_xy, fin_xy) -> float:

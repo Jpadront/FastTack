@@ -8,7 +8,7 @@
   // pistas: decodificadas; an: análisis; sel: Set de velas; ref: vela de referencia
   // T: tiempo actual (s desde la señal); ventana: [t0, t1] de la pestaña; nombres: vela → texto
   // capa: 'presion' | 'twd' | 'rol' | 'sog' | null; tramo: el tramo en curso (para capas y laylines)
-  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null, lider = false } = $props();
+  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null, lider = false, fantasma = false, tramoFijo = null } = $props();
   // el tramo que se navega en T (aunque la pestaña sea otra)
   const liderEn = (T) => { const t = tramoEn(an, T) || tramo; return t ? lineaLider(an, pistas, t, T) : null; };
   const ll = $derived(lider ? liderEn(T) : null);
@@ -66,12 +66,51 @@
     mapa.fitBounds([aLonLat(minx - m, miny - m), aLonLat(maxx + m, maxy + m)], { padding: 30, duration: 0, maxZoom: 17 });
   }
   $effect(() => { ventana; sel; if (listo) encuadrar(); });
-  $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; if (listo) dibujar(); });
+  $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; fantasma; tramoFijo; if (listo) dibujar(); });
 
   function px(x, y) { const p = mapa.project(aLonLat(x, y)); return [p.x, p.y]; }
   function metrosPx(m) { const a = px(0, 0), b = px(m, 0); return Math.hypot(b[0] - a[0], b[1] - a[1]); }
   function colorSog(v, lo, hi) { const k = Math.max(0, Math.min(RAMPA_SOG.length - 1, Math.round(((v - lo) / (hi - lo || 1)) * (RAMPA_SOG.length - 1)))); return RAMPA_SOG[k]; }
   function colorRol(r) { return r > 0 ? DIVERGENTE.favor : r < 0 ? DIVERGENTE.contra : DIVERGENTE.neutro; }
+
+  // Silueta de casco visto desde arriba: proa en punta, costados curvos y espejo de popa recto, con
+  // un punto en el palo para distinguir proa y popa también de lejos
+  function casco(X, Y, rumbo, s, color, alfa = 1) {
+    ctx.save(); ctx.translate(X, Y); ctx.rotate(rumbo); ctx.globalAlpha = alfa;
+    ctx.beginPath(); ctx.moveTo(0, -11 * s);
+    ctx.bezierCurveTo(3.6 * s, -6.5 * s, 4.4 * s, -1 * s, 3.6 * s, 7 * s);
+    ctx.lineTo(-3.6 * s, 7 * s);
+    ctx.bezierCurveTo(-4.4 * s, -1 * s, -3.6 * s, -6.5 * s, 0, -11 * s); ctx.closePath();
+    ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -2.5 * s, 1.2 * s, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill(); ctx.restore();
+  }
+
+  // Barco fantasma del tramo en curso: su camino perfecto (con las roladas sabidas de antemano) y
+  // dónde iría ahora si hubiera salido de la baliza a la vez que el barco de referencia
+  const COLOR_FANTASMA = '#6a5acd';
+  function dibujarFantasma() {
+    // el tramo de la pestaña; si no, el que navega el barco de referencia en ese momento
+    const enT = (tr) => { const f = tr.barcos?.[ref]; return f && (f.t_entrada - an.senal) / 1000 <= T && T <= (f.t_salida - an.senal) / 1000; };
+    const t = tramoFijo || an.tramos.find(enT) || tramoEn(an, T);
+    const cam = t?.fantasma_camino;
+    if (!fantasma || !cam || cam.length < 2) return;
+    const P = cam.map(([x, y]) => px(x, y));
+    ctx.save(); ctx.globalAlpha = 0.85; ctx.setLineDash([7, 5]); ctx.strokeStyle = COLOR_FANTASMA; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(...P[0]); for (const q of P.slice(1)) ctx.lineTo(...q); ctx.stroke(); ctx.restore();
+    const ent = t.barcos?.[ref]?.t_entrada;
+    if (ent == null) return;
+    const seg = Math.max(0, T - (ent - an.senal) / 1000);
+    let k = 1;
+    while (k < cam.length - 1 && cam[k][2] < seg) k++;
+    const [a, b] = [cam[k - 1], cam[k]];
+    const f = b[2] > a[2] ? Math.max(0, Math.min(1, (seg - a[2]) / (b[2] - a[2]))) : 1;
+    const [X, Y] = px(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+    const [A, B] = [px(a[0], a[1]), px(b[0], b[1])];
+    casco(X, Y, Math.atan2(B[0] - A[0], -(B[1] - A[1])), 1.2, COLOR_FANTASMA, 0.75);
+    ctx.font = '600 12px "Barlow Semi Condensed", Arial, sans-serif';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.strokeText('Fantasma', X + 9, Y + 4);
+    ctx.fillStyle = COLOR_FANTASMA; ctx.fillText('Fantasma', X + 9, Y + 4);
+  }
 
   // Línea perpendicular al viento por el líder del tramo y la paralela por el barco de referencia
   function dibujarLider() {
@@ -153,6 +192,7 @@
       }
     }
     dibujarLider();
+    dibujarFantasma();
     // Rango de SOG de la ventana (p5–p95 de los seleccionados) para la rampa de la capa SOG
     let sogLo = 0, sogHi = 1;
     if (capa === 'sog') {
@@ -198,17 +238,7 @@
       if (e.sinDatos) {
         ctx.beginPath(); ctx.arc(X, Y, 4, 0, 7); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
       } else {
-        const rumbo = ((e.hdg ?? e.cog ?? 0) * Math.PI) / 180;
-        ctx.save(); ctx.translate(X, Y); ctx.rotate(rumbo);
-        const s = v === ref ? 1.3 : 1;
-        // Silueta de casco visto desde arriba: proa en punta, costados curvos y espejo de popa recto
-        ctx.beginPath(); ctx.moveTo(0, -11 * s);
-        ctx.bezierCurveTo(3.6 * s, -6.5 * s, 4.4 * s, -1 * s, 3.6 * s, 7 * s);
-        ctx.lineTo(-3.6 * s, 7 * s);
-        ctx.bezierCurveTo(-4.4 * s, -1 * s, -3.6 * s, -6.5 * s, 0, -11 * s); ctx.closePath();
-        ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fill();
-        // palo (punto) para distinguir proa y popa también de lejos
-        ctx.beginPath(); ctx.arc(0, -2.5 * s, 1.2 * s, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill(); ctx.restore();
+        casco(X, Y, ((e.hdg ?? e.cog ?? 0) * Math.PI) / 180, v === ref ? 1.3 : 1, color);
       }
       if (!todos || v === ref) {
         ctx.font = `${v === ref ? 700 : 600} 12px "Barlow Semi Condensed", Arial, sans-serif`;
