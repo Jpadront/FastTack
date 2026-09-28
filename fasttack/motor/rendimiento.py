@@ -13,7 +13,7 @@ import math
 import numpy as np
 
 from .geo import dif
-from .tramos import lado, vmg
+from .tramos import lado, vmc, vmg
 from .trazas import Traza
 
 MARGEN_RODEO_MS = 20_000
@@ -157,12 +157,13 @@ def rodeo(tr: Traza, paso) -> dict | None:
             "sog_salida": round(float(tr.sog[i[-1]]), 2)}
 
 
-def vmg_estable(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> float | None:
-    """VMG media navegando estable (sin rodeos ni maniobras): la velocidad «pura» del barco."""
+def vmg_estable(tr: Traza, e: int, s: int, vt, maniobras_t: list[int], eje: float | None = None) -> float | None:
+    """VMG media navegando estable (sin rodeos ni maniobras): la velocidad «pura» del barco. Con
+    `eje` (un largo), la VMC: velocidad hacia la baliza a lo largo del eje del tramo."""
     i = estables(tr, e, s, vt, maniobras_t)
     if i is None:
         return None
-    v = vmg(tr, i, vt.twd_en(tr.ts[i]), vt.ceñida)
+    v = vmc(tr, i, eje) if eje is not None else vmg(tr, i, vt.twd_en(tr.ts[i]), vt.ceñida)
     w = np.minimum(np.diff(tr.ts[i], append=tr.ts[i][-1]), 5_000).astype(float)
     return float(np.sum(v * w) / w.sum()) if w.sum() > 0 else None
 
@@ -208,7 +209,9 @@ def desglose(salida_tramos: list[dict], salida: dict | None, llegadas: dict, v: 
         d_total = f["parcial_s"] - med("parcial_s")
         vm, v5 = f.get("vmg_estable"), med("vmg_estable")
         # la VMG se mide a lo largo del viento: la distancia que cubre es la del tramo en esa dirección
-        dir_viento = t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360
+        # en un largo la VMC ya va a lo largo del eje: la distancia es la del tramo
+        dir_viento = (t["rumbo_eje"] if t["tipo"] == "largo" else t["viento"]["twd_media"] if t["tipo"] == "ceñida"
+                      else (t["viento"]["twd_media"] + 180) % 360)
         dist = t["largo_m"] * abs(math.cos(math.radians(t["rumbo_eje"] - dir_viento)))
         d_vel = (dist / (vm * KN_MS) - dist / (v5 * KN_MS)) if vm and v5 and vm > 0.5 and v5 > 0.5 else 0.0
         m5 = med("perdida_man_s")

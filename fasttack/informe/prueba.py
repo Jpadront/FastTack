@@ -73,7 +73,10 @@ class _PDF(FPDF):
         self.set_y(-12)
         self.set_font("Texto", "", 8)
         self.set_text_color(*TINTA3)
-        self.cell(0, 4, self.pie, align="L")
+        pie = self.pie
+        while self.get_string_width(pie) > self.w - 2 * MARGEN - 22 and len(pie) > 20:
+            pie = pie[:-2]
+        self.cell(0, 4, pie if pie == self.pie else pie.rstrip(" ·,") + "…", align="L")
         self.set_x(-MARGEN - 30)
         self.cell(30, 4, f"pág. {self.page_no()}/{{nb}}", align="R")
 
@@ -323,6 +326,9 @@ def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
     pdf.fichas(fichas)
     if p.get("llegadas") and "oficial" not in str(p.get("llegadas")):
         pdf.texto(f"Llegadas {p['llegadas']}.", tam=8.5, estilo="I", color=TINTA3, alto=4)
+    if p.get("recorrido"):
+        pdf.texto(f"Recorrido {p['recorrido']}: en los largos se compara la VMC (velocidad hacia la baliza) y la SOG.",
+                  tam=8.5, estilo="I", color=TINTA3, alto=4)
 
     # Dónde se perdió
     if dsp:
@@ -392,18 +398,19 @@ def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
             gan = t.get("puestos_ganados")
             filas.append([t["nombre"],
                           f"{t.get('puesto_al_final') or '—'}" + (f" ({con_signo(gan, 0)})" if gan else ""),
-                          con_signo(t.get("vmg_frente_al_top5_kn"), 2) + " kn." if t.get("vmg_frente_al_top5_kn") is not None else "—",
-                          _por_que(t.get("vmg_frente_al_top5_por_que"), corto=True),
+                          (con_signo(vv, 2) + " kn.") if (vv := t.get("vmc_frente_al_top5_kn" if (es_l := t["tipo"] == "largo") else "vmg_frente_al_top5_kn")) is not None else "—",
+                          (("SOG " + con_signo(t["sog_frente_al_top5_kn"], 2) + " kn.") if es_l and t.get("sog_frente_al_top5_kn") is not None
+                           else "largo" if es_l else _por_que(t.get("vmg_frente_al_top5_por_que"), corto=True)),
                           f"{t.get('maniobras', '—')}" + (f" · {num(t.get('perdida_en_maniobras_m'), 0)} m." if t.get("perdida_en_maniobras_m") else ""),
                           ("+" + num(lay.get("exceso_m"), 0) + " m." if lay.get("estado") == "sobrepasada" else "ok" if lay.get("estado") == "correcta" else "—"),
                           (con_signo(esc, 1) + "°") if esc is not None else "—",
                           (num(tac.get("amura_favorecida_pct"), 0) + " %") if tac.get("amura_favorecida_pct") is not None else "—"])
-            v = t.get("vmg_frente_al_top5_kn")
+            v = t.get("vmc_frente_al_top5_kn") if t["tipo"] == "largo" else t.get("vmg_frente_al_top5_kn")
             col.append([None, (AZUL if (gan or 0) > 0 else ROJO if (gan or 0) < 0 else None),
                         (None if v is None or abs(v) < 0.03 else AZUL if v > 0 else ROJO), None, None,
                         ROJO if lay.get("estado") == "sobrepasada" else None, (ROJO if esc is not None and abs(esc) > 2 else None), None])
-        pdf.tabla(["Tramo", "Puesto", "VMG vs top 5", "Por qué", "Maniobras", "Layline", "Escora", "Amura fav."],
-                  filas, [19, 17, 21, 50, 20, 17, 17, 17], ["L", "R", "R", "L", "R", "R", "R", "R"], col, tam=8)
+        pdf.tabla(["Tramo", "Puesto", "VMG / VMC vs top 5" if any(t["tipo"] == "largo" for t in tramos) else "VMG vs top 5", "Por qué / SOG", "Maniobras", "Layline", "Escora", "Amura fav."],
+                  filas, [18, 19, 26, 43, 20, 17, 17, 18], ["L", "R", "R", "L", "R", "R", "R", "R"], col, tam=8)
 
     # Debrief
     d = debrief_mod.leer(alm, camp_id, clave, barco)

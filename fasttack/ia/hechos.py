@@ -200,6 +200,10 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "top5_de_la_prueba": [_vela(x, nombres) for x in top5],
         },
     }
+    n_largos = sum(1 for t in an["tramos"] if t["tipo"] == "largo")
+    if n_largos:
+        h["prueba"]["recorrido"] = (f"triangular: {n_largos} largos hacia una baliza de ala en lugar de popas"
+                                    + ("" if any(t["tipo"] == "popa" for t in an["tramos"]) else " (no hubo popas)"))
     c = an.get("corriente")
     if c:
         h["corriente_estimada"] = {
@@ -298,8 +302,9 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             "detras_del_primero_s": _r(f.get("gap_s")), "parcial_s": _r(f.get("parcial_s")),
             "calidad_de_datos": f.get("calidad"), "cobertura_pct": _r((f.get("cobertura") or 0) * 100),
             "vmg_kn": _r(f.get("vmg"), 2),
-            "vmg_frente_al_top5_por_que": causa_vmg(f.get("vmg"), f.get("sog"), f.get("twa"), m5["vmg"], m5["sog"], m5["twa"],
-                                                    t["tipo"] == "popa"),
+            "vmg_frente_al_top5_por_que": (None if t["tipo"] == "largo" else
+                                           causa_vmg(f.get("vmg"), f.get("sog"), f.get("twa"), m5["vmg"], m5["sog"], m5["twa"],
+                                                     t["tipo"] == "popa")),
             "top5": {"barcos_con_datos": len(cinco),
                      "vmg_mediana_kn": _r(m5["vmg"], 2), "sog_mediana_kn": _r(m5["sog"], 2),
                      "twa_mediana_grados": _r(m5["twa"], 1), "maniobras_mediana": _r(m5["maniobras"]),
@@ -348,6 +353,17 @@ def de_prueba(an: dict, v: str, nombres: dict | None = None, clase: str | None =
             tr["puerta"] = {"elegida": f["puerta"].lower(), "nota": "izquierda/derecha mirando a sotavento",
                             **({"favorecida": pz["favorecida"].lower(), "ventaja_de_la_favorecida_m": _r(pz["ventaja_m"])} if pz else {})}
         pos_ant = f.get("posicion") or pos_ant
+        if t["tipo"] == "largo":
+            # en un largo la «VMG» del motor es la VMC (hacia la baliza): con su nombre, para no mezclarla
+            # con la VMG de ceñidas y popas (ni en los mejores y peores tramos del día)
+            for k in [k for k in tr if k.startswith("vmg_")]:
+                tr[k.replace("vmg_", "vmc_", 1)] = tr.pop(k)
+            tr.pop("vmc_frente_al_top5_por_que", None)
+            if isinstance(tr.get("top5"), dict) and "vmg_mediana_kn" in tr["top5"]:
+                tr["top5"]["vmc_mediana_kn"] = tr["top5"].pop("vmg_mediana_kn")
+            tr["largo_significa"] = ("tramo de través hacia una baliza de ala (recorrido triangular, sin popa): se compara la VMC "
+                                     "(velocidad hacia la baliza) y la SOG; no hay VMG al viento, maniobras, laylines ni táctica "
+                                     "de roles, y el viento es el del tramo anterior")
         tramos.append(tr)
     h["tramos"] = tramos
     dg = (an["rendimiento"].get(v) or {}).get("desglose")
@@ -391,19 +407,6 @@ def _por_que(r: dict, t5) -> dict:
             for m in ("ceñida", "popa")}
 
 
-def _escora_camp(res, v, top5):
-    e = res.get("escora")
-    if not e:
-        return None
-    mio = e["barcos"].get(v) or {}
-    return {"escora_de_los_5_con_mas_vmg_grados": e["escora"], "ceñidas": e["ceñidas"],
-            "escora_media_del_barco_grados": mio.get("escora_media"),
-            "escora_del_barco_frente_a_ella_grados": mio.get("frente_optima"),
-            "ceñidas_del_barco_a_menos_de_2_grados": mio.get("en_rango"), "ceñidas_del_barco": mio.get("ceñidas"),
-            "segun_el_viento": [{"viento": x["tramo"], "escora_grados": x["escora"], "ceñidas": x["ceñidas"]} for x in e["por_viento"]] or None,
-            "nota": "estimada: en cada ceñida, media de la escora de los 5 barcos con más VMG; aquí, la media de todas las ceñidas"}
-
-
 def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None, clase: str | None = None) -> dict:
     nombres = nombres or {}
     gen = res["general"]
@@ -442,6 +445,8 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                              if p.get("recorrido_dudoso") else "no: prueba sin analizar")}
         if p.get("viento_kn") is not None:
             fila["viento_referencia_kn"] = p["viento_kn"]
+        if p.get("largos"):
+            fila["recorrido"] = "triangular con largos (sin popas): la VMG de popa no aplica"
         if mv:
             for m in ("ceñida", "popa"):
                 if mv.get(f"vmg_{m}") is not None and v5(f"vmg_{m}") is not None:
@@ -497,7 +502,6 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
                      "correctas_top5_pct": media_top5(lambda x: x["laylines"]["ok"] / (x["laylines"]["ok"] + x["laylines"]["sobrepasadas"]) * 100
                                                       if x["laylines"]["ok"] + x["laylines"]["sobrepasadas"] else None, 0)},
         "puertas": {"puertas_con_ventaja_clara": t["puertas"]["total"], "eligio_la_favorecida": t["puertas"]["buenas"]},
-        "escora_optima_en_ceñida": _escora_camp(res, v, top5),
         "segun_el_viento": [{"tramo_de_viento": x["tramo"], "pruebas": x["pruebas"], "puesto_medio": _r(x["puesto_medio"], 1),
                              "vmg_ceñida_kn": _r(x["vmg_ceñida"], 2), "vmg_popa_kn": _r(x["vmg_popa"], 2)}
                             for x in t["viento"] if x["pruebas"]],
@@ -529,9 +533,6 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
     if "medias_del_campeonato" in h:
         h["medias_del_dia"] = h.pop("medias_del_campeonato")
         h["medias_del_dia"]["comparacion"] = "top5 = mediana de los 5 primeros del día (sin contar este barco)"
-    if h.get("escora_optima_en_ceñida"):
-        h["escora_optima_en_ceñida"]["nota"] = ("estimada: media de la escora de los 5 barcos con más VMG de cada ceñida, "
-                                                "en todas las ceñidas del campeonato hasta hoy (más datos que un solo día)")
     h["nota"] = "salidas, laylines, puertas y medias se refieren solo a las pruebas de este día"
     return h
 
@@ -539,7 +540,8 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
 def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
     """Desglose por tramo de una prueba (de «de_prueba») con lo esencial, para el debrief del día."""
     claves = ("nombre", "tipo", "puesto_al_final", "puestos_ganados", "detras_del_primero_s", "calidad_de_datos",
-              "vmg_kn", "vmg_frente_al_top5_kn", "vmg_frente_al_top5_por_que", "sog_frente_al_top5_kn",
+              "vmg_kn", "vmg_frente_al_top5_kn", "vmg_frente_al_top5_por_que", "vmc_kn", "vmc_frente_al_top5_kn",
+              "largo_significa", "sog_frente_al_top5_kn",
               "twa_grados", "maniobras", "perdida_en_maniobras_m", "layline", "puerta", "modo")
     claves_coach = ("sog_kn", "escora_grados",
                     "escora_con_signo_grados", "escora_optima", "tactica", "maniobras_detalle", "viento", "parcial_s",
@@ -552,7 +554,10 @@ def tramos_compactos(dp: dict, coach: bool = False) -> list[dict]:
             continue
         f = {k: t[k] for k in claves + (claves_coach if coach else ()) if k in t}
         if "top5" in t and not coach:
-            f["vmg_top5_kn"] = t["top5"].get("vmg_mediana_kn")
+            if t.get("tipo") == "largo":
+                f["vmc_top5_kn"] = t["top5"].get("vmc_mediana_kn")
+            else:
+                f["vmg_top5_kn"] = t["top5"].get("vmg_mediana_kn")
         out.append(f)
     return out
 

@@ -6,7 +6,7 @@
   import { num, COLOR_YO } from './datos.js';
 
   let { tramo, ref, nombreRef = '', titulo = null, enRangoTexto = null, nota = '', nombres = (v) => v } = $props();
-  const popa = $derived(tramo.tipo === 'popa');
+  const popa = $derived(tramo.tipo !== 'ceñida');   // popa y largo: escora con signo
   const campo = $derived(popa ? 'escora_sotavento' : 'escora');
   const tituloV = $derived(titulo ?? (popa ? 'Escora óptima en popa' : 'Escora óptima en ceñida'));
   const o = $derived(tramo.escora_optima);

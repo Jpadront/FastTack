@@ -114,6 +114,7 @@ Pulsa **Analizar →** en una prueba. La primera vez se calcula el análisis y s
 - **Mapa**: arrastra y haz zoom; las balizas con borde discontinuo están **estimadas** (sin Atlas). Una traza cortada o un círculo vacío = hueco de datos.
 - **Corriente estimada**: flecha y valor en la esquina del mapa (la de la vuelta en curso) y detalle con su confianza en las pestañas de ceñida y popa.
 - **Laylines**: si se sobrepasó, la columna «Motivo» dice si fue por **tráfico** (no podía virar por un barco cerca, o la layline ya estaba ocupada por barcos delante) o por **cálculo**; el resumen del campeonato cuenta cuántas fueron por tráfico.
+- **Recorridos con largos**: si se montó un triángulo (baliza de ala), la popa se parte en dos largos que se comparan por VMC (velocidad hacia la baliza) y SOG; el debrief sabe que ese día no hubo popas.
 - **Escora óptima** (ceñidas y popas): la media de la escora de los 5 barcos con más VMG del tramo, tu escora frente a ella (columna «vs óptima») y el % de tu tiempo a ±2°.
 - **HDG corregido**: el rumbo de proa de cada barco sale en verdadero, con el desvío de su brújula y la declinación ya corregidos.
 - **Capas del mapa** (botones sobre el mapa): *Presión* (SOG de cada barco frente a la flota; anillo = está acelerando), *TWD* (tinte por la rolada), *Rol* (traza en azul cuando la rolada favorece al barco, en rojo cuando le perjudica) y *SOG* (traza por velocidad). Las laylines de la baliza siguiente se ven siempre. Encima, la TWD del momento y la fase de rolada.
@@ -130,7 +131,6 @@ En la página del campeonato, **Resumen del campeonato →**. La primera vez ana
 - **General calculada**: puntuación baja con los descartes que elijas (por defecto 1 a partir de 4 pruebas). No incluye decisiones del jurado, así que puede diferir algo de la oficial. «rec.» = llegadas reconstruidas.
 - **Comparar con**: tu barco solo, o frente al top 3/5/10 de la general.
 - **Gráficos por prueba**: puesto y la métrica que elijas (VMG, SOG, TWA, escora, cabeceo, pérdidas), con la mediana de la flota.
-- **Escora óptima del campeonato**: media de la óptima de todas las ceñidas (y por intensidad de viento si hay viento de referencia), con tu escora y en cuántas ceñidas quedaste a menos de 2°.
 - **Debrief del campeonato** al final (ver abajo).
 - **Salidas, maniobras, laylines y puertas** acumuladas, y **según la intensidad del viento** (necesita el viento de referencia de cada prueba).
 

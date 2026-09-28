@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .geo import a_ejes, distancia, rumbo
+from .geo import a_ejes, dif, distancia, rumbo
 from .pistas import Pista
 from .trazas import Traza
 
@@ -36,6 +36,17 @@ RADIO_ATLAS_M = 250.0      # un Atlas a menos de esto del rodeo de la flota es e
 OFFSET_VENTANA_MS = 150_000  # el offset se rodea en los 2,5 min siguientes a la baliza
 OFFSET_BAJADA_M = 40.0       # empieza la popa cuando se baja más de esto respecto a la baliza
 OFFSET_MIN_M = 40.0          # separación lateral mínima para considerar que hay offset
+# Baliza de ala (recorrido triangular: dos largos en lugar de una popa)
+ALA_LATERAL_FRACCION = 0.25  # el vértice del triángulo se aparta del eje al menos esto del largo del tramo…
+ALA_LATERAL_MIN_M = 300.0    # …y al menos esto
+ALA_RADIO_FRACCION = 0.15    # los vértices de cada barco, a menos de esto del largo (o de ALA_RADIO_MIN_M) de la mediana…
+ALA_RADIO_MIN_M = 200.0
+ALA_MIN_FLOTA = 0.6          # …en al menos esta fracción de la flota
+ALA_DESVIO_MIN_DEG = 40.0      # los dos largos se apartan al menos esto de la dirección de popa (el eje del
+                               # recorrido + 180): bajando en popa hasta la layline y trasluchando, 20–35°
+ALA_RADIO_CONFIRMADA = 0.3     # radio (fracción del tramo) para contar los que pasan cerca de una baliza conocida
+ALA_MIN_FLOTA_CONFIRMADA = 0.4  # o de esta si hay un Atlas ahí o coincide con el ala de la vuelta anterior
+                                # (hacia la llegada, la línea no es una baliza y los vértices se dispersan más)
 
 
 @dataclass
@@ -43,7 +54,7 @@ class Control:
     """Un punto de paso: salida, baliza de barlovento, puerta/baliza de sotavento o llegada."""
     id: str                    # 'salida', 'b1', 's1', 'b2', …, 'llegada'
     nombre: str                # 'Baliza 1', 'Puerta', 'Llegada'…
-    tipo: str                  # 'salida' | 'barlovento' | 'offset' | 'sotavento' | 'llegada'
+    tipo: str                  # 'salida' | 'barlovento' | 'offset' | 'ala' | 'sotavento' | 'llegada'
     fuente: str                # 'atlas' | 'estimada' | 'documento'
     puntos: list = field(default_factory=list)  # [(sn o None, pista)] — 2 si es puerta o línea
     rodeo_mediano: int | None = None             # ms
@@ -198,7 +209,97 @@ def reconstruir(trazas: dict[str, Traza], balizas: dict[int, Pista], roles: dict
             pv["llegada"] = Paso(llegadas[v], *(xy if xy else (np.nan, np.nan)))
         pasos[v] = pv
     controles = _offsets(trazas, controles, pasos, eje, zona_m)
+    controles = _alas(trazas, controles, pasos, eje, balizas, zona_m, avisos)
     return controles, pasos, eje, vueltas, avisos
+
+
+def _alas(trazas, controles, pasos, eje, balizas, zona_m, avisos) -> list[Control]:
+    """Baliza de ala: recorrido triangular, con dos largos en lugar de una popa. Entre la baliza de
+    barlovento (o su offset) y la de sotavento, cada barco tiene un punto de máxima separación
+    lateral respecto a la recta entre las dos balizas; si casi toda la flota lo tiene en el mismo
+    sitio y muy apartado del eje, ahí hay una baliza (el vértice del triángulo). Posición = mediana
+    de esos puntos (o el Atlas que haya cerca); paso = máxima aproximación."""
+    nuevos = list(controles)
+    k_ala = 0
+    for k in range(len(controles) - 1):
+        ini, fin = controles[k], controles[k + 1]
+        if ini.tipo == "barlovento" and fin.tipo == "offset" and k + 2 < len(controles):
+            continue   # se mira desde el offset
+        if ini.tipo not in ("barlovento", "offset") or fin.tipo not in ("sotavento", "llegada"):
+            continue
+        t_ini = ini.rodeo_mediano
+        a = ini.puntos[0][1].en(np.array([t_ini or 0]))
+        b = fin.puntos[0][1].en(np.array([fin.rodeo_mediano or t_ini or 0]))
+        ax, ay, bx, by = float(a[0][0]), float(a[1][0]), float(b[0][0]), float(b[1][0])
+        if np.isnan([ax, ay, bx, by]).any():
+            continue
+        largo = float(np.hypot(bx - ax, by - ay))
+        if largo < 200:
+            continue
+        rumbo_ab = float(np.degrees(np.arctan2(bx - ax, by - ay)) % 360)
+        vertices = []
+        for v, tr in trazas.items():
+            pi, pf = pasos[v].get(ini.id), pasos[v].get(fin.id)
+            if pi is None or pf is None or pf.t <= pi.t:
+                continue
+            i = tr.tramo(pi.t, pf.t)
+            if len(i) < 10:
+                continue
+            _, lat = a_ejes(tr.x[i] - ax, tr.y[i] - ay, rumbo_ab)
+            j = int(np.nanargmax(np.abs(lat)))
+            vertices.append((v, int(tr.ts[i[j]]), float(tr.x[i[j]]), float(tr.y[i[j]]), float(lat[j])))
+        if len(vertices) < 5:
+            continue
+        mx = float(np.median([q[2] for q in vertices]))
+        my = float(np.median([q[3] for q in vertices]))
+        _, lat_m = a_ejes(mx - ax, my - ay, rumbo_ab)
+        radio = max(ALA_RADIO_MIN_M, ALA_RADIO_FRACCION * largo)
+        cerca = [q for q in vertices if np.hypot(q[2] - mx, q[3] - my) <= radio]
+        if abs(float(lat_m)) < max(ALA_LATERAL_MIN_M, ALA_LATERAL_FRACCION * largo):
+            continue
+        if len(cerca) < ALA_MIN_FLOTA * len(vertices):
+            # Confirmación: una baliza conocida (el ala de la vuelta anterior o un Atlas) muy apartada
+            # del eje por la que pasa cerca al menos el 40 % de la flota
+            t_c = int(np.median([q[1] for q in vertices]))
+            conocidas = [c.puntos[0][1] for c in nuevos if c.tipo == "ala"] + list(balizas.values())
+            elegido = None
+            for p_ in conocidas:
+                px_, py_ = (float(z[0]) for z in p_.en(np.array([t_c])))
+                if np.isnan(px_):
+                    continue
+                _, lat_p = a_ejes(px_ - ax, py_ - ay, rumbo_ab)
+                if abs(float(lat_p)) < max(ALA_LATERAL_MIN_M, ALA_LATERAL_FRACCION * largo):
+                    continue
+                # radio mayor: con huecos de datos cerca del ala, el punto más apartado de cada barco se queda corto
+                n_cerca = sum(1 for q in vertices if np.hypot(q[2] - px_, q[3] - py_) <= ALA_RADIO_CONFIRMADA * largo)
+                if n_cerca >= ALA_MIN_FLOTA_CONFIRMADA * len(vertices) and (elegido is None or n_cerca > elegido[0]):
+                    elegido = (n_cerca, px_, py_)
+            if elegido is None:
+                continue
+            mx, my = elegido[1], elegido[2]
+            cerca = [q for q in vertices if np.hypot(q[2] - mx, q[3] - my) <= ALA_RADIO_CONFIRMADA * largo]
+        # ¿Son largos? A→ala y ala→B, lejos de la dirección de popa (si no, es una popa hasta la layline)
+        popa_dir = (eje + 180) % 360
+        desvio = lambda x0, y0, x1, y1: abs(float(dif(float(np.degrees(np.arctan2(x1 - x0, y1 - y0))) - popa_dir)))
+        if min(desvio(ax, ay, mx, my), desvio(mx, my, bx, by)) < ALA_DESVIO_MIN_DEG:
+            continue
+        k_ala += 1
+        t_med = int(np.median([q[1] for q in cerca]))
+        ala = _baliza(f"a{k_ala}", f"Ala {k_ala}", "ala", balizas, list(balizas), mx, my, t_med)
+        tiempos = []
+        for v, tr in trazas.items():
+            pi, pf = pasos[v].get(ini.id), pasos[v].get(fin.id)
+            if pi is None or pf is None:
+                continue
+            q = _paso(tr, ala, next((x[1] for x in vertices if x[0] == v), t_med), eje, zona_m)
+            if not np.isnan(q.x) and pi.t < q.t < pf.t:
+                pasos[v][ala.id] = q
+                tiempos.append(q.t)
+        ala.rodeo_mediano = int(np.median(tiempos)) if tiempos else t_med
+        nuevos.insert(nuevos.index(fin), ala)
+        avisos.append(f"Recorrido con largos: baliza de ala entre {ini.nombre} y {fin.nombre} "
+                      f"({'Atlas' if ala.fuente == 'atlas' else 'estimada con los rodeos de la flota'}).")
+    return nuevos
 
 
 def _offsets(trazas, controles, pasos, eje, zona_m: float = ZONA_M) -> list[Control]:

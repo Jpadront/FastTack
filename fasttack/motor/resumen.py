@@ -209,6 +209,8 @@ def resumen(pruebas: list[dict], inscritos: list[str], analisis: dict[str, dict]
                      "recorrido_dudoso": bool(analisis.get(p["clave"], {}).get("recorrido_dudoso")),
                      "corriente": {k: (analisis[p["clave"]].get("corriente") or {}).get(k) for k in ("velocidad_kn", "hacia_grados", "confianza")}
                      if (analisis.get(p["clave"]) or {}).get("corriente") else None,
+                     # recorrido triangular: largos en lugar de popas (se cuentan los tramos «largo»)
+                     "largos": sum(1 for t in (analisis.get(p["clave"]) or {}).get("tramos", []) if t.get("tipo") == "largo"),
                      "flota": x["flota"] if x else None} for p, x in zip(pruebas, pp)],
         "general": gen,
         "barcos": barcos,

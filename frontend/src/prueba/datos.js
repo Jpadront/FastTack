@@ -171,7 +171,8 @@ export function instantaneos(an, pistas, tramo, T) {
     let vmg = null, twa = null;
     if (suyo && e.cog != null && !e.sinDatos) {
       const w = suyo === tramo ? twd : twdEn(suyo, T, s);
-      const ref = suyo.tipo === 'ceñida' ? w : (w + 180) % 360;
+      // en un largo, VMC: velocidad hacia la baliza (a lo largo del eje del tramo)
+      const ref = suyo.tipo === 'largo' ? suyo.rumbo_eje : suyo.tipo === 'ceñida' ? w : (w + 180) % 360;
       vmg = e.sog * Math.cos((dif(e.cog - ref) * Math.PI) / 180);
       twa = Math.abs(dif(e.cog - w));
     }
@@ -251,6 +252,11 @@ export function derivados(an, pistas, v) {
     d.twd[i] = twd;
     if (b.cog[i] < 0) continue;
     const ceñida = tr.tipo === 'ceñida';
+    if (tr.tipo === 'largo') {   // VMC hacia la baliza; en un largo no hay amura favorecida
+      d.vmg[i] = b.sog[i] * Math.cos((dif(b.cog[i] - tr.rumbo_eje) * Math.PI) / 180);
+      d.twa[i] = Math.abs(dif(b.cog[i] - twd));
+      continue;
+    }
     const ref = ceñida ? twd : (twd + 180) % 360;
     d.vmg[i] = b.sog[i] * Math.cos((dif(b.cog[i] - ref) * Math.PI) / 180);
     d.twa[i] = Math.abs(dif(b.cog[i] - twd));
@@ -277,7 +283,7 @@ export function lineaLider(an, pistas, tramo, T) {
   if (!tramo) return null;
   const k = an.tramos.indexOf(tramo);
   const twd = twdEn(tramo, T, an.senal);
-  const dir = tramo.tipo === 'ceñida' ? twd : (twd + 180) % 360;
+  const dir = tramo.tipo === 'largo' ? tramo.rumbo_eje : tramo.tipo === 'ceñida' ? twd : (twd + 180) % 360;
   const ux = Math.sin((dir * Math.PI) / 180), uy = Math.cos((dir * Math.PI) / 180);
   const avance = {};
   for (const v of Object.keys(pistas.barcos)) {
@@ -333,7 +339,7 @@ export function mediana(a) {
 // Laylines del tramo desde su baliza final (con Atlas o estimada): rectas con el TWA de la flota
 export function laylines(an, pistas, tr, T) {
   const fin = an.controles.find((c) => c.id === tr.hasta);
-  if (!fin || !tr.viento.twa_flota) return [];
+  if (!fin || !tr.viento.twa_flota || tr.tipo === 'largo') return [];
   // Rumbos sobre el fondo de cada amura en el corte más cercano (incluyen la corriente); si no hay,
   // TWD ± TWA de la flota. Las rectas salen de la baliza en sentido contrario al de la navegación.
   const pctT = ((T * 1000 + an.senal - tr.t0) / (tr.t1 - tr.t0)) * 100;

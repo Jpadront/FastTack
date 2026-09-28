@@ -202,20 +202,6 @@ def generar(alm: Almacen, camp_id: str, ambito: str, barco: str) -> bytes:
                           if pu5.get("puertas_con_ventaja_clara") else "—"])
         pdf.tabla(["", "Tú", "Top 5"], filas, [86, 50, 42], ["L", "R", "R"])
 
-    # Escora
-    e = h.get("escora_optima_en_ceñida")
-    if e and e.get("escora_de_los_5_con_mas_vmg_grados") is not None:
-        pdf.seccion("Escora en ceñida", "Óptima = media de la escora de los 5 barcos con más VMG de cada ceñida (estimada)"
-                    + (", con todas las ceñidas del campeonato hasta ese día." if dia else "."))
-        t = f"Óptima **{num(e['escora_de_los_5_con_mas_vmg_grados'], 1)}°**"
-        if e.get("escora_media_del_barco_grados") is not None:
-            t += f" · tu escora media **{num(e['escora_media_del_barco_grados'], 1)}°**"
-        if e.get("escora_del_barco_frente_a_ella_grados") is not None:
-            t += f" ({con_signo(e['escora_del_barco_frente_a_ella_grados'], 1)}°)"
-        if e.get("ceñidas_del_barco"):
-            t += f" · a menos de 2° en {e.get('ceñidas_del_barco_a_menos_de_2_grados', 0)} de {e['ceñidas_del_barco']} ceñidas"
-        pdf.texto(t + ".", tam=9.5, alto=5)
-
     # Debrief
     d = debrief_mod.leer(alm, camp_id, ambito, barco)
     pdf.add_page()

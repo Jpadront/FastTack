@@ -41,6 +41,11 @@ def vmg(tr: Traza, i: np.ndarray, twd: np.ndarray, ceñida: bool) -> np.ndarray:
     return tr.sog[i] * np.cos(np.radians(dif(tr.cog[i] - ref)))
 
 
+def vmc(tr: Traza, i: np.ndarray, rumbo: float) -> np.ndarray:
+    """Velocidad hacia la baliza (kn): a lo largo del eje del tramo. Es la que cuenta en un largo."""
+    return tr.sog[i] * np.cos(np.radians(dif(tr.cog[i] - rumbo)))
+
+
 def maniobras(tr: Traza, t0: int, t1: int, viento: VientoTramo, margen_ini_ms: int = MARGEN_RODEO_MS) -> list[Maniobra]:
     """Viradas (ceñida) o trasluchadas (popa): cambios del lado del viento que se mantienen al
     menos MANIOBRA_MIN_MS. Las pegadas a un rodeo no cuentan (salvo al inicio desde la salida)."""

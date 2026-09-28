@@ -104,6 +104,31 @@ def sog_minima(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]]) -
     return max(SOG_MIN_ABS, FRACCION_SOG_MIN * float(np.median(s))) if len(s) else 2.0
 
 
+def viento_largo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]], t0: int, t1: int,
+                 twd: float) -> VientoTramo:
+    """Viento de un largo (recorrido triangular): toda la flota va en la misma amura, así que no hay
+    dos grupos de rumbos para sacar la TWD; se mantiene la del tramo anterior («arrastre») y la
+    presión de cada corte es la SOG mediana de la flota."""
+    vt = VientoTramo(False, t0, t1)
+    vt.sog_min = sog_minima(trazas, en_tramo)
+    d = (t1 - t0) / N_CORTES
+    for k in range(N_CORTES):
+        a, b = t0 + k * d, t0 + (k + 1) * d
+        sogs = []
+        for v, (e, s) in en_tramo.items():
+            tr = trazas.get(v)
+            if tr is None:
+                continue
+            i = tr.tramo(int(max(a, e + MARGEN_RODEO_MS)), int(min(b, s - MARGEN_RODEO_MS)))
+            if len(i):
+                x = tr.sog[i][tr.sog[i] > vt.sog_min]
+                if len(x):
+                    sogs.append(x)
+        sog_med = float(np.median(np.concatenate(sogs))) if sogs else None
+        vt.cortes.append(Corte(int((a + b) / 2), twd, None, sog_med, len(sogs), 0.0, "arrastre"))
+    return vt
+
+
 def viento_tramo(trazas: dict[str, Traza], en_tramo: dict[str, tuple[int, int]], t0: int, t1: int,
                  ceñida: bool, ref: float, limite_deg: float | None = None,
                  eje: float | None = None) -> VientoTramo:

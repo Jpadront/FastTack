@@ -6,7 +6,6 @@
   import Tabla from '../prueba/Tabla.svelte';
   import GraficoPruebas from './GraficoPruebas.svelte';
   import Debrief from '../Debrief.svelte';
-  import EscoraOptima from '../prueba/EscoraOptima.svelte';
 
   let { campId, barco } = $props();
 
@@ -53,8 +52,7 @@
 
   let ambitoIA = $state('campeonato');
   const nombreDia = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const SECCIONES = [['r-general', 'General'], ['r-puestos', 'Puestos'], ['r-metrica', 'Por prueba'], ['r-medias', 'Medias'],
-    ['r-escora', 'Escora'], ['r-salidas', 'Salidas y maniobras'], ['r-viento', 'Viento'], ['r-debrief', 'Debrief IA']];
+  const SECCIONES = [['r-general', 'General'], ['r-puestos', 'Puestos'], ['r-metrica', 'Por prueba'], ['r-medias', 'Medias'], ['r-salidas', 'Salidas y maniobras'], ['r-viento', 'Viento'], ['r-debrief', 'Debrief IA']];
   // Sesión con un solo barco (archivos .vkx): sin general ni puestos, que no dicen nada
   const solo = $derived((res?.inscritos ?? 0) <= 1);
   const secciones = $derived(solo ? SECCIONES.filter(([id]) => id !== 'r-general' && id !== 'r-puestos') : SECCIONES);
@@ -213,19 +211,6 @@
       { k: 'escora_ceñida', titulo: 'Escora ↑', num: true, fmt: fG(0) }, { k: 'escora_popa', titulo: 'Escora ↓', num: true, fmt: fG(0) },
       { k: 'cabeceo_ceñida', titulo: 'Cabeceo ↑', num: true, fmt: fG(0) }, { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fG(0) },
     ]} />
-
-  <div id="r-escora" class="ancla"></div>
-  {#if res.escora}
-    {@const e = res.escora}
-    {@const mio = e.barcos[ref]}
-    <div class="bloque-ia">
-      <EscoraOptima titulo="Escora óptima en ceñida · todo el campeonato" {ref} nombreRef={vc(ref)}
-        tramo={{ tipo: 'ceñida', escora_optima: { escora: e.escora, curva: e.curva },
-                 barcos: mio ? { [ref]: { escora: mio.escora_media, escora_frente_optima: mio.frente_optima } } : {} }}
-        enRangoTexto={mio ? `${mio.en_rango} de ${mio.ceñidas} ceñidas` : null}
-        nota={`Media de las ${e.ceñidas} ceñidas; la del barco, la media de sus ceñidas.${e.por_viento.length ? ' Según el viento: ' + e.por_viento.map((x) => `${x.tramo}: ${num(x.escora, 1)}° (${x.ceñidas} ceñidas)`).join(' · ') + '.' : ''}`} />
-    </div>
-  {/if}
 
   <div id="r-salidas" class="ancla"></div>
   <div class="dos">

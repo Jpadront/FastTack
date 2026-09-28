@@ -89,6 +89,19 @@ Sin corredera, la corriente se estima con toda la flota (`fasttack/motor/corrien
 
 El HDG de cada Atlas puede estar en magnético o en verdadero y tener un error de montaje. El ajuste de la corriente estima un **desvío por barco** (COG − HDG que no explican la corriente ni el abatimiento). La media de la flota se fija en la **declinación magnética** del campo de regatas y la fecha (modelo magnético mundial WMM 2025, p. ej. −1,0° en Cascais en septiembre de 2026), porque la mayoría de los Atlas van en magnético. Para las brújulas descartadas (desvío > 15°), el desvío se calcula después con la corriente ya fija. **HDG corregido = HDG del dispositivo + desvío del barco** (rumbo verdadero); sin desvío estimado, solo se suma la declinación. En el Mundial, 15 de 96 barcos tienen desvíos > 5° (máx. 79°). La declinación también mejora la corriente transversal (antes se suponía desvío medio 0).
 
+## Recorridos con largos (baliza de ala)
+
+Desde el motor 0.21 (`fasttack/motor/recorrido.py`, `_alas`). Con mucho viento se puede montar un triángulo: de la baliza de barlovento a una baliza de ala y de ahí a sotavento, con dos largos en lugar de una popa. RaceSense no dice qué recorrido se navegó, así que se detecta con la flota:
+
+1. Entre la baliza de barlovento (o su offset) y la de sotavento (o la llegada), el punto de cada barco más apartado de la recta entre las dos balizas.
+2. Hay baliza de ala si esos puntos están juntos (≥ 60 % de la flota a menos de 200 m o del 15 % del tramo de la mediana) y muy apartados del eje (≥ 300 m y ≥ 25 % del tramo), y si los dos tramos (hasta el ala y desde el ala) van a más de 40° de la dirección de popa (el eje del recorrido + 180°). Bajando en popa con una trasluchada en la layline también sale un «triángulo», pero sus rumbos van a 20–35° de la popa.
+3. Hacia la llegada la línea no es una baliza y, con huecos de datos, los puntos se dispersan: basta con el 40 % de la flota a menos del 30 % del tramo de una baliza conocida (un Atlas o el ala de la vuelta anterior).
+4. Posición = la del Atlas si hay uno a menos de 250 m; si no, la mediana. Paso de cada barco = máxima aproximación.
+
+**Tramos «Largo»**: se comparan por la **VMC** (velocidad hacia la baliza, a lo largo del eje del tramo) y la SOG. No hay VMG al viento, maniobras, laylines, táctica de roles, barco fantasma ni comparación con los vecinos; el viento es el del tramo anterior (con una sola amura no hay dos grupos de rumbos) y la presión, la SOG de la flota. No entran en las medias de popa ni en la corriente. En el debrief, los largos llevan «vmc_…» y no cuentan para los mejores y peores tramos del día (sus cifras no se comparan con las de ceñidas y popas).
+
+Mundial de Snipe 2026 (Mahón): el primer día (pruebas 1 y 2, mucho viento) sale con cuatro largos y dos balizas de ala (hay un Atlas en ella); el resto de días y las 10 pruebas del Mundial de J/70, barlovento-sotavento sin falsos positivos.
+
 ## Escora óptima (estimada)
 
 Desde el motor 0.17 (`fasttack/motor/analisis.py`), en cada ceñida y cada popa:
@@ -98,7 +111,7 @@ Desde el motor 0.17 (`fasttack/motor/analisis.py`), en cada ceñida y cada popa:
 3. **Escora óptima = media de la escora de los 5 barcos con más VMG del tramo** (VMG navegando estable; se necesitan al menos 3). Se guarda también el rango (mín–máx de esos 5) y quiénes son.
 4. Por barco: su escora menos la óptima (+ = más escorado) y el % del tiempo navegando estable con la escora (media móvil de 10 s) a ±2° de la óptima.
 
-**Campeonato** (Resumen): media de la óptima de todas las ceñidas y, si hay viento de referencia, por intensidad (≥ 2 ceñidas). Por barco: su escora media, la diferencia media con la óptima y en cuántas ceñidas quedó a menos de 2°. Mundial (19 ceñidas, 20–25 kn): 15,1°; ESP 1214, 16,2° (+1,4°), 13 de 19 ceñidas a menos de 2°.
+**Campeonato** (desde la v0.30 ya no se muestra ni va al debrief: junta condiciones de viento muy distintas y no dice nada; la óptima solo tiene sentido tramo a tramo). Antes: media de la óptima de todas las ceñidas y, si hay viento de referencia, por intensidad (≥ 2 ceñidas). Por barco: su escora media, la diferencia media con la óptima y en cuántas ceñidas quedó a menos de 2°. Mundial (19 ceñidas, 20–25 kn): 15,1°; ESP 1214, 16,2° (+1,4°), 13 de 19 ceñidas a menos de 2°.
 
 **Gráfico** (acompaña a la cifra, no la sustituye): VMG y SOG relativas a los vecinos por franjas de 2° de escora (`fasttack/motor/escora.py`: tramos de 30 s sin maniobras ni rodeos, vecinos en la misma amura a < 300 m y ±30 s; sombreadas las franjas sin pérdida clara frente a la mejor), con la óptima de los 5 con más VMG y la escora del barco marcadas. En el campeonato se juntan las franjas de todas las ceñidas. Con los datos del Mundial es una meseta (±1 % entre 12° y 20°) y la pérdida clara aparece por debajo de 10–14°.
 

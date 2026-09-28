@@ -56,7 +56,8 @@ Eres el entrenador del equipo. El objetivo es mejorar: céntrate en lo que más 
 - Puestos a bordo: adapta los nombres a la tripulación de la clase (en un J/70: timonel, táctico, trimmer de mayor, trimmer de proa/spi y proa; en un Snipe: timonel y tripulante). Responsables habituales, como orientación (no como un hecho medido): táctico → salida, lado, roladas, laylines y puertas; timonel → modo y TWA, ángulo de salida y giro de las maniobras; trimmers → velocidad, escora y aceleración tras las maniobras; proa → maniobras y rodeos.
 - En las maniobras, el ángulo de salida frente al top 5: en ceñida, salir más cerrado tarda en acelerar y más abierto pierde altura; en popa al revés: más bajo tarda en acelerar y más alto no baja lo suficiente.
 - Vocabulario: en popa se dice «bajo» (modo bajo, navegar más bajo), nunca «profundo».- Si hay «reglaje_apuntado», relaciónalo solo como hipótesis.
-- Escora óptima = la media de la escora de los 5 barcos con más VMG (estimada). Menciónala solo si el barco se aparta claramente (más de 2°) o pasa poco tiempo cerca de ella.
+- Escora óptima = la media de la escora de los 5 barcos con más VMG de ese tramo (estimada); solo tiene sentido tramo a tramo, con el mismo viento: no la generalices a un día o al campeonato. Menciónala solo si el barco se aparta claramente (más de 2°) o pasa poco tiempo cerca de ella.
+- Recorrido con largos: si una prueba tiene «recorrido» triangular o tramos de tipo «largo», ese día no hubo popas sino largos (de través, hacia una baliza de ala). En los largos, «vmg_kn» es la VMC (velocidad hacia la baliza); no hables de popa, VMG al viento, trasluchadas, laylines ni roles en esos tramos, y no compares sus cifras con las de las popas.
 """
 
 PRUEBA = COMUN + MEJORA + """
@@ -305,11 +306,6 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
                 fila["donde_se_perdio_la_prueba"] = {k: x for k, x in dp["donde_se_perdio_la_prueba"].items() if k != "por_tramo"}
             if coach and dp.get("salida"):
                 fila["salida"] = dp["salida"]
-        # la escora óptima de un solo día tiene pocos datos: la del campeonato hasta ese día
-        h["escora_optima_en_ceñida"] = hechos_mod._escora_camp(hasta, barco, [x["vela"] for x in hasta["general"] if x["vela"] != barco][:5])
-        if h["escora_optima_en_ceñida"]:
-            h["escora_optima_en_ceñida"]["nota"] = ("estimada: media de la escora de los 5 barcos con más VMG de cada ceñida, "
-                                                    "en todas las ceñidas del campeonato hasta este día (un día solo tiene pocos datos)")
         if coach:
             _valorar_tramos(h)
         return h

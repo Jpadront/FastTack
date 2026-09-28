@@ -22,9 +22,9 @@ from . import roles as viento_loc_mod
 from . import escora as esc_mod
 from . import tramos as tm
 from .trazas import Traza, construir
-from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
+from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.20.1"
+VERSION = "0.21.5"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -113,16 +113,20 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
 
     # ---------------------------------------------------------------- tramos y viento
     tramos = []
-    n_ceñ = n_popa = 0
+    n_ceñ = n_popa = n_largo = 0
     for ini, fin in zip(controles, controles[1:]):
         if fin.tipo == "offset":  # baliza → offset forma parte del rodeo, no es un tramo
             continue
-        ceñida = fin.tipo == "barlovento" or (fin.tipo == "llegada" and ini.tipo == "sotavento")
-        if ceñida:
+        # Largo: hacia o desde una baliza de ala (recorrido triangular, sin popa)
+        largo_t = fin.tipo == "ala" or ini.tipo == "ala"
+        ceñida = not largo_t and (fin.tipo == "barlovento" or (fin.tipo == "llegada" and ini.tipo == "sotavento"))
+        if largo_t:
+            n_largo += 1
+        elif ceñida:
             n_ceñ += 1
         else:
             n_popa += 1
-        nombre = f"Ceñida {n_ceñ}" if ceñida else f"Popa {n_popa}"
+        nombre = f"Largo {n_largo}" if largo_t else f"Ceñida {n_ceñ}" if ceñida else f"Popa {n_popa}"
         en_tramo = {}
         for v in trazas:
             e = senal if ini.id == "salida" else (pasos[v].get(ini.id).t if ini.id in pasos[v] else None)
@@ -147,11 +151,16 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         # TWD de partida: la del final del tramo anterior; en el primero, el rumbo del eje
         previo = tramos[-1]["viento"].cortes[-1].twd if tramos else None
         ref = previo if previo is not None else (eje_tramo if ceñida else (eje_tramo + 180) % 360)
-        vt = viento_tramo(trazas, en_tramo, t0, t1, ceñida, ref, limite_deg=30 if previo is not None else None,
-                          eje=eje_tramo)
+        if largo_t:
+            # En un largo toda la flota va en la misma amura: no hay dos grupos de rumbos para sacar el
+            # viento. Se mantiene el del tramo anterior (arrastre), con la presión de la flota por cortes.
+            vt = viento_largo(trazas, en_tramo, t0, t1, previo if previo is not None else (eje_tramo + 90) % 360)
+        else:
+            vt = viento_tramo(trazas, en_tramo, t0, t1, ceñida, ref, limite_deg=30 if previo is not None else None,
+                              eje=eje_tramo)
         largo = float(distancia(*p_ini, *p_fin)) if p_ini and p_fin else None
-        tramos.append({"id": f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
-                       "ceñida": ceñida, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
+        tramos.append({"id": f"l{n_largo}" if largo_t else f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
+                       "ceñida": ceñida, "largo": largo_t, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
                        "eje": eje_tramo, "largo_m": largo, "lider": lider, "p_ini": p_ini})
     # Intensidad del viento: del modelo meteorológico si cuadra con la flota; si no, de la SOG anclada
     # al viento de referencia apuntado; si no hay ninguno, sin calibrar (solo presión relativa)
@@ -164,15 +173,16 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
     man_por_tramo = {t["id"]: {} for t in tramos}
     for t in tramos:
         for v, (e, s) in t["en_tramo"].items():
-            man_por_tramo[t["id"]][v] = tm.maniobras(trazas[v], e, s, t["viento"],
-                                                     0 if t["desde"] == "salida" else tm.MARGEN_RODEO_MS)
+            # en un largo no hay viradas ni trasluchadas (el cambio de rumbo en el ala es un rodeo)
+            man_por_tramo[t["id"]][v] = [] if t["largo"] else tm.maniobras(
+                trazas[v], e, s, t["viento"], 0 if t["desde"] == "salida" else tm.MARGEN_RODEO_MS)
     # Ángulo de salida de las maniobras frente al top 5 de la prueba (por tipo)
     top5_prueba = sorted(llegadas, key=llegadas.get)[:5]
     ref_maniobras = {}
     for tipo_c in (True, False):
         por_barco = {}
         for t in tramos:
-            if t["ceñida"] == tipo_c:
+            if t["ceñida"] == tipo_c and not t["largo"]:
                 for v, ms in man_por_tramo[t["id"]].items():
                     por_barco.setdefault(v, []).extend(ms)
         ref_maniobras["virada" if tipo_c else "trasluchada"] = tm.valorar_salidas(por_barco, top5_prueba)
@@ -182,12 +192,12 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
     # ---------------------------------------------------------------- métricas por tramo
     salida_tramos = []
     for t in tramos:
-        vt, ceñida = t["viento"], t["ceñida"]
+        vt, ceñida, es_largo = t["viento"], t["ceñida"], t["largo"]
         twas = [c.twa_flota for c in vt.cortes if c.twa_flota]
         twa_flota = float(np.median(twas)) if twas else None
         # Roles locales: el viento en el sitio de cada barco, sacado del rumbo de la flota (roles.py)
-        viento_loc = viento_loc_mod.viento_local(trazas, dict(t["en_tramo"]), vt,
-                                        {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, ceñida)
+        viento_loc = {} if es_largo else viento_loc_mod.viento_local(
+            trazas, dict(t["en_tramo"]), vt, {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, ceñida)
         filas = {}
         ventanas = {}
         rejilla = None
@@ -213,7 +223,9 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 twd = vt.twd_en(tr.ts[i])
                 ref = twd if ceñida else (twd + 180) % 360
                 f["sog"] = _r(tm.media_temporal(tr.sog[i], tr.ts[i]))
-                f["vmg"] = _r(tm.media_temporal(tm.vmg(tr, i, twd, ceñida), tr.ts[i]))
+                # en un largo, VMC: velocidad hacia la baliza (a lo largo del eje del tramo); la VMG
+                # respecto al viento no dice nada navegando de través
+                f["vmg"] = _r(tm.media_temporal(tm.vmc(tr, i, t["eje"]) if es_largo else tm.vmg(tr, i, twd, ceñida), tr.ts[i]))
                 f["twa"] = _r(tm.media_temporal(np.abs(dif(tr.cog[i] - twd)), tr.ts[i]), 1)
                 f["distancia_m"] = (round(float(np.sum(np.hypot(np.diff(tr.x[i]), np.diff(tr.y[i])))), 0)
                                     if cob >= COBERTURA_DISTANCIA else None)
@@ -249,7 +261,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                     marca = (float(marca[0][0]), float(marca[1][0]))
                 else:
                     marca = _punto(fin_ctrl, s)
-            f["layline"] = tm.layline(tr, e, s, marca, vt, twa_flota, mans[-1] if mans else None)
+            f["layline"] = {} if es_largo else tm.layline(tr, e, s, marca, vt, twa_flota, mans[-1] if mans else None)
             lay = f["layline"]
             if lay.get("estado") == "SOBREPASADA":
                 # ¿tráfico o cálculo? (posiciones de la flota entre el cruce de la layline y la última maniobra)
@@ -261,17 +273,18 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 lay["trafico"] = traf.analizar(rejilla, v, marca, centro, semi, t_desde, lay["_tp"], zona)
             lay.pop("_cono", None)
             lay.pop("_tp", None)
-            f["tactica"] = tac.tramo(tr, e, s, vt, ceñida, marca if marca is not None else _punto(fin_ctrl, s),
-                                     t["p_ini"], t["eje"], mans, viento_loc.get(v))
+            f["tactica"] = None if es_largo else tac.tramo(tr, e, s, vt, ceñida, marca if marca is not None else _punto(fin_ctrl, s),
+                                                         t["p_ini"], t["eje"], mans, viento_loc.get(v))
             f["puerta"] = paso_fin.puerta if paso_fin else None
             man_t = [m.t for m in mans]
-            f["vmg_estable"] = _r(rend.vmg_estable(tr, e, s, vt, man_t), 3)
+            f["vmg_estable"] = _r(rend.vmg_estable(tr, e, s, vt, man_t, eje=t["eje"] if es_largo else None), 3)
             pm = rend.segundos_en_maniobras(mans)
             f["perdida_man_s"] = None if pm is None else round(pm, 1)
-            ventanas[v] = rend.vmg_por_ventanas(tr, e, s, vt, man_t, t["en_tramo"][t["lider"]][0])
+            if not es_largo:
+                ventanas[v] = rend.vmg_por_ventanas(tr, e, s, vt, man_t, t["en_tramo"][t["lider"]][0])
             if fin_ctrl.tipo in ("barlovento", "sotavento"):
                 f["rodeo"] = rend.rodeo(tr, paso_fin)
-            if not ceñida and t["desde"][0] in "bo":   # popa tras barlovento u offset: ¿set directo o trasluchando?
+            if not ceñida and not es_largo and t["desde"][0] in "bo":   # popa tras barlovento u offset: ¿set directo o trasluchando?
                 f["set"] = rend.tipo_set(tr, e, vt)
             filas[v] = f
         for v, r in rend.regularidad(ventanas).items():
@@ -292,10 +305,10 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             prim = [(min(m.t for m in ms) - senal) / 1000 for ms in man_por_tramo[t["id"]].values() if ms]
             prim = [x for x in prim if x > 0]
             est_s = float(np.median(prim)) if prim else 0.0
-        fant_d = tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"], est_s)
+        fant_d = None if es_largo else tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"], est_s)
         fant = fant_d["m"] if fant_d else None
         for f in filas.values():
-            f["modo"] = tm.modo(f["twa"], f["sog"], med_twa, med_sog, ceñida) if buenas else None
+            f["modo"] = tm.modo(f["twa"], f["sog"], med_twa, med_sog, ceñida) if buenas and not es_largo else None
             if fant and f["distancia_m"]:
                 f["vs_fantasma_m"] = round(f["distancia_m"] - fant, 0)
                 f["eficiencia_pct"] = round((fant - f["distancia_m"]) / fant * 100, 1)
@@ -349,21 +362,21 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                     f["escora_en_rango_pct"] = round(float(np.mean(np.abs(h_ - esc_opt) <= 2)) * 100)
         # Curva para el gráfico: VMG relativa a los vecinos por franja de 2° de escora (sin maniobras
         # ni rodeos). La óptima sigue siendo la media de los 5 con más VMG; la curva la acompaña.
-        curva = esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+        curva = None if es_largo else esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
                                                  {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
         if curva:
             curva.pop("_por_barco", None)
             opt = (opt or {}) | {"curva": curva}
         # Ángulo, SOG y VMG de cada barco frente a sus vecinos (mismo viento): sustituye a la polar,
         # que con la TWD reconstruida confundía las roladas locales con el ángulo (ver rendimiento)
-        fv = rend.frente_a_vecinos(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+        fv = {} if es_largo else rend.frente_a_vecinos(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
                                                      {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()},
                                                      offsets, tras_maniobra_ms=25_000))
         for v, f in filas.items():
             f["vecinos"] = fv.get(v)
         salida_tramos.append({
             "escora_optima": opt,
-            "id": t["id"], "nombre": t["nombre"], "tipo": "ceñida" if ceñida else "popa",
+            "id": t["id"], "nombre": t["nombre"], "tipo": "largo" if es_largo else "ceñida" if ceñida else "popa",
             "desde": t["desde"], "hasta": t["hasta"], "t0": vt.t0, "t1": vt.t1,
             "rumbo_eje": round(t["eje"], 1), "largo_m": _r(t["largo_m"], 0),
             "viento": {"sog_min": round(vt.sog_min, 2), "twd_media": round(vt.twd_media, 1), "twa_flota": _r(twa_flota, 1), "cortes": cortes,
@@ -437,7 +450,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
     entrada_corr = [{"ceñida": t["tipo"] == "ceñida", "t0": t["t0"], "t1": t["t1"], "sog_min": t["viento"]["sog_min"],
                      "avance": t["viento"]["twd_media"] if t["tipo"] == "ceñida" else (t["viento"]["twd_media"] + 180) % 360,
                      "barcos": {v: (f["t_entrada"], f["t_salida"]) for v, f in t["barcos"].items()}}
-                    for t in salida_tramos]
+                    for t in salida_tramos if t["tipo"] != "largo"]
     decl = corr.declinacion(proy.lat0, proy.lon0, senal)
     c = corr.estimar(trazas, entrada_corr, decl)
     # por vuelta (ceñida + popa siguiente): la marea cambia durante la prueba

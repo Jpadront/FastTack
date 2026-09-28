@@ -1,1 +1,1 @@
-__version__ = "0.29.2"  # informe PDF: maniobras por fases, con los datos del motor
+__version__ = "0.30.0"  # recorridos con largos (baliza de ala); sin escora óptima del campeonato

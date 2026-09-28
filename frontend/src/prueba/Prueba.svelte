@@ -269,9 +269,12 @@
         <div><i>TWD media <span class="est">est.</span></i><b>{num(tr.viento.twd_media, 0)}°</b></div>
         <div><i>TWA de la flota <span class="est">est.</span></i><b>{tr.viento.twa_flota == null ? '—' : num(tr.viento.twa_flota, 0) + '°'}</b></div>
         <div><i>Largo</i><b>{fM(tr.largo_m)}</b></div>
-        <div><i>Barco fantasma <span class="est">est.</span></i><b>{fM(tr.fantasma_m)}</b></div>
+        {#if tr.tipo !== 'largo'}<div><i>Barco fantasma <span class="est">est.</span></i><b>{fM(tr.fantasma_m)}</b></div>{/if}
         <div><i>Líder</i><b>{vc(Object.entries(tr.barcos).find(([, f]) => f.posicion === 1)?.[0] || '')}</b></div>
       </section>
+      {#if tr.tipo === 'largo'}
+        <p class="nota-largo">Largo: tramo de través hacia una baliza de ala (recorrido triangular, sin popa). Se compara la <b>VMC</b> (velocidad hacia la baliza) y la SOG; no hay VMG al viento, maniobras, laylines ni táctica de roles. El viento es el del tramo anterior.</p>
+      {/if}
       <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
         nota={`En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «tráfico en la layline» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
         columnas={[
@@ -279,29 +282,31 @@
           { k: 'posicion', titulo: 'Pos.', num: true },
           { k: 'parcial_s', titulo: 'Parcial', num: true, fmt: fmtDur },
           { k: 'gap_s', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
-          { k: 'vmg', titulo: 'VMG', num: true, est: true, fmt: fKn },
+          tr.tipo === 'largo' ? { k: 'vmg', titulo: 'VMC', num: true, ayuda: 'Velocidad hacia la baliza (a lo largo del tramo)', fmt: fKn } : { k: 'vmg', titulo: 'VMG', num: true, est: true, fmt: fKn },
           { k: 'sog', titulo: 'SOG', num: true, fmt: fKn },
           { k: 'twa', titulo: 'TWA', num: true, est: true, fmt: fGrados(1) },
           { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
-          { k: 'maniobras', titulo: 'Man.', num: true, est: true },
-          { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
-          { k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') },
-          { k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
-          { k: 'layline_txt', titulo: 'Layline', est: true },
-          { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'maniobras', titulo: 'Man.', num: true, est: true }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'layline_txt', titulo: 'Layline', est: true }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' }]),
           { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
           ...(tr.escora_optima ? [{ k: 'escora_frente_optima', titulo: 'vs óptima', num: true, est: true, ayuda: 'Escora del barco menos la óptima (media de los 5 con más VMG del tramo): + = más escorado', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + '°') }] : []),
           { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
-          { k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' },
-          { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) },
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' }]),
+          ...(tr.tipo === 'largo' ? [] : [{ k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) }]),
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
       {#if tr.escora_optima}
         <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} nombres={vc} />
       {/if}
       <Polar tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />
-      <Maniobras tramo={tr} {ref} nombreRef={vc(ref)} senalMs={an.senal} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)}
-        refTop5={an.maniobras_top5?.[tr.tipo === 'ceñida' ? 'virada' : 'trasluchada']} />
+      {#if tr.tipo !== 'largo'}
+        <Maniobras tramo={tr} {ref} nombreRef={vc(ref)} senalMs={an.senal} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)}
+          refTop5={an.maniobras_top5?.[tr.tipo === 'ceñida' ? 'virada' : 'trasluchada']} />
+      {/if}
       <GraficoViento tramo={tr} {T} senalMs={an.senal} />
       <div class="dos">
         <section class="tarjeta bloque">
@@ -443,6 +448,7 @@
   .zona i { font-style: normal; font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-2); }
   .nota-z { font-size: 13px; color: var(--tinta-3); margin: 6px 0 0; }
   .informe { margin: 0 0 8px; }
+  .nota-largo { margin: 0 0 8px; font-size: 14px; color: var(--tinta-2); }
   .informe a { font-size: 14px; padding: 5px 12px; text-decoration: none; display: inline-block; }
   .modos-ia { display: flex; gap: 6px; margin-bottom: 8px; }
   .modos-ia button { font: 600 14px var(--display); padding: 5px 12px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); cursor: pointer; }
