@@ -202,7 +202,7 @@
   </section>
 
   <div id="r-medias" class="ancla"></div>
-  <Tabla titulo="Medias del campeonato" {ref} {colores} filas={filasRend} ordenInicial="pos"
+  <Tabla titulo="Medias del campeonato" {ref} {colores} filas={filasRend} ordenInicial="pos" destacada={metrica}
     nota="Medias de las pruebas con métricas, ponderadas por la cobertura de datos de cada barco en cada prueba. * estimado con el viento reconstruido."
     columnas={[
       { k: 'vela', titulo: 'Barco', fmt: vc }, { k: 'pos', titulo: 'Pos.', num: true }, { k: 'analizadas', titulo: 'Pruebas', num: true },
@@ -238,6 +238,7 @@
         { k: 'ocs', titulo: 'OCS', num: true, ayuda: 'Según el comité' },
       ]} />
     <Tabla titulo="Maniobras, laylines y puertas" {ref} {colores} filas={filasManiobras} ordenInicial="virada"
+      destacada={{ perdida_virada_m: 'virada', perdida_trasluchada_m: 'trasluchada' }[metrica]}
       nota="Pérdida media por maniobra con datos suficientes. Layline OK: tramos que llegan a la baliza sin sobrepasar la layline. Puerta favorecida: solo puertas con ventaja ≥ 5 m. * estimado."
       columnas={[
         { k: 'vela', titulo: 'Barco', fmt: vc },

@@ -2,10 +2,10 @@
 
 Amura favorecida: en cada instante, de las dos amuras (o bandas en popa) posibles con la TWD de ese
 momento y el ángulo al viento del barco en el tramo, la que apunta más cerca de la baliza. Navegar en
-la otra es navegar «en el rolón» (con la rolada en contra). Si la TWD está a menos de UMBRAL_GRADOS
+la otra es navegar «con el role en contra» (con la rolada en contra). Si la TWD está a menos de UMBRAL_GRADOS
 de la dirección de la baliza, las dos amuras son iguales (neutro).
 
-Viradas/trasluchadas: a favor si pasan de la amura desfavorecida a la favorecida (virar en el rolón),
+Viradas/trasluchadas: a favor si pasan de la amura desfavorecida a la favorecida (virar en el role en contra),
 en contra si pasan de la favorecida a la desfavorecida; neutras si no cambian nada (o sin datos).
 
 Lado del campo: distancia lateral a la recta entre la baliza de salida del tramo y la de llegada,
@@ -24,8 +24,8 @@ MARGEN_RODEO_MS = 20_000
 MARGEN_MANIOBRA_MS = 10_000
 VENTANA_MANIOBRA_MS = 40_000
 CENTRO_M = 50.0
-ROLON_MIN_MS = 20_000        # en la amura desfavorecida al menos 20 s seguidos = ha entrado un rolón
-HUECO_ROLON_MS = 15_000      # huecos (maniobras, datos) que no cortan un rolón
+ROLE_MIN_MS = 20_000        # en la amura desfavorecida al menos 20 s seguidos = ha entrado un role en contra
+HUECO_ROLE_MS = 15_000      # huecos (maniobras, datos) que no cortan un role en contra
 
 
 def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float, maniobras: list,
@@ -74,11 +74,11 @@ def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float
             en_contra += 1
         else:
             neutras += 1
-    # Reacción a los rolones: cuando el barco queda en la amura desfavorecida al menos ROLON_MIN_MS
+    # Reacción a los roles en contra: cuando el barco queda en la amura desfavorecida al menos ROLE_MIN_MS
     # seguidos, cuánto tarda en virar (o trasluchar). Sin maniobra antes del final del tramo: sin responder.
     t_ok = tr.ts[i][util]
     malo = ~en_fav[util]
-    rolones, respuestas, sin_resp = 0, [], 0
+    roles_en_contra, respuestas, sin_resp = 0, [], 0
     k = 0
     mts = sorted(m.t for m in maniobras)
     while k < len(t_ok):
@@ -86,10 +86,10 @@ def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float
             k += 1
             continue
         j = k
-        while j + 1 < len(t_ok) and malo[j + 1] and t_ok[j + 1] - t_ok[j] <= HUECO_ROLON_MS:
+        while j + 1 < len(t_ok) and malo[j + 1] and t_ok[j + 1] - t_ok[j] <= HUECO_ROLE_MS:
             j += 1
-        if t_ok[j] - t_ok[k] >= ROLON_MIN_MS:
-            rolones += 1
+        if t_ok[j] - t_ok[k] >= ROLE_MIN_MS:
+            roles_en_contra += 1
             sig = next((m for m in mts if m >= t_ok[k]), None)
             if sig is not None and sig <= t_ok[j] + VENTANA_MANIOBRA_MS:
                 respuestas.append((sig - t_ok[k]) / 1000)
@@ -97,8 +97,8 @@ def tramo(tr: Traza, e: int, s: int, vt, ceñida: bool, marca, p_ini, eje: float
                 sin_resp += 1
         k = j + 1
     out = {"amura_favorecida_pct": None if fav_pct is None else round(fav_pct, 0),
-           "rolones": rolones, "rolones_sin_responder": sin_resp,
-           "respuesta_a_rolones_mediana_s": round(float(np.median(respuestas))) if respuestas else None,
+           "roles_en_contra": roles_en_contra, "roles_en_contra_sin_responder": sin_resp,
+           "respuesta_a_roles_en_contra_mediana_s": round(float(np.median(respuestas))) if respuestas else None,
            "viento": "local" if viento_local else "cortes",
            "tiempo_en_amura_desfavorecida_s": round(float(dt[util & ~en_fav].sum())),
            "tiempo_neutro_pct": round(float(dt[neutro].sum() / dt.sum() * 100), 0) if dt.sum() > 0 else None,
