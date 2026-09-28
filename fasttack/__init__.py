@@ -1,1 +1,1 @@
-__version__ = "0.28.0"  # informe PDF de la prueba: rendimiento y debrief
+__version__ = "0.28.1"  # dónde se perdió, en el orden de la prueba

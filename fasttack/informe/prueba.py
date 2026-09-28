@@ -287,22 +287,31 @@ def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
 
     # Dónde se perdió
     if dsp:
-        pdf.seccion("Dónde se perdió la prueba", "Tiempo perdido (+) o ganado (−) frente al tiempo mediano de los 5 primeros. "
+        pdf.seccion("Dónde se perdió la prueba", "En el orden de la prueba. Tiempo perdido (+) o ganado (−) frente al tiempo mediano de los 5 primeros. "
                     "Velocidad: con tu VMG navegando estable; maniobras: viradas y trasluchadas; táctica y resto: lo que falta "
                     "hasta la diferencia real (roladas, lado, laylines, rodeos).")
-        partes = [("Salida", dsp.get("salida_s") if not isinstance(dsp.get("salida_s"), str) else None),
-                  ("Velocidad", dsp.get("velocidad_s")), ("Maniobras", dsp.get("maniobras_s")), ("Táctica y resto", dsp.get("tactica_y_resto_s"))]
-        escala = max([30] + [abs(s) for _, s in partes if s])
+        # En el orden de la prueba: la salida y cada tramo (el primero, sin la salida)
+        sal = dsp.get("salida_s") if not isinstance(dsp.get("salida_s"), str) else None
+        pt = dsp.get("por_tramo", [])
+        partes = [("Salida", sal)] + [(x["tramo"], None if x.get("sin_datos") else
+                                       x["total_s"] - ((x.get("salida_s") or 0) if k == 0 else 0)) for k, x in enumerate(pt)]
+        escala = max([30] + [abs(v) for _, v in partes if v])
         pdf.barras(partes, escala)
-        pt = [x for x in dsp.get("por_tramo", []) if not x.get("sin_datos")]
-        if pt:
-            pdf.ln(2)
-            filas = [[x["tramo"], tiempo(x.get("total_s"), True), tiempo(x.get("salida_s"), True), tiempo(x.get("velocidad_s"), True),
-                      tiempo(x.get("maniobras_s"), True), tiempo(x.get("tactica_y_resto_s"), True)] for x in pt]
-            col = [[None] + [ROJO if (x.get(k) or 0) > 0 else AZUL if (x.get(k) or 0) < 0 else None
-                             for k in ("total_s", "salida_s", "velocidad_s", "maniobras_s", "tactica_y_resto_s")] for x in pt]
-            pdf.tabla(["Tramo", "Total", "Salida", "Velocidad", "Maniobras", "Táctica y resto"], filas,
-                      [38, 28, 28, 28, 28, 28], ["L", "R", "R", "R", "R", "R"], col)
+        pdf.ln(1)
+        tipos = [("velocidad", dsp.get("velocidad_s")), ("maniobras", dsp.get("maniobras_s")), ("táctica y resto", dsp.get("tactica_y_resto_s"))]
+        pdf.texto("Por tipo: " + " · ".join(f"{k} **{tiempo(v, True)}**" for k, v in tipos if v is not None), tam=9.5, color=TINTA2)
+        con = [x for x in pt if not x.get("sin_datos")]
+        if con:
+            pdf.ln(1)
+            filas = [[x["tramo"], tiempo(x["total_s"] - ((x.get("salida_s") or 0) if x is pt[0] else 0), True), tiempo(x.get("velocidad_s"), True),
+                      tiempo(x.get("maniobras_s"), True), tiempo(x.get("tactica_y_resto_s"), True)] for x in con]
+            col = [[None] + [ROJO if (v or 0) > 0 else AZUL if (v or 0) < 0 else None
+                             for v in (x["total_s"] - ((x.get("salida_s") or 0) if x is pt[0] else 0), x.get("velocidad_s"),
+                                       x.get("maniobras_s"), x.get("tactica_y_resto_s"))] for x in con]
+            pdf.tabla(["Tramo", "Total", "Velocidad", "Maniobras", "Táctica y resto"], filas,
+                      [42, 34, 34, 34, 34], ["L", "R", "R", "R", "R"], col)
+        pdf.texto("Cada tramo se compara con la mediana del top 5 en ese tramo: la suma no coincide exactamente con la diferencia en la llegada.",
+                  tam=8, estilo="I", color=TINTA3, alto=4)
 
     # Medias frente al top 5
     md = h.get("medias_de_la_prueba") or {}
