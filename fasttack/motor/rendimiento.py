@@ -25,7 +25,9 @@ MIN_VENTANAS = 5
 SET_VENTANA_MS = 45_000        # trasluchada dentro de los 45 s tras el rodeo = set trasluchando
 
 
-def _estables(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]):
+def estables(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]):
+    """Índices del tramo navegando estable: sin los 20 s de cada rodeo, sin ±15 s alrededor de cada
+    maniobra y sin momentos parados o sin rumbo. None si quedan menos de 10 muestras."""
     i = tr.tramo(e + MARGEN_RODEO_MS, s - MARGEN_RODEO_MS)
     if len(i) < 10:
         return None
@@ -38,7 +40,7 @@ def _estables(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]):
 
 def polar(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> list[dict] | None:
     """[{twa, sog, vmg, s}] por franja de TWA (2° en ceñida, 5° en popa) con ≥ 15 s de datos."""
-    i = _estables(tr, e, s, vt, maniobras_t)
+    i = estables(tr, e, s, vt, maniobras_t)
     if i is None:
         return None
     twd = vt.twd_en(tr.ts[i])
@@ -59,7 +61,7 @@ def polar(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> list[dict] |
 
 def vmg_por_ventanas(tr: Traza, e: int, s: int, vt, maniobras_t: list[int], t0: int) -> dict[int, float]:
     """VMG media de cada ventana de 30 s (alineadas desde t0) con ≥ 70 % de datos estables."""
-    i = _estables(tr, e, s, vt, maniobras_t)
+    i = estables(tr, e, s, vt, maniobras_t)
     if i is None:
         return {}
     v = vmg(tr, i, vt.twd_en(tr.ts[i]), vt.ceñida)
@@ -128,7 +130,7 @@ def rodeo(tr: Traza, paso) -> dict | None:
 
 def vmg_estable(tr: Traza, e: int, s: int, vt, maniobras_t: list[int]) -> float | None:
     """VMG media navegando estable (sin rodeos ni maniobras): la velocidad «pura» del barco."""
-    i = _estables(tr, e, s, vt, maniobras_t)
+    i = estables(tr, e, s, vt, maniobras_t)
     if i is None:
         return None
     v = vmg(tr, i, vt.twd_en(tr.ts[i]), vt.ceñida)

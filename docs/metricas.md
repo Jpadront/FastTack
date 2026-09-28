@@ -93,10 +93,10 @@ El HDG de cada Atlas puede estar en magnético o en verdadero y tener un error d
 
 Desde el motor 0.17 (`fasttack/motor/analisis.py`), en cada ceñida y cada popa:
 
-1. Escora de cada barco en el tramo = mediana de |roll − desviación del sensor| navegando estable (en popa, con signo: + a sotavento, − a barlovento).
+1. Escora de cada barco en el tramo = mediana de |roll − desviación del sensor| **solo navegando estable**: sin los 20 s del principio y del final (rodeos), sin ±15 s alrededor de cada virada o trasluchada (la escora pasa por 0 y cambia de banda) y sin momentos parados; lo mismo para el cabeceo (desde el motor 0.17.2; antes entraban todas las muestras y la escora salía de media 0,2° más baja en ceñida y 0,3° en popa, hasta 2° en popas con muchas trasluchadas). En popa, con signo: + a sotavento, − a barlovento.
 2. **No cuentan los sensores que no cuadran con la flota**: a más de 6° (o de 3 MAD) de la mediana de la flota en ese tramo (p. ej. 3° en ceñida con 20 kn, u 85°: sensor mal montado o sin calibrar).
 3. **Escora óptima = media de la escora de los 5 barcos con más VMG del tramo** (VMG navegando estable; se necesitan al menos 3). Se guarda también el rango (mín–máx de esos 5) y quiénes son.
-4. Por barco: su escora menos la óptima (+ = más escorado) y el % del tiempo con la escora (media móvil de 10 s) a ±2° de la óptima.
+4. Por barco: su escora menos la óptima (+ = más escorado) y el % del tiempo navegando estable con la escora (media móvil de 10 s) a ±2° de la óptima.
 
 **Campeonato** (Resumen): media de la óptima de todas las ceñidas y, si hay viento de referencia, por intensidad (≥ 2 ceñidas). Por barco: su escora media, la diferencia media con la óptima y en cuántas ceñidas quedó a menos de 2°. Mundial (19 ceñidas, 20–25 kn): 15,1°; ESP 1214, 16,2° (+1,4°), 13 de 19 ceñidas a menos de 2°.
 

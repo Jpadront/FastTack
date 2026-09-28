@@ -22,7 +22,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_tramo
 
-VERSION = "0.17.1"
+VERSION = "0.17.2"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -212,15 +212,24 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 f["twa"] = _r(tm.media_temporal(np.abs(dif(tr.cog[i] - twd)), tr.ts[i]), 1)
                 f["distancia_m"] = (round(float(np.sum(np.hypot(np.diff(tr.x[i]), np.diff(tr.y[i])))), 0)
                                     if cob >= COBERTURA_DISTANCIA else None)
-                esc = np.abs(tr.roll[i] - offsets[v])
-                f["escora"] = _r(np.median(esc), 1)
-                f["escora_iqr"] = _r(np.subtract(*np.percentile(esc, [75, 25])), 1)
+                # Escora y cabeceo solo navegando estable: en cada virada o trasluchada la escora pasa
+                # por 0 y cambia de banda, y en los rodeos tampoco es la de navegar el tramo
+                ie = rend.estables(tr, e, s, vt, [m.t for m in mans])
+                if ie is not None:
+                    esc = np.abs(tr.roll[ie] - offsets[v])
+                    f["escora"] = _r(np.median(esc), 1)
+                    f["escora_iqr"] = _r(np.subtract(*np.percentile(esc, [75, 25])), 1)
+                    f["cabeceo"] = _r(np.median(tr.pitch[ie]), 1)
+                    f["cabeceo_iqr"] = _r(np.subtract(*np.percentile(tr.pitch[ie], [75, 25])), 1)
+                else:
+                    f.update({k: None for k in ("escora", "escora_iqr", "cabeceo", "cabeceo_iqr")})
                 if not ceñida:   # en popa, con signo: + = a sotavento, − = a barlovento
-                    al_viento = dif(tr.cog[i] - twd)
-                    ok_s = ~np.isnan(al_viento)
-                    f["escora_sotavento"] = _r(np.median((tr.roll[i][ok_s] - offsets[v]) * np.sign(al_viento[ok_s])), 1) if ok_s.any() else None
-                f["cabeceo"] = _r(np.median(tr.pitch[i]), 1)
-                f["cabeceo_iqr"] = _r(np.subtract(*np.percentile(tr.pitch[i], [75, 25])), 1)
+                    f["escora_sotavento"] = None
+                    if ie is not None:
+                        al_viento = dif(tr.cog[ie] - vt.twd_en(tr.ts[ie]))
+                        ok_s = ~np.isnan(al_viento)
+                        if ok_s.any():
+                            f["escora_sotavento"] = _r(np.median((tr.roll[ie][ok_s] - offsets[v]) * np.sign(al_viento[ok_s])), 1)
             else:
                 f.update({k: None for k in ("sog", "vmg", "twa", "distancia_m", "escora", "escora_iqr", "cabeceo", "cabeceo_iqr")})
                 if not ceñida:
@@ -312,17 +321,19 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                 if f.get(campo) is None:
                     continue
                 f["escora_frente_optima"] = round(f[campo] - esc_opt, 1)
+                # % del tiempo navegando estable (sin maniobras ni rodeos) a ±2° de la óptima, con la
+                # escora suavizada 10 s (las olas la mueven de un segundo a otro)
                 tr = trazas[v]
                 e_, s_ = t["en_tramo"][v]
-                i_ = tr.tramo(e_ + 20_000, s_ - 20_000)
-                i_ = i_[tr.sog[i_] > vt.sog_min]
-                if len(i_) > 10:
+                i_ = tr.tramo(e_, s_)
+                ie = rend.estables(tr, e_, s_, vt, [m.t for m in man_por_tramo[t["id"]][v]])
+                if ie is not None and len(i_) > 20:
                     if ceñida:
                         h_ = np.abs(tr.roll[i_] - offsets[v])
                     else:
-                        al_ = dif(tr.cog[i_] - vt.twd_en(tr.ts[i_]))
-                        h_ = (tr.roll[i_] - offsets[v]) * np.sign(np.nan_to_num(al_))
-                    h_ = np.convolve(np.nan_to_num(h_, nan=esc_opt + 99), np.ones(20) / 20, mode="valid") if len(h_) > 20 else h_
+                        h_ = (tr.roll[i_] - offsets[v]) * np.sign(np.nan_to_num(dif(tr.cog[i_] - vt.twd_en(tr.ts[i_]))))
+                    h_ = np.convolve(np.nan_to_num(h_, nan=esc_opt + 99), np.ones(20) / 20, mode="same")
+                    h_ = h_[np.isin(i_, ie)]
                     f["escora_en_rango_pct"] = round(float(np.mean(np.abs(h_ - esc_opt) <= 2)) * 100)
         salida_tramos.append({
             "escora_optima": opt,
