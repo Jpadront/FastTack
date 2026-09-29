@@ -41,13 +41,13 @@
   </div>
   <div class="rodillo">
     <table>
-      <thead><tr><th class="n">#</th><th>Barco</th><th class="n">Δm</th>{#if linea}<th class="n" title="Metros a la línea de salida en este momento: − por detrás, + pasado">A la línea</th>{/if}<th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
+      <thead><tr><th class="n">#</th><th>Barco</th><th class="n" title="Metros por detrás del barco más adelantado del tramo, a lo largo del eje">Al líder</th>{#if linea}<th class="n" title="Metros a la línea de salida en este momento: − por detrás, + pasado">A la línea</th>{/if}<th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
       <tbody>
         {#each filas as f (f.vela)}
           <tr class:yo={f.vela === ref} class:tenue={f.sinDatos}>
             <td class="n num">{f.pos}</td>
             <td><span class="punto" style:background={colorBarco(f.vela, ref)}></span>{velaCorta(f.vela, nombres)}{#if f.otro}<span class="otro">{f.suyo}</span>{/if}</td>
-            <td class="n num">{f.dm == null ? '—' : num(f.dm, 0)}</td>
+            <td class="n num">{f.dm == null ? '—' : num(f.dm, 0) + ' m.'}</td>
             {#if linea}{@const m = f.sinDatos || f.x == null ? null : linea(f.x, f.y)}<td class="n num" class:pasado={m != null && m > 0}>{m == null ? '—' : (m > 0 ? '+' : '') + num(m, 0) + ' m.'}</td>{/if}
             <td class="n num">{f.sinDatos ? 'sin datos' : num(f.sog, 2)}</td>
             <td class="n num">{num(f.vmg, 2)}</td>

@@ -1,1 +1,1 @@
-__version__ = "0.30.2"  # salida: metros a la línea en los valores instantáneos
+__version__ = "0.30.3"  # instantáneos: cabecera «Al líder»
