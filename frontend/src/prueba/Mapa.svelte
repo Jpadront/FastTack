@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { estado, puntosControl, colorBarco, indice, HUECO_S, velaCorta, derivados, presionEn, laylines, twdEn, dif,
@@ -65,7 +65,9 @@
     const m = 60;
     mapa.fitBounds([aLonLat(minx - m, miny - m), aLonLat(maxx + m, maxy + m)], { padding: 30, duration: 0, maxZoom: 17 });
   }
-  $effect(() => { ventana; sel; if (listo) encuadrar(); });
+  // untrack: fitBounds dispara «move» → dibujar(), que lee T; sin esto el efecto dependería de T y
+  // reencuadraría en cada fotograma de la reproducción, deshaciendo el zoom del usuario
+  $effect(() => { ventana; sel; if (listo) untrack(encuadrar); });
   $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; fantasma; tramoFijo; if (listo) dibujar(); });
 
   function px(x, y) { const p = mapa.project(aLonLat(x, y)); return [p.x, p.y]; }

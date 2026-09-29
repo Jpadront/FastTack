@@ -1,1 +1,1 @@
-__version__ = "0.30.3"  # instantáneos: cabecera «Al líder»
+__version__ = "0.30.4"  # mapa: el zoom se mantiene al reproducir
