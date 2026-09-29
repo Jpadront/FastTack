@@ -1,8 +1,10 @@
 <script>
   import Nota from '../Nota.svelte';
-  import { instantaneos, twsEn, tramoEn, fmtT, num, dif, velaCorta, colorBarco, presionEn } from './datos.js';
+  import { instantaneos, twsEn, tramoEn, fmtT, num, dif, velaCorta, colorBarco, presionEn, aLaLinea } from './datos.js';
 
-  let { an, pistas, T, sel, ref, tramo = null, desfaseMs = 0, nombres = {} } = $props();
+  let { an, pistas, T, sel, ref, tramo = null, desfaseMs = 0, nombres = {}, enSalida = false } = $props();
+  // En la salida: metros a la línea en T (− por detrás, + pasado)
+  const linea = $derived(enSalida ? aLaLinea(an, pistas, T) : null);
 
   const tr = $derived(tramo ?? tramoEn(an, T));
   const inst = $derived(instantaneos(an, pistas, tr, T));
@@ -39,13 +41,14 @@
   </div>
   <div class="rodillo">
     <table>
-      <thead><tr><th class="n">#</th><th>Barco</th><th class="n">Δm</th><th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
+      <thead><tr><th class="n">#</th><th>Barco</th><th class="n">Δm</th>{#if linea}<th class="n" title="Metros a la línea de salida en este momento: − por detrás, + pasado">A la línea</th>{/if}<th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
       <tbody>
         {#each filas as f (f.vela)}
           <tr class:yo={f.vela === ref} class:tenue={f.sinDatos}>
             <td class="n num">{f.pos}</td>
             <td><span class="punto" style:background={colorBarco(f.vela, ref)}></span>{velaCorta(f.vela, nombres)}{#if f.otro}<span class="otro">{f.suyo}</span>{/if}</td>
             <td class="n num">{f.dm == null ? '—' : num(f.dm, 0)}</td>
+            {#if linea}{@const m = f.sinDatos || f.x == null ? null : linea(f.x, f.y)}<td class="n num" class:pasado={m != null && m > 0}>{m == null ? '—' : (m > 0 ? '+' : '') + num(m, 0) + ' m.'}</td>{/if}
             <td class="n num">{f.sinDatos ? 'sin datos' : num(f.sog, 2)}</td>
             <td class="n num">{num(f.vmg, 2)}</td>
             <td class="n num">{f.twa == null ? '—' : num(f.twa, 0) + '°'}</td>
@@ -81,4 +84,5 @@
   tr.tenue td { color: var(--tinta-3); }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .nota { font-size: 12px; color: var(--tinta-3); margin: 0; }
+  .pasado { color: var(--error, #c62828); font-weight: 600; }
 </style>

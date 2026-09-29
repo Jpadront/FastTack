@@ -79,6 +79,20 @@ export function puntosControl(c, pistas, T) {
   return pts;
 }
 
+// Distancia firmada a la línea de salida en T (m): + en el lado del recorrido (pasado), − por detrás.
+// Como el «margen» del motor (motor/salida.py): normal a la recta pin–comité, orientada hacia el eje.
+export function aLaLinea(an, pistas, T) {
+  const c = an.controles.find((x) => x.id === 'salida');
+  const pts = c ? puntosControl(c, pistas, T) : [];
+  if (pts.length < 2) return null;
+  const [pin, com] = pts;
+  const cx = pin.x - com.x, cy = pin.y - com.y, l = Math.hypot(cx, cy) || 1;
+  let nx = cy / l, ny = -cx / l;
+  const e = (an.eje * Math.PI) / 180;
+  if (nx * Math.sin(e) + ny * Math.cos(e) < 0) { nx = -nx; ny = -ny; }
+  return (x, y) => (x - com.x) * nx + (y - com.y) * ny;
+}
+
 export const dif = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
 
 // TWD del tramo en T interpolando entre cortes (s desde la señal).
@@ -182,7 +196,7 @@ export function instantaneos(an, pistas, tramo, T) {
     const fase = T > t_out ? 0 : T >= t_in ? 1 : 2;
     const avance = e.x * ux + e.y * uy;
     filas.push({ vela: v, fase, t_out, avance, dentro: fase === 1, suyo: suyo ? suyo.nombre : T < 0 ? 'presalida' : T > (an.clasificacion.find((c) => c.vela === v)?.t - s) / 1000 ? 'llegado' : 'rodeo', otro: T >= 0 && suyo !== tramo, sinDatos: e.sinDatos, sog: e.sinDatos ? null : e.sog, vmg, twa,
-                 cog: e.sinDatos ? null : e.cog, hdg: e.sinDatos ? null : e.hdg });
+                 cog: e.sinDatos ? null : e.cog, hdg: e.sinDatos ? null : e.hdg, x: e.x, y: e.y });
   }
   filas.sort((a, b) => a.fase - b.fase || (a.fase === 0 ? a.t_out - b.t_out : b.avance - a.avance));
   const lider = filas.find((f) => f.fase === 1);

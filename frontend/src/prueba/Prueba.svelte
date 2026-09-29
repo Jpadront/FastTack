@@ -209,7 +209,7 @@
       <Reproductor bind:T ventana={vent} senalMs={an.senal} desfaseMs={desfase} />
     </div>
     <div class="der">
-      <Panel {an} {pistas} {T} {sel} {ref} tramo={tab.tipo === 'tramo' ? tab.tramo : null} desfaseMs={desfase} {nombres} />
+      <Panel {an} {pistas} {T} {sel} {ref} tramo={tab.tipo === 'tramo' ? tab.tramo : null} desfaseMs={desfase} {nombres} enSalida={tab.tipo === 'salida'} />
     </div>
   </div>
 
