@@ -244,11 +244,12 @@
         </section>
       {/if}
       <Tabla titulo="Comparativa de apertura" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
-        nota="Margen negativo = por detrás de la línea en el disparo. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
+        nota="Margen: metros a la línea en el disparo; en verde por detrás, en rojo (+) pasado. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
           { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
-          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : num(v, 1) + ' m.') },
+          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + ' m.'),
+            color: (v) => (v == null ? null : v > 0 ? 'var(--error, #c62828)' : '#1b7f3b') },
           { k: 'sog_disparo', titulo: 'SOG disparo', num: true, fmt: fKn },
           { k: 'cruce_s', titulo: 'Cruce GPS', num: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' s.') },
           { k: 'vmg_0_90', titulo: 'VMG 0–90 s.', num: true, est: true, fmt: fKn },

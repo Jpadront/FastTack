@@ -40,7 +40,7 @@
         {#each vista as f (f.vela)}
           <tr class:yo={f.vela === ref} class:tenue={f.baja}>
             {#each columnas as c, i}
-              <td class:n={c.num} class:fija={i === 0} class:num={c.num} class:dest={c.k === destacada}>
+              <td class:n={c.num} class:fija={i === 0} class:num={c.num} class:dest={c.k === destacada} style:color={c.color?.(f[c.k], f)} style:font-weight={c.color?.(f[c.k], f) ? 600 : null}>
                 {#if i === 0 && colores[f.vela]}<span class="punto" style:background={colores[f.vela]}></span>{/if}{c.fmt ? c.fmt(f[c.k], f) : (f[c.k] ?? '—')}
               </td>
             {/each}
