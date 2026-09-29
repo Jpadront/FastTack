@@ -3,12 +3,12 @@
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { estado, puntosControl, colorBarco, indice, HUECO_S, velaCorta, derivados, presionEn, laylines, twdEn, dif,
-           DIVERGENTE, RAMPA_SOG, corrienteEn, num, lineaLider, tramoEn } from './datos.js';
+           DIVERGENTE, RAMPA_SOG, corrienteEn, num, lineaLider, tramoEn, rejillaSalida } from './datos.js';
 
   // pistas: decodificadas; an: análisis; sel: Set de velas; ref: vela de referencia
   // T: tiempo actual (s desde la señal); ventana: [t0, t1] de la pestaña; nombres: vela → texto
   // capa: 'presion' | 'twd' | 'rol' | 'sog' | null; tramo: el tramo en curso (para capas y laylines)
-  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null, lider = false, fantasma = false, tramoFijo = null } = $props();
+  let { pistas, an, sel, ref, T, ventana, controlesVisibles = null, nombres = {}, capa = null, tramo = null, lider = false, fantasma = false, tramoFijo = null, enSalida = false } = $props();
   // el tramo que se navega en T (aunque la pestaña sea otra)
   const liderEn = (T) => { const t = tramoEn(an, T) || tramo; return t ? lineaLider(an, pistas, t, T) : null; };
   const ll = $derived(lider ? liderEn(T) : null);
@@ -68,7 +68,7 @@
   // untrack: fitBounds dispara «move» → dibujar(), que lee T; sin esto el efecto dependería de T y
   // reencuadraría en cada fotograma de la reproducción, deshaciendo el zoom del usuario
   $effect(() => { ventana; sel; if (listo) untrack(encuadrar); });
-  $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; fantasma; tramoFijo; if (listo) dibujar(); });
+  $effect(() => { T; sel; controlesVisibles; capa; tramo; lider; fantasma; tramoFijo; enSalida; if (listo) dibujar(); });
 
   function px(x, y) { const p = mapa.project(aLonLat(x, y)); return [p.x, p.y]; }
   function metrosPx(m) { const a = px(0, 0), b = px(m, 0); return Math.hypot(b[0] - a[0], b[1] - a[1]); }
@@ -176,6 +176,21 @@
         const A = px(...a), B = px(...b); ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
       }
       ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    // Salida: paralelas a 25 y 50 m. por detrás, cerradas por las laylines de comité (estribor) y pin (babor)
+    const rj = enSalida ? rejillaSalida(an, pistas, T) : null;
+    if (rj) {
+      const COL = '#0f766e', ult = rj.lineas[rj.lineas.length - 1];
+      ctx.strokeStyle = COL; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.moveTo(...px(...rj.pin)); ctx.lineTo(...px(...ult.a));
+      ctx.moveTo(...px(...rj.comite)); ctx.lineTo(...px(...ult.b)); ctx.stroke();
+      ctx.font = '600 11px "Barlow Semi Condensed", Arial, sans-serif'; ctx.fillStyle = COL;
+      for (const ln of rj.lineas) {
+        const A = px(...ln.a), B = px(...ln.b);
+        ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
+        ctx.fillText(ln.d + ' m.', A[0] + 6, A[1] + 12);
+      }
+      ctx.globalAlpha = 1;
     }
     // Líneas de salida y llegada, balizas
     const ctrls = an.controles.filter((c) => !controlesVisibles || controlesVisibles.has(c.id));

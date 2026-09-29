@@ -79,6 +79,32 @@ export function puntosControl(c, pistas, T) {
   return pts;
 }
 
+// Líneas paralelas a la de salida a 25 y 50 m. por detrás, cerradas por la layline de estribor que
+// llega al comité y la de babor que llega al pin (visor). Rumbos de ceñida: TWD del primer tramo en T
+// ± TWA de la flota (estimados). Devuelve { lineas: [{ d, a: [x, y], b: [x, y] }], comite, pin }.
+export function rejillaSalida(an, pistas, T, distancias = [25, 50]) {
+  const c = an.controles.find((x) => x.id === 'salida');
+  const tr = an.tramos[0];
+  const pts = c ? puntosControl(c, pistas, T) : [];
+  if (pts.length < 2 || !tr || tr.tipo !== 'ceñida' || !tr.viento?.twa_flota) return null;
+  const [pin, com] = pts;
+  const cx = pin.x - com.x, cy = pin.y - com.y, l = Math.hypot(cx, cy) || 1;
+  let nx = cy / l, ny = -cx / l;
+  const e = (an.eje * Math.PI) / 180;
+  if (nx * Math.sin(e) + ny * Math.cos(e) < 0) { nx = -nx; ny = -ny; }
+  const twd = twdEn(tr, T, an.senal), a = tr.viento.twa_flota;
+  const dir = (r) => [Math.sin((r * Math.PI) / 180), Math.cos((r * Math.PI) / 180)];
+  const est = dir(twd - a), bab = dir(twd + a);   // proa de ceñida en estribor y en babor
+  const kE = est[0] * nx + est[1] * ny, kB = bab[0] * nx + bab[1] * ny;
+  if (kE < 0.1 || kB < 0.1) return null;          // laylines casi paralelas a la línea: no se cierran
+  const lineas = distancias.map((d) => ({
+    d,
+    a: [pin.x - (d / kB) * bab[0], pin.y - (d / kB) * bab[1]],
+    b: [com.x - (d / kE) * est[0], com.y - (d / kE) * est[1]],
+  }));
+  return { lineas, comite: [com.x, com.y], pin: [pin.x, pin.y] };
+}
+
 // Distancia firmada a la línea de salida en T (m): + en el lado del recorrido (pasado), − por detrás.
 // Como el «margen» del motor (motor/salida.py): normal a la recta pin–comité, orientada hacia el eje.
 export function aLaLinea(an, pistas, T) {

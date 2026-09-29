@@ -205,7 +205,7 @@
           {#if corrAhora}<span>· corriente {num(corrAhora.velocidad_kn, 1)} kn. hacia {num(corrAhora.hacia_grados, 0)}° <span class="est">est.</span></span>{:else}<span class="tenue">· corriente sin estimar</span>{/if}
         </div>
       </div>
-      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} {lider} {fantasma} tramoFijo={tab?.tipo === 'tramo' ? tab.tramo : null} /></div>
+      <div class="mapabox"><Mapa {pistas} {an} {sel} {ref} {T} ventana={vent} controlesVisibles={controlesTab} {nombres} {capa} tramo={trMapa} {lider} {fantasma} tramoFijo={tab?.tipo === 'tramo' ? tab.tramo : null} enSalida={tab?.tipo === 'salida'} /></div>
       <Reproductor bind:T ventana={vent} senalMs={an.senal} desfaseMs={desfase} />
     </div>
     <div class="der">
