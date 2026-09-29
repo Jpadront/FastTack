@@ -435,8 +435,11 @@
   .pestanas::-webkit-scrollbar { display: none; }
   .pestanas button { font: 600 15px var(--display); padding: 8px 12px; border: 0; background: none; color: var(--tinta-2); white-space: nowrap; border-bottom: 3px solid transparent; }
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
-  .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 10px; align-items: start; }
-  .izq { display: grid; gap: 8px; min-width: 0; }
+  /* subgrid: el panel de la derecha empieza a la altura del borde superior del mapa (fila 2), aunque
+     la fila de capas de encima cambie de alto */
+  .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto auto auto; gap: 8px 10px; align-items: start; }
+  .izq { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; min-width: 0; }
+  .der { grid-column: 2; grid-row: 2 / span 2; min-width: 0; }
   .meteo { font-size: 14px; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
   .meteo .etiqueta { margin-right: 2px; }
   .aviso-meteo { color: #b35c00; }
@@ -458,7 +461,9 @@
   .peq { font-size: 12px !important; font-weight: 500 !important; color: var(--tinta-3); }
   .mapabox { height: min(62vh, 560px); min-height: 300px; }
   @media (max-width: 900px) {
-    .rejilla { grid-template-columns: minmax(0, 1fr); } .mapabox { height: 46vh; }
+    .rejilla { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    .izq { grid-row: auto; grid-template-rows: none; gap: 8px; } .der { grid-column: auto; grid-row: auto; }
+    .mapabox { height: 46vh; }
     .contenido { padding-bottom: 76px; }   /* sitio para el reproductor fijo */
     .modos { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     .modos button { flex: none; }

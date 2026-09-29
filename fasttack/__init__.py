@@ -1,1 +1,1 @@
-__version__ = "0.30.4"  # mapa: el zoom se mantiene al reproducir
+__version__ = "0.30.5"  # prueba: valores instantáneos alineados con el mapa
