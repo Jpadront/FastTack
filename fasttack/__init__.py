@@ -1,1 +1,1 @@
-__version__ = "0.30.7"  # salida: rótulos paralelos y laylines blancas; instantáneos sin scroll
+__version__ = "0.30.8"  # instantáneos: a la línea en verde por detrás

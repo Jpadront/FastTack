@@ -48,7 +48,7 @@
             <td class="n num">{f.pos}</td>
             <td><span class="punto" style:background={colorBarco(f.vela, ref)}></span>{velaCorta(f.vela, nombres)}{#if f.otro}<span class="otro">{f.suyo}</span>{/if}</td>
             <td class="n num">{f.dm == null ? '—' : num(f.dm, 0) + ' m.'}</td>
-            {#if linea}{@const m = f.sinDatos || f.x == null ? null : linea(f.x, f.y)}<td class="n num" class:pasado={m != null && m > 0}>{m == null ? '—' : (m > 0 ? '+' : '') + num(m, 0) + ' m.'}</td>{/if}
+            {#if linea}{@const m = f.sinDatos || f.x == null ? null : linea(f.x, f.y)}<td class="n num" class:pasado={m != null && m > 0} class:dentro={m != null && m <= 0}>{m == null ? '—' : (m > 0 ? '+' : '') + num(m, 0) + ' m.'}</td>{/if}
             <td class="n num">{f.sinDatos ? 'sin datos' : num(f.sog, 2)}</td>
             <td class="n num">{num(f.vmg, 2)}</td>
             <td class="n num">{f.twa == null ? '—' : num(f.twa, 0) + '°'}</td>
@@ -86,4 +86,5 @@
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .nota { font-size: 12px; color: var(--tinta-3); margin: 0; }
   .pasado { color: var(--error, #c62828); font-weight: 600; }
+  .dentro { color: #1b7f3b; font-weight: 600; }
 </style>
