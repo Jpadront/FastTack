@@ -145,6 +145,22 @@
     ctx.globalAlpha = 1;
   }
 
+  // Rótulos de las paralelas de salida: sobre cada línea, en su centro, paralelos a ella, sin quedar
+  // boca abajo y encima de los barcos (en el disparo la flota se amontona justo ahí)
+  function rotulosSalida(rj) {
+    ctx.font = '600 11px "Barlow Semi Condensed", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const ln of rj.lineas) {
+      const A = px(...ln.a), B = px(...ln.b);
+      let ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
+      if (ang > Math.PI / 2) ang -= Math.PI; else if (ang < -Math.PI / 2) ang += Math.PI;
+      ctx.save(); ctx.translate((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); ctx.rotate(ang);
+      ctx.lineWidth = 4; ctx.strokeStyle = '#ffffff'; ctx.strokeText(ln.d + ' m.', 0, 0);
+      ctx.fillStyle = '#0f766e'; ctx.fillText(ln.d + ' m.', 0, 0);
+      ctx.restore();
+    }
+    ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+  }
+
   function dibujar() {
     if (!ctx) return;
     const w = lienzo.clientWidth, h = lienzo.clientHeight;
@@ -181,14 +197,17 @@
     const rj = enSalida ? rejillaSalida(an, pistas, T) : null;
     if (rj) {
       const COL = '#0f766e', ult = rj.lineas[rj.lineas.length - 1];
+      // laylines: blanco discontinuo, con un filo oscuro tenue para que se vean sobre el fondo claro
+      const tramos = [[rj.pin, ult.a], [rj.comite, ult.b]].map(([a, b]) => [px(...a), px(...b)]);
+      ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(16,34,43,0.25)';
+      ctx.beginPath(); for (const [A, B] of tramos) { ctx.moveTo(...A); ctx.lineTo(...B); } ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff';
+      ctx.beginPath(); for (const [A, B] of tramos) { ctx.moveTo(...A); ctx.lineTo(...B); } ctx.stroke();
+      ctx.setLineDash([]);
       ctx.strokeStyle = COL; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
-      ctx.beginPath(); ctx.moveTo(...px(...rj.pin)); ctx.lineTo(...px(...ult.a));
-      ctx.moveTo(...px(...rj.comite)); ctx.lineTo(...px(...ult.b)); ctx.stroke();
-      ctx.font = '600 11px "Barlow Semi Condensed", Arial, sans-serif'; ctx.fillStyle = COL;
       for (const ln of rj.lineas) {
         const A = px(...ln.a), B = px(...ln.b);
         ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
-        ctx.fillText(ln.d + ' m.', A[0] + 6, A[1] + 12);
       }
       ctx.globalAlpha = 1;
     }
@@ -265,6 +284,7 @@
         ctx.fillStyle = '#10222b'; ctx.fillText(velaCorta(v, nombres), X + 9, Y + 4);
       }
     }
+    if (rj) rotulosSalida(rj);
   }
 </script>
 

@@ -41,7 +41,7 @@
   </div>
   <div class="rodillo">
     <table>
-      <thead><tr><th class="n">#</th><th>Barco</th><th class="n" title="Metros por detrás del barco más adelantado del tramo, a lo largo del eje">Al líder</th>{#if linea}<th class="n" title="Metros a la línea de salida en este momento: − por detrás, + pasado">A la línea</th>{/if}<th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
+      <thead><tr><th class="n">#</th><th>Barco</th><th class="n" title="Metros por detrás del barco más adelantado del tramo, a lo largo del eje">Al<br>líder</th>{#if linea}<th class="n" title="Metros a la línea de salida en este momento: − por detrás, + pasado">A la<br>línea</th>{/if}<th class="n">SOG</th><th class="n">VMG<span class="est">*</span></th><th class="n">TWA<span class="est">*</span></th><th class="n">COG</th><th class="n">HDG</th></tr></thead>
       <tbody>
         {#each filas as f (f.vela)}
           <tr class:yo={f.vela === ref} class:tenue={f.sinDatos}>
@@ -75,11 +75,12 @@
   .lr { font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
   .lr i { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); font-style: normal; }
   .rodillo { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th { font: 600 11px var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-2); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
-  td { padding: 4px 6px; border-bottom: 1px solid var(--rejilla); white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  /* compacta para que quepan todas las columnas sin desplazamiento lateral */
+  th { font: 600 11px var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--tinta-2); text-align: left; vertical-align: bottom; line-height: 1.15; padding: 4px 3px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+  td { padding: 4px 3px; border-bottom: 1px solid var(--rejilla); white-space: nowrap; }
   .n { text-align: right; }
-  .otro { margin-left: 5px; font: 600 10px var(--display); color: var(--tinta-3); text-transform: uppercase; letter-spacing: .04em; }
+  .otro { display: block; margin-left: 14px; line-height: 1.1; font: 600 10px var(--display); color: var(--tinta-3); text-transform: uppercase; letter-spacing: .04em; }
   tr.yo td { background: color-mix(in srgb, var(--yo) 14%, transparent); font-weight: 600; }
   tr.tenue td { color: var(--tinta-3); }
   .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }

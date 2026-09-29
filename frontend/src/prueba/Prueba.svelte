@@ -437,7 +437,7 @@
   .pestanas button.activa { color: var(--tinta); border-bottom-color: var(--yo); }
   /* subgrid: el panel de la derecha empieza a la altura del borde superior del mapa (fila 2), aunque
      la fila de capas de encima cambie de alto */
-  .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto auto auto; gap: 8px 10px; align-items: start; }
+  .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 424px; grid-template-rows: auto auto auto; gap: 8px 10px; align-items: start; }
   .izq { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; min-width: 0; }
   .der { grid-column: 2; grid-row: 2 / span 2; min-width: 0; }
   .meteo { font-size: 14px; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
