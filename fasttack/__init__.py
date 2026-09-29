@@ -1,1 +1,1 @@
-__version__ = "0.30.10"  # «Comparativa de salida»
+__version__ = "0.30.11"  # comparativa de salida centrada; signo del cruce

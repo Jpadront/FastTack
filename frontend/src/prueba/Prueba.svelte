@@ -243,7 +243,7 @@
           <p class="nota-z">Rolada de cada tercio respecto a la TWD del disparo, de +10 a +60 s., con los rumbos de los barcos que salieron por él (a su ángulo al viento de la ceñida). Derecha = el viento viene más de la derecha mirando a barlovento.</p>
         </section>
       {/if}
-      <Tabla titulo="Comparativa de salida" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
+      <Tabla titulo="Comparativa de salida" centrado {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
         nota="Margen: metros a la línea en el disparo; en verde por detrás, en rojo (+) pasado. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
@@ -251,14 +251,14 @@
           { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + ' m.'),
             color: (v) => (v == null ? null : v > 0 ? 'var(--error, #c62828)' : '#1b7f3b') },
           { k: 'sog_disparo', titulo: 'SOG disparo', num: true, fmt: fKn },
-          { k: 'cruce_s', titulo: 'Cruce GPS', num: true, fmt: (v) => (v == null ? '—' : '+' + num(v, 0) + ' s.') },
-          { k: 'vmg_0_90', titulo: 'VMG 0–90 s.', num: true, est: true, fmt: fKn },
-          { k: 'pos_60', titulo: '+60', num: true, est: true },
-          { k: 'dist_60', titulo: 'Δ60', num: true, est: true, fmt: fM },
-          { k: 'pos_180', titulo: '+180', num: true, est: true },
-          { k: 'dist_180', titulo: 'Δ180', num: true, est: true, fmt: fM },
+          { k: 'cruce_s', titulo: 'Cruce GPS', num: true, ayuda: 'Segundos desde la señal hasta que el GPS cruza la línea (− antes de la señal)', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 0) + ' s.') },
+          { k: 'vmg_0_90', titulo: 'VMG 0–90 s.', num: true, est: true, ayuda: 'VMG media (velocidad hacia el viento) en los primeros 90 s. tras la señal', fmt: fKn },
+          { k: 'pos_60', titulo: '+60', num: true, est: true, ayuda: 'Puesto a los 60 s. de la señal, por avance hacia la baliza 1' },
+          { k: 'dist_60', titulo: 'Δ60', num: true, est: true, ayuda: 'Metros por detrás del primero a los 60 s. de la señal, hacia la baliza 1', fmt: fM },
+          { k: 'pos_180', titulo: '+180', num: true, est: true, ayuda: 'Puesto a los 180 s. (3 min.) de la señal, por avance hacia la baliza 1' },
+          { k: 'dist_180', titulo: 'Δ180', num: true, est: true, ayuda: 'Metros por detrás del primero a los 180 s. (3 min.) de la señal, hacia la baliza 1', fmt: fM },
           { k: 'primera_virada_s', titulo: '1.ª virada', num: true, est: true, fmt: fS },
-          { k: 'pos_b1', titulo: 'Baliza 1', num: true, fmt: (v, f) => (v == null ? '—' : `${v}.º${f.gap_b1_s ? ' +' + f.gap_b1_s + ' s.' : ''}`) },
+          { k: 'pos_b1', titulo: 'Baliza 1', num: true, fmt: (v, f) => (v == null ? '—' : `${v}.º${f.gap_b1_s ? ' +' + fS(f.gap_b1_s) : ''}`) },
           { k: 'ocs', titulo: 'OCS', ayuda: 'Según el comité', fmt: (v) => (v !== 'NO' ? 'sí' : 'no') },
           { k: 'llegada_txt', titulo: 'Llegada', est: true, ayuda: 'Pronto: a menos de una eslora de la línea 10 s. antes y lento en la señal. Tarde: a más de 2 esloras en la señal y cruzando 5 s. después', fmt: (v) => v || '—' },
           { k: 'hueco_sotavento_esloras', titulo: 'Hueco sot.', num: true, est: true, ayuda: 'Esloras hasta el barco de sotavento a la par en la señal (vacío: nadie a menos de 6 esloras)', fmt: (v, f) => (v == null ? (f.diagnostico ? 'libre' : '—') : num(v, 1)) },

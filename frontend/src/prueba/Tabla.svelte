@@ -1,7 +1,7 @@
 <script>
   import Nota from '../Nota.svelte';
   // columnas: [{ k, titulo, fmt?, num?, est? (estimado), ayuda? }]; filas: objetos con .vela
-  let { columnas, filas, ref, colores = {}, titulo = '', nota = '', ordenInicial = null, destacada = null } = $props();
+  let { columnas, filas, ref, colores = {}, titulo = '', nota = '', ordenInicial = null, destacada = null, centrado = false } = $props();
   let orden = $state(ordenInicial);
   let asc = $state(true);
 
@@ -24,7 +24,7 @@
 <section class="tarjeta bloque">
   {#if titulo}<h3>{titulo}</h3>{/if}
   <div class="rodillo">
-    <table>
+    <table class:centrado>
       <thead>
         <tr>
           {#each columnas as c, i}
@@ -60,6 +60,8 @@
   th { text-align: left; white-space: nowrap; border-bottom: 1px solid var(--linea); padding: 0; }
   th button { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); background: none; border: 0; padding: 6px 8px; width: 100%; text-align: inherit; white-space: nowrap; }
   th.n button { text-align: right; }
+  /* centrado: valores y cabeceras al centro de la columna (salvo la primera, la del barco) */
+  .centrado th:not(.fija) button, .centrado td:not(.fija) { text-align: center; }
   td { padding: 5px 8px; border-bottom: 1px solid var(--rejilla); white-space: nowrap; background: var(--panel); }
   .n { text-align: right; }
   .fija { position: sticky; left: 0; z-index: 1; }
