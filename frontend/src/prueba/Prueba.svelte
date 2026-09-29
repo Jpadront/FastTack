@@ -243,7 +243,7 @@
           <p class="nota-z">Rolada de cada tercio respecto a la TWD del disparo, de +10 a +60 s., con los rumbos de los barcos que salieron por él (a su ángulo al viento de la ceñida). Derecha = el viento viene más de la derecha mirando a barlovento.</p>
         </section>
       {/if}
-      <Tabla titulo="Comparativa de apertura" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
+      <Tabla titulo="Comparativa de salida" {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
         nota="Margen: metros a la línea en el disparo; en verde por detrás, en rojo (+) pasado. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
