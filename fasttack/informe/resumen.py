@@ -20,6 +20,7 @@ DIFS = (("VMG en ceñida", "vmg_ceñida", "kn", 2, True), ("VMG en popa", "vmg_p
         ("SOG en ceñida", "sog_ceñida", "kn", 2, True), ("SOG en popa", "sog_popa", "kn", 2, True),
         ("TWA en ceñida (+ = más abierto)", "twa_ceñida", "grados", 1, None),
         ("TWA en popa (+ = más bajo)", "twa_popa", "grados", 1, None),
+        # la escora solo llega en el día (en el campeonato mezcla vientos muy distintos)
         ("Escora en ceñida", "escora_ceñida", "grados", 0, None), ("Escora en popa", "escora_popa", "grados", 0, None),
         ("Pérdida por virada", "perdida_virada", "m", 1, False), ("Pérdida por trasluchada", "perdida_trasluchada", "m", 1, False))
 UNIDAD = {"kn": " kn.", "grados": "°", "m": " m."}

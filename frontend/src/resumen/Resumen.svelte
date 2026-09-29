@@ -92,7 +92,6 @@
     ['vmg_ceñida', 'VMG en ceñida', 'kn', 2, true], ['vmg_popa', 'VMG en popa', 'kn', 2, true],
     ['sog_ceñida', 'SOG en ceñida', 'kn', 2], ['sog_popa', 'SOG en popa', 'kn', 2],
     ['twa_ceñida', 'TWA en ceñida', '°', 1, true], ['twa_popa', 'TWA en popa', '°', 1, true],
-    ['escora_ceñida', 'Escora en ceñida', '°', 0], ['escora_popa', 'Escora en popa', '°', 0],
     ['cabeceo_ceñida', 'Cabeceo en ceñida', '°', 0], ['cabeceo_popa', 'Cabeceo en popa', '°', 0],
     ['perdida_virada_m', 'Pérdida por virada', 'm', 1, true], ['perdida_trasluchada_m', 'Pérdida por trasluchada', 'm', 1, true],
   ];
@@ -208,7 +207,6 @@
       { k: 'vmg_ceñida', titulo: 'VMG ↑', num: true, est: true, fmt: fKn }, { k: 'vmg_popa', titulo: 'VMG ↓', num: true, est: true, fmt: fKn },
       { k: 'sog_ceñida', titulo: 'SOG ↑', num: true, fmt: fKn }, { k: 'sog_popa', titulo: 'SOG ↓', num: true, fmt: fKn },
       { k: 'twa_ceñida', titulo: 'TWA ↑', num: true, est: true, fmt: fG(1) }, { k: 'twa_popa', titulo: 'TWA ↓', num: true, est: true, fmt: fG(1) },
-      { k: 'escora_ceñida', titulo: 'Escora ↑', num: true, fmt: fG(0) }, { k: 'escora_popa', titulo: 'Escora ↓', num: true, fmt: fG(0) },
       { k: 'cabeceo_ceñida', titulo: 'Cabeceo ↑', num: true, fmt: fG(0) }, { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fG(0) },
     ]} />
 

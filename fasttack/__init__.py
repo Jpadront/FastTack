@@ -1,1 +1,1 @@
-__version__ = "0.30.0"  # recorridos con largos (baliza de ala); sin escora óptima del campeonato
+__version__ = "0.30.1"  # sin escora en el resumen del campeonato (sí en el día)

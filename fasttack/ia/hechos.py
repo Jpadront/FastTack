@@ -407,7 +407,10 @@ def _por_que(r: dict, t5) -> dict:
             for m in ("ceñida", "popa")}
 
 
-def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None, clase: str | None = None) -> dict:
+def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = None, clase: str | None = None,
+                  escora: bool = False) -> dict:
+    """escora: incluir la escora frente al top 5 en las medias. En el campeonato no (mezcla vientos
+    muy distintos); en un día sí (condiciones parecidas)."""
     nombres = nombres or {}
     gen = res["general"]
     mia = next(f for f in gen if f["vela"] == v)
@@ -420,8 +423,9 @@ def de_campeonato(res: dict, v: str, nombre_camp: str, nombres: dict | None = No
 
     rend = {}
     for k, u, d in (("vmg_ceñida", "kn", 2), ("vmg_popa", "kn", 2), ("sog_ceñida", "kn", 2), ("sog_popa", "kn", 2),
-                    ("twa_ceñida", "grados", 1), ("twa_popa", "grados", 1), ("escora_ceñida", "grados", 0),
-                    ("escora_popa", "grados", 0), ("perdida_virada_m", None, 1), ("perdida_trasluchada_m", None, 1)):
+                    ("twa_ceñida", "grados", 1), ("twa_popa", "grados", 1),
+                    *((("escora_ceñida", "grados", 0), ("escora_popa", "grados", 0)) if escora else ()),
+                    ("perdida_virada_m", None, 1), ("perdida_trasluchada_m", None, 1)):
         # solo la diferencia con el top 5 (menos cifras: el texto tiene que poder leerse de un vistazo)
         t5 = media_top5(lambda x, k=k: x["rend"].get(k), d)
         if t["rend"].get(k) is not None and t5 is not None:
@@ -514,7 +518,7 @@ def de_dia(res: dict, hasta: dict, v: str, dia: str, nombre_camp: str, nombres: 
     """Debrief de un día: las pruebas de ese día (con el top 5 del día como referencia) y cómo queda
     el barco en la general calculada al terminar el día."""
     import datetime as dt
-    h = de_campeonato(res, v, nombre_camp, nombres, clase)
+    h = de_campeonato(res, v, nombre_camp, nombres, clase, escora=True)
     h["tipo"] = "debrief del día"
     d = dt.date.fromisoformat(dia)
     h["dia"] = f"{['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][d.weekday()]} {d.day}"
