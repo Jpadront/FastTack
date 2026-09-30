@@ -381,7 +381,8 @@ def modo(twa: float | None, sog: float | None, med_twa: float, med_sog: float, c
 
 
 def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: float | None,
-             p_ini: tuple[float, float] | None = None, estribor_inicial_s: float = 0.0) -> dict | None:
+             p_ini: tuple[float, float] | None = None, estribor_inicial_s: float = 0.0,
+             sog_trozos: list[float | None] | None = None) -> dict | None:
     """Barco fantasma: el camino más corto de la baliza de salida a la de llegada conociendo de
     antemano las roladas del tramo (viento igual en todo el campo), con los rumbos sobre el fondo de
     la flota en cada corte (incluyen la corriente; sin ellos, TWD ± TWA de la flota).
@@ -400,12 +401,21 @@ def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: f
     puede salir a babor entre la flota) y no vira hasta pasados esos segundos (lo que tarda la flota
     en poder virar): esos trozos quedan fijos en la amura de estribor (la de la izquierda en ceñida).
 
-    Devuelve {"m": distancia, "camino": [[x, y, s], ...]} con s = segundos desde el inicio a la SOG
-    mediana de la flota en cada corte (el camino solo si se da p_ini)."""
+    sog_trozos: SOG (kn) con la que navega el fantasma en cada trozo (la media de los 5 primeros del
+    tramo); donde falte, la SOG mediana de la flota en ese corte. Solo afecta al tiempo (dónde está el
+    fantasma en cada momento y lo que avanza en el primer bordo desde la salida), no a la distancia.
+
+    Devuelve {"m": distancia, "camino": [[x, y, s], ...]} con s = segundos desde el inicio (el camino
+    solo si se da p_ini)."""
     if not twa_flota or not largo_m or not viento.cortes:
         return None
     n = len(viento.cortes)
     d = largo_m / n
+
+    def sog_en(k):
+        v = sog_trozos[k] if sog_trozos and k < len(sog_trozos) else None
+        return v or viento.cortes[k].sog_mediana
+
     alpha = twa_flota if viento.ceñida else 180 - twa_flota
     trozos = []   # (ángulo izq, ángulo der) con el eje, o None si va derecho
     for c in viento.cortes:
@@ -420,7 +430,7 @@ def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: f
     # salida amurado a estribor: avance a lo largo del eje que queda fijo en la amura izquierda
     fijo_m = 0.0
     if estribor_inicial_s > 0 and viento.ceñida and trozos[0]:
-        sog0 = viento.cortes[0].sog_mediana or 0.0
+        sog0 = sog_en(0) or 0.0
         fijo_m = estribor_inicial_s * sog0 * KN * math.cos(math.radians(trozos[0][0]))
     minimo = [(max(0.0, min(1.0, (fijo_m - k * d) / d)) if t else 0.0) for k, t in enumerate(trozos)]
     # empezando en la amura derecha (salvo lo fijo), cuánto hay que corregir hacia la izquierda
@@ -459,14 +469,14 @@ def fantasma(largo_m: float, viento: VientoTramo, eje_tramo: float, twa_flota: f
     if p_ini is not None:
         e = math.radians(eje_tramo)
         u, nor = (math.sin(e), math.cos(e)), (math.cos(e), -math.sin(e))   # a lo largo del eje y a su derecha
-        sog_ref = [c.sog_mediana for c in viento.cortes if c.sog_mediana]
+        sog_ref = [x for x in (sog_en(k) for k in range(n)) if x]
         x = y = seg = 0.0
         camino = [[round(p_ini[0], 1), round(p_ini[1], 1), 0.0]]
         for ang, av, k in piernas:
             largo = av / math.cos(math.radians(ang))
             x += av
             y += av * math.tan(math.radians(ang))
-            sog = viento.cortes[k].sog_mediana or (float(np.median(sog_ref)) if sog_ref else None)
+            sog = sog_en(k) or (float(np.median(sog_ref)) if sog_ref else None)
             seg += largo / (sog * KN) if sog else 0.0
             px, py = p_ini[0] + x * u[0] + y * nor[0], p_ini[1] + x * u[1] + y * nor[1]
             if camino and len(camino) > 1 and abs(ang - ultimo) < 1e-6:

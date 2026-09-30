@@ -24,7 +24,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.21.5"
+VERSION = "0.21.6"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -33,6 +33,7 @@ COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea 
 def calidad(cob: float) -> str:
     return "alta" if cob >= 0.7 else "media" if cob >= 0.45 else "baja" if cob >= COBERTURA_MIN else "insuficiente"
 HUECO_MEDIAS_MS = 15_000     # para medias de un tramo, un hueco de hasta 15 s no invalida el tramo
+FANTASMA_TOP = 5             # el fantasma navega a la SOG media de los 5 primeros del tramo
 
 
 def _punto(c: rec.Control, t: int):
@@ -305,7 +306,21 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             prim = [(min(m.t for m in ms) - senal) / 1000 for ms in man_por_tramo[t["id"]].values() if ms]
             prim = [x for x in prim if x > 0]
             est_s = float(np.median(prim)) if prim else 0.0
-        fant_d = None if es_largo else tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"], est_s)
+        # velocidad del fantasma: SOG media de los 5 primeros del tramo en cada trozo (el tramo de cada
+        # uno partido en tantas partes iguales de tiempo como cortes de viento)
+        sog_trozos = None
+        if not es_largo and vt.cortes:
+            nc = len(vt.cortes)
+            por_trozo = [[] for _ in range(nc)]
+            for v in orden[:FANTASMA_TOP]:
+                e5, s5, tr5 = filas[v]["t_entrada"], filas[v]["t_salida"], trazas[v]
+                for k in range(nc):
+                    i = tr5.tramo(int(e5 + (s5 - e5) * k / nc), int(e5 + (s5 - e5) * (k + 1) / nc))
+                    m = tm.media_temporal(tr5.sog[i], tr5.ts[i]) if len(i) > 1 else None
+                    if m is not None:
+                        por_trozo[k].append(m)
+            sog_trozos = [float(np.mean(x)) if x else None for x in por_trozo]
+        fant_d = None if es_largo else tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"], est_s, sog_trozos)
         fant = fant_d["m"] if fant_d else None
         for f in filas.values():
             f["modo"] = tm.modo(f["twa"], f["sog"], med_twa, med_sog, ceñida) if buenas and not es_largo else None

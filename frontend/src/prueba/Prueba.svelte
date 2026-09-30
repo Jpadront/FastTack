@@ -197,7 +197,7 @@
           <button class:activo={capa === null} aria-pressed={capa === null} onclick={() => (capa = null)}>Colores de barco</button>
           {#each CAPAS as [k, t]}<button class:activo={capa === k} aria-pressed={capa === k} onclick={() => (capa = capa === k ? null : k)}>{t}</button>{/each}
           <button class:activo={lider} aria-pressed={lider} title="Línea perpendicular al viento por el líder del tramo y metros que te faltan hasta ella" onclick={() => (lider = !lider)}>Línea del líder</button>
-          <button class:activo={fantasma} aria-pressed={fantasma} title="Camino más corto del tramo sabiendo de antemano las roladas, y dónde iría ahora el fantasma si hubiera salido de la baliza a la vez que tu barco (a la SOG mediana de la flota)" onclick={() => (fantasma = !fantasma)}>Barco fantasma</button>
+          <button class:activo={fantasma} aria-pressed={fantasma} title="Camino más corto del tramo sabiendo de antemano las roladas, y dónde iría ahora el fantasma si hubiera salido de la baliza a la vez que tu barco (a la SOG media de los 5 primeros de ese tramo)" onclick={() => (fantasma = !fantasma)}>Barco fantasma</button>
         </div>
         <div class="indic num">
           <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
