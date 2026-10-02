@@ -24,7 +24,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.21.7"
+VERSION = "0.21.9"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -383,6 +383,9 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         # sin flota suficiente (p. ej. una sesión .vkx de un solo barco): la curva del barco frente a sí mismo
         if curva is None and segs_esc and len(t["en_tramo"]) < 3:
             curva = esc_mod.optima_propia(segs_esc) if len({s_[0] for s_ in segs_esc}) == 1 else None
+        # pocos barcos o pocos datos: curva orientativa con umbrales mínimos, para que el gráfico dé una idea
+        if curva is None and segs_esc:
+            curva = esc_mod.orientativa(segs_esc)
         if curva:
             curva.pop("_por_barco", None)
             opt = (opt or {}) | {"curva": curva}

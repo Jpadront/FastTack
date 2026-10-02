@@ -53,3 +53,14 @@ def test_optima_propia_un_solo_barco():
     assert c is not None and c["propia"]
     assert c["mejor"] == [14, 16]
     assert all(f["barcos"] == 1 for f in c["franjas"])
+
+
+def test_orientativa_con_muy_pocos_datos():
+    """Con 6 segmentos de un barco sigue saliendo una curva (orientativa) para dar una idea."""
+    from fasttack.motor import escora as esc
+    h = [15.8, 16.0, 16.6, 16.9, 16.9, 18.3]
+    segs = [("ESP1", k * 30_000, e, 4.0 + 0.05 * k, 0.0, 0.0, 1.0, 5.5, 40.0) for k, e in enumerate(h)]
+    assert esc.optima_propia(segs) is None
+    c = esc.orientativa(segs)
+    assert c is not None and c["orientativa"] and c["propia"]
+    assert len(c["franjas"]) >= 2

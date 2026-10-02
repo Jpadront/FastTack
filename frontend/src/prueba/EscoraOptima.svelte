@@ -42,14 +42,15 @@
     </div>
   {:else}
     <p class="sub">Sin escora óptima de la flota en este tramo: hacen falta al menos 3 barcos con datos de escora fiables{Object.keys(tramo.barcos).length < 3 ? ` (solo hay ${Object.keys(tramo.barcos).length})` : ''}. {nombreRef}: <b class="num">{g(mia)}</b>.</p>
-    {#if c?.propia}<p class="sub"><b>Solo tu barco:</b> cada punto es tu VMG (y SOG) en esa franja de escora en % de la tuya en la misma amura en los 2,5 min. de alrededor. Quita los cambios lentos de presión y las roladas largas, no las rachas cortas; con {c.segmentos} tramos de 30 s. es orientativo.</p>{/if}
   {/if}
   {#if popa}<p class="sub">En popa, escora con signo: <b>+</b> a sotavento, <b>−</b> a barlovento.</p>{/if}
+  {#if c?.orientativa}<p class="sub"><b>{c.propia ? 'Solo tu barco' : 'Pocos datos'} · curva orientativa</b> ({c.segmentos} tramos de 30 s.): cada punto es la VMG (y SOG) en esa franja de escora en % de la de sus vecinos si los hay; si no, de la del mismo barco en la misma amura en los 2,5 min. de alrededor o en todo el tramo. Las rachas cortas se mezclan: da una idea, no una conclusión.</p>
+  {:else if c?.propia}<p class="sub"><b>Solo tu barco:</b> cada punto es tu VMG (y SOG) en esa franja de escora en % de la tuya en la misma amura en los 2,5 min. de alrededor. Quita los cambios lentos de presión y las roladas largas, no las rachas cortas; con {c.segmentos} tramos de 30 s. es orientativo.</p>{/if}
   {#if c}
-  <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span><span><i class="l-rango"></i>franjas sin pérdida</span><span><i class="l-yo"></i>{nombreRef}</span>{#if o.escora != null}<span><i class="l-top5"></i>óptima (5 con más VMG)</span>{/if}</div>
+  <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span>{#if !c.orientativa}<span><i class="l-rango"></i>franjas sin pérdida</span>{/if}<span><i class="l-yo"></i>{nombreRef}</span>{#if o.escora != null}<span><i class="l-top5"></i>óptima (5 con más VMG)</span>{/if}</div>
     <div bind:clientWidth={W}>
     <svg viewBox={`0 0 ${W} ${H}`} style:height={H + 'px'} role="img" aria-label="VMG relativa por franja de escora">
-      <rect x={X(c.rango[0])} y={M.t} width={Math.max(0, X(c.rango[1]) - X(c.rango[0]))} height={H - M.t - M.b} class="rango" />
+      {#if !c.orientativa}<rect x={X(c.rango[0])} y={M.t} width={Math.max(0, X(c.rango[1]) - X(c.rango[0]))} height={H - M.t - M.b} class="rango" />{/if}
       {#each [yLo + 1, 100, yHi - 1] as v}
         <line x1={M.l} x2={W - M.r} y1={Y(v)} y2={Y(v)} class="rej" class:cien={v === 100} />
         <text x={M.l - 6} y={Y(v) + 4} class="eje" text-anchor="end">{num(v, 0)} %</text>
@@ -60,7 +61,7 @@
         {#each fr as f}<circle cx={X((f.desde + f.hasta) / 2)} cy={Y(f.sog_rel_pct)} r="3" class="punto-sog" />{/each}{/if}
       <path d={fr.map((f, k) => `${k ? 'L' : 'M'}${X((f.desde + f.hasta) / 2)} ${Y(f.vmg_rel_pct)}`).join(' ')} class="linea" />
       {#each fr as f, k}
-        <circle cx={X((f.desde + f.hasta) / 2)} cy={Y(f.vmg_rel_pct)} r="5" class="punto" class:dentro={f.desde >= c.rango[0] && f.hasta <= c.rango[1]}
+        <circle cx={X((f.desde + f.hasta) / 2)} cy={Y(f.vmg_rel_pct)} r="5" class="punto" class:dentro={!c.orientativa && f.desde >= c.rango[0] && f.hasta <= c.rango[1]}
                 role="presentation" onpointerenter={() => (hover = k)} onpointerleave={() => (hover = null)} />
       {/each}
       {#if o.escora != null}<line x1={X(clamp(o.escora))} x2={X(clamp(o.escora))} y1={M.t} y2={H - M.b} class="top5" /><text x={X(clamp(o.escora)) + 4} y={M.t + 10} class="eje">5 con más VMG</text>{/if}

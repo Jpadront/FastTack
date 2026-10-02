@@ -95,7 +95,7 @@ def optima(segs: list[tuple]) -> dict | None:
     if ok.sum() < 3 * MIN_SEGMENTOS:
         return None
     franjas = []
-    for lo in range(int(np.nanmin(h)) // FRANJA * FRANJA, int(np.nanmax(h)) + FRANJA, FRANJA):
+    for lo in range(int(np.floor(np.nanmin(h))) // FRANJA * FRANJA, int(np.nanmax(h)) + FRANJA, FRANJA):
         m = (h >= lo) & (h < lo + FRANJA) & ok
         if m.sum() >= MIN_SEGMENTOS and len(set(velas[m])) >= MIN_BARCOS:
             franjas.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": int(m.sum()), "barcos": len(set(velas[m])),
@@ -137,7 +137,7 @@ def optima_propia(segs: list[tuple]) -> dict | None:
     if ok.sum() < 3 * PROPIA_MIN_SEG:
         return None
     franjas = []
-    for lo in range(int(np.min(h[ok])) // FRANJA * FRANJA, int(np.max(h[ok])) + FRANJA, FRANJA):
+    for lo in range(int(np.floor(np.min(h[ok]))) // FRANJA * FRANJA, int(np.max(h[ok])) + FRANJA, FRANJA):
         m = (h >= lo) & (h < lo + FRANJA) & ok
         if m.sum() >= PROPIA_MIN_SEG:
             franjas.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": int(m.sum()), "barcos": 1,
@@ -148,6 +148,57 @@ def optima_propia(segs: list[tuple]) -> dict | None:
     if r is None:
         return None
     return r | {"segmentos": int(ok.sum()), "propia": True}
+
+
+# Último recurso para que el gráfico siempre dé una idea (pocos barcos o pocos datos): cada segmento
+# frente a sus vecinos si los tiene (≥ 3 barcos), si no frente al mismo barco en su amura a ±2,5 min.,
+# y si tampoco, frente a su mediana en esa amura en todo el tramo. Franjas con ≥ 2 segmentos.
+ORIENTATIVA_MIN_SEG = 2
+
+
+def orientativa(segs: list[tuple]) -> dict | None:
+    if len(segs) < 2:
+        return None
+    velas = np.array([s[0] for s in segs])
+    t = np.array([s[1] for s in segs])
+    h = np.array([s[2] for s in segs])
+    v = np.array([s[3] for s in segs])
+    x = np.array([s[4] for s in segs])
+    y = np.array([s[5] for s in segs])
+    amura = np.array([s[6] for s in segs])
+    sog = np.array([s[7] for s in segs])
+    rel, rel_sog = np.full(len(v), np.nan), np.full(len(v), np.nan)
+    for k in range(len(v)):
+        misma = amura == amura[k]
+        cand = [((np.abs(t - t[k]) <= VECINOS_MS) & (np.hypot(x - x[k], y - y[k]) <= VECINOS_M) & (velas != velas[k]) & misma, MIN_VECINOS),
+                ((np.abs(t - t[k]) <= PROPIA_MS) & (velas == velas[k]) & misma, 1),
+                ((velas == velas[k]) & misma, 1),
+                (velas == velas[k], 1)]
+        for m, minimo in cand:
+            m = m.copy()
+            m[k] = False
+            if len(set(velas[m])) >= (minimo if minimo > 1 else 1) and m.sum() >= minimo and np.median(v[m]) > 0.5:
+                rel[k] = v[k] / np.median(v[m]) * 100
+                rel_sog[k] = sog[k] / np.median(sog[m]) * 100
+                break
+    ok = ~np.isnan(rel)
+    if ok.sum() < 2:
+        return None
+    # franjas de 2° con ≥ 2 segmentos; si con tan pocos datos caen casi todos en una, de 1°; y en el
+    # último caso, de 1° aunque tengan un solo segmento (cada punto es entonces un tramo de 30 s.)
+    for ancho, minimo in ((FRANJA, ORIENTATIVA_MIN_SEG), (1, ORIENTATIVA_MIN_SEG), (1, 1)):
+        franjas = []
+        for lo in range(int(np.floor(np.min(h[ok]))) // ancho * ancho, int(np.max(h[ok])) + ancho, ancho):
+            m = (h >= lo) & (h < lo + ancho) & ok
+            if m.sum() >= minimo:
+                franjas.append({"desde": lo, "hasta": lo + ancho, "segmentos": int(m.sum()), "barcos": len(set(velas[m])),
+                                "vmg_rel_pct": round(float(np.mean(rel[m])), 1),
+                                "sog_rel_pct": round(float(np.mean(rel_sog[m])), 1),
+                                "error_pct": round(float(np.std(rel[m]) / np.sqrt(m.sum())), 2)})
+        r = _evaluar(franjas)
+        if r is not None:
+            return r | {"segmentos": int(ok.sum()), "orientativa": True, "propia": len(set(velas)) == 1}
+    return None
 
 
 def _evaluar(franjas: list[dict]) -> dict | None:

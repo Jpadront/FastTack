@@ -1,1 +1,1 @@
-__version__ = "0.31.1"  # rendimiento del tramo en dos tablas
+__version__ = "0.31.2"  # gráfico escora–VMG siempre, orientativo con pocos datos
