@@ -1,1 +1,1 @@
-__version__ = "0.30.14"  # escora óptima siempre visible en ceñidas y popas
+__version__ = "0.31.0"  # escora vs VMG también con un solo barco

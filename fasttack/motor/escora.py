@@ -110,6 +110,46 @@ def optima(segs: list[tuple]) -> dict | None:
                 "_por_barco": {b: [float(e) for e in h[velas == b]] for b in set(velas)}}
 
 
+# Sin flota (sesión de un solo barco, o menos de 3): la referencia de cada segmento son los segmentos
+# del MISMO barco en la misma amura en los 2,5 min. de alrededor, en lugar de los vecinos. Así se
+# quitan los cambios lentos de presión y las roladas largas, pero no las rachas cortas: es más ruidoso
+# que con flota y se marca como «propia».
+PROPIA_MS, PROPIA_MIN_REF, PROPIA_MIN_SEG = 150_000, 2, 3
+
+
+def optima_propia(segs: list[tuple]) -> dict | None:
+    """Curva escora–VMG de un barco frente a sí mismo (ver arriba); la misma forma que optima()."""
+    if len(segs) < 3 * PROPIA_MIN_SEG:
+        return None
+    t = np.array([s[1] for s in segs])
+    h = np.array([s[2] for s in segs])
+    v = np.array([s[3] for s in segs])
+    amura = np.array([s[6] for s in segs])
+    sog = np.array([s[7] for s in segs])
+    rel, rel_sog = np.full(len(v), np.nan), np.full(len(v), np.nan)
+    for k in range(len(v)):
+        m = (np.abs(t - t[k]) <= PROPIA_MS) & (amura == amura[k])
+        m[k] = False
+        if m.sum() >= PROPIA_MIN_REF and np.median(v[m]) > 0.5:
+            rel[k] = v[k] / np.median(v[m]) * 100
+            rel_sog[k] = sog[k] / np.median(sog[m]) * 100
+    ok = ~np.isnan(rel)
+    if ok.sum() < 3 * PROPIA_MIN_SEG:
+        return None
+    franjas = []
+    for lo in range(int(np.min(h[ok])) // FRANJA * FRANJA, int(np.max(h[ok])) + FRANJA, FRANJA):
+        m = (h >= lo) & (h < lo + FRANJA) & ok
+        if m.sum() >= PROPIA_MIN_SEG:
+            franjas.append({"desde": lo, "hasta": lo + FRANJA, "segmentos": int(m.sum()), "barcos": 1,
+                            "vmg_rel_pct": round(float(np.mean(rel[m])), 1),
+                            "sog_rel_pct": round(float(np.mean(rel_sog[m])), 1),
+                            "error_pct": round(float(np.std(rel[m]) / np.sqrt(m.sum())), 2)})
+    r = _evaluar(franjas)
+    if r is None:
+        return None
+    return r | {"segmentos": int(ok.sum()), "propia": True}
+
+
 def _evaluar(franjas: list[dict]) -> dict | None:
     """Mejor franja, rango óptimo y pérdidas a partir de las franjas (con su error típico)."""
     if len(franjas) < 2:

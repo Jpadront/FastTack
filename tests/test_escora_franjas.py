@@ -38,3 +38,18 @@ def test_combinar_ceñidas():
     c = combinar([a["franjas"], b["franjas"]])
     assert c["ceñidas"] == 2 and c["segmentos"] == a["segmentos"] + b["segmentos"]
     assert c["rango"][0] <= 17 <= c["rango"][1]
+
+
+def test_optima_propia_un_solo_barco():
+    """Sin flota: la VMG de cada segmento frente a la del mismo barco en su amura a ±2,5 min."""
+    from fasttack.motor import escora as esc
+    segs = []
+    for k in range(30):
+        t = k * 30_000
+        h = 12 + (k % 3) * 2            # 12, 14, 16°
+        vmg = 4.0 * (1.03 if h == 14 else 1.0)   # 14° es la mejor
+        segs.append(("ESP1", t, h + 0.5, vmg, 0.0, 0.0, 1.0 if (k // 6) % 2 else -1.0, 5.5, 40.0))
+    c = esc.optima_propia(segs)
+    assert c is not None and c["propia"]
+    assert c["mejor"] == [14, 16]
+    assert all(f["barcos"] == 1 for f in c["franjas"])

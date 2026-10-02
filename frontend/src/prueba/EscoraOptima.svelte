@@ -41,11 +41,12 @@
       {#if enRangoTexto || enRango != null}<div><span class="etq">Cerca de la óptima</span><b class="num">{enRangoTexto ?? enRango + ' %'}</b><small class="tenue">{enRangoTexto ? '' : 'del tiempo a ±2°'}</small></div>{/if}
     </div>
   {:else}
-    <p class="sub">Sin escora óptima en este tramo: hacen falta al menos 3 barcos con datos de escora fiables{Object.keys(tramo.barcos).length < 3 ? ` (solo hay ${Object.keys(tramo.barcos).length})` : ''}. {nombreRef}: <b class="num">{g(mia)}</b>.</p>
+    <p class="sub">Sin escora óptima de la flota en este tramo: hacen falta al menos 3 barcos con datos de escora fiables{Object.keys(tramo.barcos).length < 3 ? ` (solo hay ${Object.keys(tramo.barcos).length})` : ''}. {nombreRef}: <b class="num">{g(mia)}</b>.</p>
+    {#if c?.propia}<p class="sub"><b>Solo tu barco:</b> cada punto es tu VMG (y SOG) en esa franja de escora en % de la tuya en la misma amura en los 2,5 min. de alrededor. Quita los cambios lentos de presión y las roladas largas, no las rachas cortas; con {c.segmentos} tramos de 30 s. es orientativo.</p>{/if}
   {/if}
   {#if popa}<p class="sub">En popa, escora con signo: <b>+</b> a sotavento, <b>−</b> a barlovento.</p>{/if}
   {#if c}
-  <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span><span><i class="l-rango"></i>franjas sin pérdida</span><span><i class="l-yo"></i>{nombreRef}</span><span><i class="l-top5"></i>óptima (5 con más VMG)</span></div>
+  <div class="leyenda"><span><i class="l-vmg"></i>VMG</span><span><i class="l-sog"></i>SOG</span><span><i class="l-rango"></i>franjas sin pérdida</span><span><i class="l-yo"></i>{nombreRef}</span>{#if o.escora != null}<span><i class="l-top5"></i>óptima (5 con más VMG)</span>{/if}</div>
     <div bind:clientWidth={W}>
     <svg viewBox={`0 0 ${W} ${H}`} style:height={H + 'px'} role="img" aria-label="VMG relativa por franja de escora">
       <rect x={X(c.rango[0])} y={M.t} width={Math.max(0, X(c.rango[1]) - X(c.rango[0]))} height={H - M.t - M.b} class="rango" />
@@ -68,7 +69,7 @@
         {@const f = fr[hover]}
         <g transform={`translate(${Math.min(X(f.hasta) + 6, W - 206)}, ${M.t + 30})`}><rect width="200" height="34" rx="3" class="tip" />
           <text x="6" y="14" class="tiptxt">{f.desde}–{f.hasta}°: VMG {num(f.vmg_rel_pct, 1)} % · SOG {num(f.sog_rel_pct, 1)} %</text>
-          <text x="6" y="27" class="tiptxt">{f.segmentos} tramos de 30 s. · {f.barcos} barcos</text></g>
+          <text x="6" y="27" class="tiptxt">{f.segmentos} tramos de 30 s.{c.propia ? '' : ` · ${f.barcos} barcos`}</text></g>
       {/if}
     </svg>
   </div>

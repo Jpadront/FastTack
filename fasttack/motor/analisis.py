@@ -24,7 +24,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.21.6"
+VERSION = "0.21.7"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -377,8 +377,12 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                     f["escora_en_rango_pct"] = round(float(np.mean(np.abs(h_ - esc_opt) <= 2)) * 100)
         # Curva para el gráfico: VMG relativa a los vecinos por franja de 2° de escora (sin maniobras
         # ni rodeos). La óptima sigue siendo la media de los 5 con más VMG; la curva la acompaña.
-        curva = None if es_largo else esc_mod.optima(esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
-                                                 {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets))
+        segs_esc = [] if es_largo else esc_mod.segmentos(trazas, dict(t["en_tramo"]), vt,
+                                                         {v: [m.t for m in ms] for v, ms in man_por_tramo[t["id"]].items()}, offsets)
+        curva = esc_mod.optima(segs_esc) if segs_esc else None
+        # sin flota suficiente (p. ej. una sesión .vkx de un solo barco): la curva del barco frente a sí mismo
+        if curva is None and segs_esc and len(t["en_tramo"]) < 3:
+            curva = esc_mod.optima_propia(segs_esc) if len({s_[0] for s_ in segs_esc}) == 1 else None
         if curva:
             curva.pop("_por_barco", None)
             opt = (opt or {}) | {"curva": curva}
