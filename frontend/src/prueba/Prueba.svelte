@@ -276,30 +276,46 @@
       {#if tr.tipo === 'largo'}
         <p class="nota-largo">Largo: tramo de través hacia una baliza de ala (recorrido triangular, sin popa). Se compara la <b>VMC</b> (velocidad hacia la baliza) y la SOG; no hay VMG al viento, maniobras, laylines ni táctica de roles. El viento es el del tramo anterior.</p>
       {/if}
-      <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
-        nota={`En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «tráfico en la layline» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
-        columnas={[
-          { k: 'vela', titulo: 'Barco', fmt: fBarco },
-          { k: 'posicion', titulo: 'Pos.', num: true },
-          { k: 'parcial_s', titulo: 'Parcial', num: true, fmt: fmtDur },
-          { k: 'gap_s', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
-          tr.tipo === 'largo' ? { k: 'vmg', titulo: 'VMC', num: true, ayuda: 'Velocidad hacia la baliza (a lo largo del tramo)', fmt: fKn } : { k: 'vmg', titulo: 'VMG', num: true, est: true, fmt: fKn },
-          { k: 'sog', titulo: 'SOG', num: true, fmt: fKn },
-          { k: 'twa', titulo: 'TWA', num: true, est: true, fmt: fGrados(1) },
-          { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'maniobras', titulo: 'Man.', num: true, est: true }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'layline_txt', titulo: 'Layline', est: true }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' }]),
-          { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
-          ...(tr.escora_optima ? [{ k: 'escora_frente_optima', titulo: 'vs óptima', num: true, est: true, ayuda: 'Escora del barco menos la óptima (media de los 5 con más VMG del tramo): + = más escorado', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + '°') }] : []),
-          { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' }]),
-          ...(tr.tipo === 'largo' ? [] : [{ k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) }]),
-          { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
-        ]} />
+      {@const colBase = [
+        { k: 'vela', titulo: 'Barco', fmt: fBarco },
+        { k: 'posicion', titulo: 'Pos.', num: true },
+      ]}
+      {@const colVel = [
+        { k: 'parcial_s', titulo: 'Parcial', num: true, fmt: fmtDur },
+        { k: 'gap_s', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
+        tr.tipo === 'largo' ? { k: 'vmg', titulo: 'VMC', num: true, ayuda: 'Velocidad hacia la baliza (a lo largo del tramo)', fmt: fKn } : { k: 'vmg', titulo: 'VMG', num: true, est: true, fmt: fKn },
+        { k: 'sog', titulo: 'SOG', num: true, fmt: fKn },
+        { k: 'twa', titulo: 'TWA', num: true, est: true, fmt: fGrados(1) },
+        ...(tr.tipo === 'largo' ? [] : [{ k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' }]),
+        ...(tr.tipo === 'largo' ? [] : [{ k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') }]),
+        { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
+        ...(tr.tipo === 'largo' ? [] : [{ k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) }]),
+        { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
+      ]}
+      {@const colTac = tr.tipo === 'largo' ? [] : [
+        { k: 'maniobras', titulo: 'Maniobras', num: true, est: true },
+        { k: 'perdida_m', titulo: 'Pérdida', num: true, est: true, fmt: fM },
+        { k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
+        { k: 'layline_txt', titulo: 'Layline', est: true },
+        { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
+      ]}
+      {@const colTrim = [
+        { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
+        ...(tr.escora_optima?.escora != null ? [{ k: 'escora_frente_optima', titulo: 'vs óptima', num: true, est: true, ayuda: 'Escora del barco menos la óptima (media de los 5 con más VMG del tramo): + = más escorado', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + '°') }] : []),
+        { k: 'cabeceo', titulo: 'Cabeceo', num: true, fmt: fGrados(0) },
+      ]}
+      {@const notaVel = 'En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido.'}
+      {#if tr.tipo === 'largo'}
+        <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion" nota={notaVel}
+          columnas={[...colBase, ...colVel, ...colTrim]} />
+      {:else}
+        <!-- dos tablas por grupos de datos para que se vean enteras sin desplazamiento lateral -->
+        <Tabla titulo={`Rendimiento en ${tr.nombre} · velocidad y rumbo`} {ref} {colores} filas={filasTramo} ordenInicial="posicion" nota={notaVel}
+          columnas={[...colBase, ...colVel]} />
+        <Tabla titulo={`${tr.nombre} · maniobras, táctica y trimado`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
+          nota={`* estimado. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «tráfico en la layline» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
+          columnas={[...colBase, ...colTac, ...colTrim]} />
+      {/if}
       {#if tr.tipo !== 'largo'}
         <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} nombres={vc} />
       {/if}
