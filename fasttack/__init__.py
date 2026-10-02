@@ -1,1 +1,1 @@
-__version__ = "0.30.12"  # fantasma a la SOG media de los 5 primeros del tramo
+__version__ = "0.30.13"  # informe PDF: gráfico de escora óptima en cada ceñida

@@ -128,6 +128,116 @@ class _PDF(FPDF):
                 self.cell(ancho - 6, 4, det)
         self.set_y(y + 22)
 
+    def escora(self, nombre: str, o: dict, f: dict, quien: str):
+        """Escora óptima de una ceñida, como en la web (prueba/EscoraOptima.svelte): cifras y gráfico de
+        VMG (y SOG) relativa a los vecinos por franja de escora, con la óptima y la del barco marcadas."""
+        c = o.get("curva") or {}
+        fr = c.get("franjas") or []
+        alto = 62 if fr else 14
+        if self.get_y() + alto > self.h - 22:
+            self.add_page()
+        g = lambda x: "—" if x is None else num(x, 1).removesuffix(",0") + "°"
+        mia, frente, en = f.get("escora"), f.get("escora_frente_optima"), f.get("escora_en_rango_pct")
+        self.set_font("Barlow", "B", 10)
+        self.set_text_color(*TINTA)
+        self.cell(0, 5.5, nombre, new_x="LMARGIN", new_y="NEXT")
+        partes = [f"**Los 5 con más VMG:** {g(o.get('escora'))}" + (f" (entre {g(o['rango'][0])} y {g(o['rango'][1])})" if o.get("rango") else "")]
+        if mia is not None:
+            lect = "" if frente is None else (" · en la óptima" if abs(frente) <= 2 else " · más escorado" if frente > 0 else " · más plano")
+            partes.append(f"**{quien}:** {g(mia)}" + (f" ({con_signo(frente, 1)}°{lect})" if frente is not None else ""))
+        if en is not None:
+            partes.append(f"**cerca de la óptima (±2°):** {num(en, 0)} % del tiempo")
+        self.texto(" · ".join(partes), tam=9, alto=4.6)
+        if not fr:
+            return
+        # gráfico
+        x0, x1 = MARGEN + 14, self.w - MARGEN - 2
+        y0 = self.get_y() + 2
+        y1 = y0 + 40
+        xlo, xhi = fr[0]["desde"], fr[-1]["hasta"]
+        vals = [q["vmg_rel_pct"] for q in fr] + [q["sog_rel_pct"] for q in fr if q.get("sog_rel_pct") is not None]
+        ylo, yhi = min(vals + [99]) - 1, max(vals + [100]) + 1
+        X = lambda e: x0 + (e - xlo) / ((xhi - xlo) or 1) * (x1 - x0)
+        Y = lambda v: y1 - (v - ylo) / ((yhi - ylo) or 1) * (y1 - y0)
+        cl = lambda e: max(xlo, min(xhi, e))
+        rg = c.get("rango")
+        if rg:
+            self.set_fill_color(222, 234, 248)
+            self.rect(X(rg[0]), y0, max(0, X(rg[1]) - X(rg[0])), y1 - y0, style="F")
+        self.set_font("Mono", "", 6.5)
+        self.set_text_color(*TINTA3)
+        for v in (ylo + 1, 100, yhi - 1):
+            self.set_draw_color(*(LINEA if v == 100 else REJILLA))
+            self.set_line_width(0.2)
+            self.line(x0, Y(v), x1, Y(v))
+            self.set_xy(MARGEN, Y(v) - 2)
+            self.cell(12.5, 4, f"{num(v, 0)} %", align="R")
+        for e in [q["desde"] for q in fr] + [xhi]:
+            self.set_xy(X(e) - 6, y1 + 0.8)
+            self.cell(12, 3.5, f"{e}°", align="C")
+        cx = [X((q["desde"] + q["hasta"]) / 2) for q in fr]
+        if fr[0].get("sog_rel_pct") is not None:
+            self.set_draw_color(138, 150, 156)
+            self.set_line_width(0.3)
+            self.set_dash_pattern(dash=1.4, gap=1.1)
+            pts = [(x, Y(q["sog_rel_pct"])) for x, q in zip(cx, fr) if q.get("sog_rel_pct") is not None]
+            for a, b in zip(pts, pts[1:]):
+                self.line(*a, *b)
+            self.set_dash_pattern()
+        self.set_draw_color(*AZUL)
+        self.set_line_width(0.55)
+        pts = [(x, Y(q["vmg_rel_pct"])) for x, q in zip(cx, fr)]
+        for a, b in zip(pts, pts[1:]):
+            self.line(*a, *b)
+        self.set_draw_color(255, 255, 255)
+        self.set_line_width(0.4)
+        for (x, y), q in zip(pts, fr):
+            dentro = rg and q["desde"] >= rg[0] and q["hasta"] <= rg[1]
+            self.set_fill_color(*(AZUL if dentro else (138, 150, 156)))
+            self.circle(x, y, 1.3, style="DF")
+        self.set_font("Mono", "", 6.5)
+        if o.get("escora") is not None:
+            self.set_draw_color(*TINTA2)
+            self.set_line_width(0.35)
+            self.set_dash_pattern(dash=1.1, gap=0.8)
+            self.line(X(cl(o["escora"])), y0, X(cl(o["escora"])), y1)
+            self.set_dash_pattern()
+            self.set_text_color(*TINTA2)
+            self.set_xy(X(cl(o["escora"])) + 1, y0 + 0.3)
+            self.cell(30, 3, "5 con más VMG")
+        if mia is not None:
+            self.set_draw_color(*NARANJA)
+            self.set_line_width(0.55)
+            self.line(X(cl(mia)), y0, X(cl(mia)), y1)
+            self.set_text_color(*NARANJA)
+            self.set_xy(X(cl(mia)) + 1, y0 + 3.6)
+            self.cell(30, 3, quien)
+        self.set_line_width(0.2)
+        # leyenda
+        self.set_xy(x0, y1 + 5.5)
+        self.set_font("Texto", "", 7.5)
+        ly = y1 + 7.3
+        x = x0
+        for col, et, raya in ((AZUL, "VMG", None), ((138, 150, 156), "SOG", 1), ((222, 234, 248), "franjas sin pérdida", "caja"),
+                              (NARANJA, quien, None), (TINTA2, "óptima (5 con más VMG)", 1)):
+            if raya == "caja":
+                self.set_fill_color(*col)
+                self.rect(x, ly - 1.3, 5, 2.6, style="F")
+            else:
+                self.set_draw_color(*col)
+                self.set_line_width(0.5)
+                if raya:
+                    self.set_dash_pattern(dash=1.1, gap=0.8)
+                self.line(x, ly, x + 5, ly)
+                self.set_dash_pattern()
+            self.set_text_color(*TINTA2)
+            self.set_xy(x + 6, ly - 2)
+            w = self.get_string_width(et) + 2
+            self.cell(w, 4, et)
+            x += 6 + w + 4
+        self.set_line_width(0.2)
+        self.set_y(y1 + 11)
+
     def tabla(self, cabecera: list[str], filas: list[list], anchos: list[float], alinear: list[str],
               colores: list[list] | None = None, resaltar: set[int] | None = None, tam=8.5):
         """Tabla simple; colores[i][j] = color del texto de la celda; resaltar = filas en negrita."""
@@ -411,6 +521,20 @@ def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
                         ROJO if lay.get("estado") == "sobrepasada" else None, (ROJO if esc is not None and abs(esc) > 2 else None), None])
         pdf.tabla(["Tramo", "Puesto", "VMG / VMC vs top 5" if any(t["tipo"] == "largo" for t in tramos) else "VMG vs top 5", "Por qué / SOG", "Maniobras", "Layline", "Escora", "Amura fav."],
                   filas, [18, 19, 26, 43, 20, 17, 17, 18], ["L", "R", "R", "L", "R", "R", "R", "R"], col, tam=8)
+
+    # Escora óptima en cada ceñida: el mismo gráfico que la pestaña del tramo en la web
+    from .. import servicio
+    an = servicio.analisis_prueba(alm, camp_id, clave)
+    cen = [t for t in an.get("tramos", []) if t.get("tipo") == "ceñida" and (t.get("escora_optima") or {}).get("escora") is not None
+           and barco in t.get("barcos", {})]
+    if cen:
+        pdf.seccion("Escora óptima en ceñida", "Óptima = media de la escora de los 5 barcos con más VMG del tramo, navegando estable. "
+                    "Cada punto: VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos "
+                    "(misma amura, a menos de 300 m., en los mismos 30 s.). Si con más escora sube la SOG y baja la VMG, "
+                    "se va más rápido pero más abierto; si bajan las dos, falta potencia. Estimada.")
+        for t in cen:
+            pdf.escora(t["nombre"], t["escora_optima"], t["barcos"][barco], "Tú")
+            pdf.ln(1)
 
     # Debrief
     d = debrief_mod.leer(alm, camp_id, clave, barco)
