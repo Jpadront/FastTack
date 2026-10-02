@@ -300,7 +300,7 @@
           ...(tr.tipo === 'largo' ? [] : [{ k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) }]),
           { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
         ]} />
-      {#if tr.escora_optima}
+      {#if tr.tipo !== 'largo'}
         <EscoraOptima tramo={tr} {ref} nombreRef={vc(ref)} nombres={vc} />
       {/if}
       <Polar tramo={tr} {ref} nombreRef={vc(ref)} top5={an.clasificacion.map((c) => c.vela).filter((v) => v !== ref).slice(0, 5)} />

@@ -1,1 +1,1 @@
-__version__ = "0.30.13"  # informe PDF: gráfico de escora óptima en cada ceñida
+__version__ = "0.30.14"  # escora óptima siempre visible en ceñidas y popas

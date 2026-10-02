@@ -91,7 +91,7 @@ wheels = [
 
 [[package]]
 name = "fasttack"
-version = "0.30.13"
+version = "0.30.14"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

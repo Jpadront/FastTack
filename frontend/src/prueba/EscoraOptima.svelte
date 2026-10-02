@@ -9,7 +9,7 @@
   const popa = $derived(tramo.tipo !== 'ceñida');   // popa y largo: escora con signo
   const campo = $derived(popa ? 'escora_sotavento' : 'escora');
   const tituloV = $derived(titulo ?? (popa ? 'Escora óptima en popa' : 'Escora óptima en ceñida'));
-  const o = $derived(tramo.escora_optima);
+  const o = $derived(tramo.escora_optima ?? {});   // sin óptima: el bloque dice por qué en lugar de desaparecer
   const c = $derived(o.curva ?? null);
   const b = $derived(tramo.barcos[ref] ?? {});
   const mia = $derived(b[campo] ?? null);
@@ -41,7 +41,7 @@
       {#if enRangoTexto || enRango != null}<div><span class="etq">Cerca de la óptima</span><b class="num">{enRangoTexto ?? enRango + ' %'}</b><small class="tenue">{enRangoTexto ? '' : 'del tiempo a ±2°'}</small></div>{/if}
     </div>
   {:else}
-    <p class="sub">Sin escora óptima: hacen falta al menos 3 barcos con datos de escora fiables. {nombreRef}: <b class="num">{g(mia)}</b>.</p>
+    <p class="sub">Sin escora óptima en este tramo: hacen falta al menos 3 barcos con datos de escora fiables{Object.keys(tramo.barcos).length < 3 ? ` (solo hay ${Object.keys(tramo.barcos).length})` : ''}. {nombreRef}: <b class="num">{g(mia)}</b>.</p>
   {/if}
   {#if popa}<p class="sub">En popa, escora con signo: <b>+</b> a sotavento, <b>−</b> a barlovento.</p>{/if}
   {#if c}
