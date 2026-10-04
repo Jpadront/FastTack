@@ -24,7 +24,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.21.9"
+VERSION = "0.22.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -33,6 +33,7 @@ COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea 
 def calidad(cob: float) -> str:
     return "alta" if cob >= 0.7 else "media" if cob >= 0.45 else "baja" if cob >= COBERTURA_MIN else "insuficiente"
 HUECO_MEDIAS_MS = 15_000     # para medias de un tramo, un hueco de hasta 15 s no invalida el tramo
+FANTASMA_PUNTOS_LINEA = 21     # puntos de la línea que se prueban como salida del fantasma
 FANTASMA_TOP = 5             # el fantasma navega a la SOG media de los 5 primeros del tramo
 
 
@@ -162,7 +163,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
         largo = float(distancia(*p_ini, *p_fin)) if p_ini and p_fin else None
         tramos.append({"id": f"l{n_largo}" if largo_t else f"{'c' if ceñida else 'p'}{n_ceñ if ceñida else n_popa}", "nombre": nombre,
                        "ceñida": ceñida, "largo": largo_t, "desde": ini.id, "hasta": fin.id, "en_tramo": en_tramo, "viento": vt,
-                       "eje": eje_tramo, "largo_m": largo, "lider": lider, "p_ini": p_ini})
+                       "eje": eje_tramo, "largo_m": largo, "lider": lider, "p_ini": p_ini, "p_fin": p_fin})
     # Intensidad del viento: del modelo meteorológico si cuadra con la flota; si no, de la SOG anclada
     # al viento de referencia apuntado; si no hay ninguno, sin calibrar (solo presión relativa)
     tws_fuente = tws_modelo([t["viento"] for t in tramos], prueba.get("meteo_horario"), prueba.get("viento_kn"), senal)
@@ -321,6 +322,22 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                         por_trozo[k].append(m)
             sog_trozos = [float(np.mean(x)) if x else None for x in por_trozo]
         fant_d = None if es_largo else tm.fantasma(t["largo_m"], vt, t["eje"], twa_flota, t["p_ini"], est_s, sog_trozos)
+        # Desde la salida, el fantasma no sale del centro de la línea: sale del punto de la línea desde el
+        # que su camino a la baliza es más corto con el viento que hubo (el lado favorecido según cómo se
+        # desarrolló la ceñida: sesgo de la línea y roladas). Se prueban 21 puntos de comité a pin.
+        fant_pct = None
+        if fant_d and t["desde"] == "salida" and ceñida and pin is not None and comite is not None and t.get("p_fin"):
+            pin_xy, com_xy = sal._linea(pin, comite, senal)
+            if not any(np.isnan(c_) for c_ in (*pin_xy, *com_xy)):
+                for k in range(FANTASMA_PUNTOS_LINEA):
+                    f_ = k / (FANTASMA_PUNTOS_LINEA - 1)
+                    p_ = (com_xy[0] + (pin_xy[0] - com_xy[0]) * f_, com_xy[1] + (pin_xy[1] - com_xy[1]) * f_)
+                    r_ = tm.fantasma(float(distancia(*p_, *t["p_fin"])), vt, tm.rumbo_tramo(p_, t["p_fin"]),
+                                     twa_flota, p_, est_s, sog_trozos)
+                    if r_ and r_["m"] < fant_d["m"] - 0.05:
+                        fant_d, fant_pct = r_, round(f_ * 100)
+                if fant_pct is None:
+                    fant_pct = 50
         fant = fant_d["m"] if fant_d else None
         for f in filas.values():
             f["modo"] = tm.modo(f["twa"], f["sog"], med_twa, med_sog, ceñida) if buenas and not es_largo else None
@@ -407,6 +424,7 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
             "fases_presion": fp,
             "fantasma_m": fant,
             "fantasma_camino": (fant_d or {}).get("camino"),
+            "fantasma_salida_pct": fant_pct,   # dónde sale el fantasma: % de la línea de comité (0) a pin (100)
             "barcos": filas,
             "maniobras": {v: [{"t": m.t, "tipo": m.tipo, "perdida_m": m.perdida_m, **({"detalle": m.detalle} if m.detalle else {})} for m in ms]
                           for v, ms in man_por_tramo[t["id"]].items()},

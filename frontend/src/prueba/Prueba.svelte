@@ -197,7 +197,7 @@
           <button class:activo={capa === null} aria-pressed={capa === null} onclick={() => (capa = null)}>Colores de barco</button>
           {#each CAPAS as [k, t]}<button class:activo={capa === k} aria-pressed={capa === k} onclick={() => (capa = capa === k ? null : k)}>{t}</button>{/each}
           <button class:activo={lider} aria-pressed={lider} title="Línea perpendicular al viento por el líder del tramo y metros que te faltan hasta ella" onclick={() => (lider = !lider)}>Línea del líder</button>
-          <button class:activo={fantasma} aria-pressed={fantasma} title="Camino más corto del tramo sabiendo de antemano las roladas, y dónde iría ahora el fantasma si hubiera salido de la baliza a la vez que tu barco (a la SOG media de los 5 primeros de ese tramo)" onclick={() => (fantasma = !fantasma)}>Barco fantasma</button>
+          <button class:activo={fantasma} aria-pressed={fantasma} title="Camino más corto del tramo sabiendo de antemano las roladas (en la primera ceñida, desde el punto de la línea que lo hace más corto), y dónde iría ahora el fantasma si hubiera salido de la baliza a la vez que tu barco (a la SOG media de los 5 primeros de ese tramo)" onclick={() => (fantasma = !fantasma)}>Barco fantasma</button>
         </div>
         <div class="indic num">
           <span>TWD <b>{num(twdAhora, 0)}°</b> <span class="est">est.</span></span>
@@ -270,7 +270,7 @@
         <div><i>TWD media <span class="est">est.</span></i><b>{num(tr.viento.twd_media, 0)}°</b></div>
         <div><i>TWA de la flota <span class="est">est.</span></i><b>{tr.viento.twa_flota == null ? '—' : num(tr.viento.twa_flota, 0) + '°'}</b></div>
         <div><i>Largo</i><b>{fM(tr.largo_m)}</b></div>
-        {#if tr.tipo !== 'largo'}<div><i>Barco fantasma <span class="est">est.</span></i><b>{fM(tr.fantasma_m)}</b></div>{/if}
+        {#if tr.tipo !== 'largo'}<div><i>Barco fantasma <span class="est">est.</span></i><b>{fM(tr.fantasma_m)}</b>{#if tr.fantasma_salida_pct != null}<small class="tenue">sale {tr.fantasma_salida_pct <= 5 ? 'por el comité' : tr.fantasma_salida_pct >= 95 ? 'por el pin' : `al ${tr.fantasma_salida_pct} % de la línea, de comité a pin`}</small>{/if}</div>{/if}
         <div><i>Líder</i><b>{vc(Object.entries(tr.barcos).find(([, f]) => f.posicion === 1)?.[0] || '')}</b></div>
       </section>
       {#if tr.tipo === 'largo'}

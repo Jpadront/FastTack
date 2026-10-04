@@ -1,1 +1,1 @@
-__version__ = "0.31.2"  # gráfico escora–VMG siempre, orientativo con pocos datos
+__version__ = "0.32.0"  # el fantasma sale del mejor punto de la línea
