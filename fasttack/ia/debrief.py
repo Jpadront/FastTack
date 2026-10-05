@@ -38,8 +38,7 @@ Reglas estrictas:
 - Si los DATOS traen «sesion_propia» con un solo barco, no hay flota ni top 5: no hables de puestos ni de la flota; compara entre pruebas y entre tramos del propio barco (evolución, regularidad, ceñida frente a popa) y recuerda que llegadas y balizas son estimadas.
 - En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
 - Si hay «set_tras_barlovento» o «rodeo_final», úsalos solo cuando expliquen una ganancia o una pérdida clara del tramo (set directo o trasluchando al montar frente a lo que hizo el top 5; tiempo en la zona de la baliza y velocidad mínima frente al top 5).
-- Si hay «reglaje_apuntado», es lo que la tripulación apuntó que llevaba: puedes relacionarlo con la velocidad o la escora como hipótesis, nunca como causa demostrada.
-- Si hay «sensacion_de_la_tripulacion» (bien, normal o mal), es cómo creyó la tripulación que fue: di si las cifras lo confirman o no (por ejemplo, «os pareció que ibais bien, pero en ceñida la VMG fue 0,10 kn. peor que la del top 5»).
+- Si hay «reglaje_apuntado», es lo que la tripulación apuntó que llevaba: puedes relacionarlo con la velocidad o la escora como hipótesis, nunca como causa demostrada. «velocidad_frente_a_la_flota» dice si con ese reglaje fuisteis rápidos: % de la flota que superasteis en VMG (bien = tercio de arriba, mal = tercio de abajo).
 - El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
 - «donde_se_perdio_la_prueba» reparte el tiempo perdido frente al top 5 en salida, velocidad, maniobras y táctica y resto: úsalo para ordenar qué pesó más (y di que es estimado).
 - «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
@@ -334,6 +333,10 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
     pr = next((p for p in camp["pruebas"] if p["clave"] == ambito), {})
     if pr.get("reglaje"):
         h["reglaje_apuntado"] = pr["reglaje"]
-    if pr.get("sensacion"):   # semáforo de la tripulación: contrástalo con las cifras, no lo des por bueno
-        h["sensacion_de_la_tripulacion"] = pr["sensacion"]
+        from .. import servicio
+        from ..motor.semaforo import semaforo
+        sem = semaforo(servicio.analisis_prueba(alm, camp_id, ambito), barco)
+        if sem:   # para relacionar el reglaje con la velocidad: VMG frente a toda la flota de la prueba
+            h["velocidad_frente_a_la_flota"] = {"semaforo": sem["nivel"], "vmg_mejor_que_el_pct_de_la_flota": sem["percentil"],
+                                                **{k.replace("percentil_", "en_"): x for k, x in sem.items() if k.startswith("percentil_")}}
     return h

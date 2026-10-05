@@ -25,6 +25,7 @@ export const api = {
   renombrar: (c, nombre) => pedir('PATCH', `/api/campeonatos/${id(c)}`, { nombre }),
   eliminar: (c) => pedir('DELETE', `/api/campeonatos/${id(c)}`),
   estado: (c) => pedir('GET', `/api/campeonatos/${id(c)}/estado`),
+  semaforos: (c, barco) => pedir('GET', `/api/campeonatos/${id(c)}/semaforos?barco=${encodeURIComponent(barco)}`),
   ajustar: (c, clave, cambios) => pedir('PATCH', `/api/campeonatos/${id(c)}/pruebas/${clave}`, cambios),
   analisis: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/analisis`),
   meteo: (c, clave) => pedir('GET', `/api/campeonatos/${id(c)}/pruebas/${clave}/meteo`),

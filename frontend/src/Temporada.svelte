@@ -78,13 +78,13 @@
       <h3>Reglaje por franja de viento <span class="est">orientativo</span></h3>
       {#if t.reglajes.length}
         <div class="rodillo"><table class="mini">
-          <thead><tr><th>Ajuste</th><th>Valor</th><th>Viento</th><th class="n">Pruebas</th><th class="n">VMG ceñida vs top 5</th><th class="n">VMG popa vs top 5</th><th class="n">Puesto</th><th>Sensación</th></tr></thead>
+          <thead><tr><th>Ajuste</th><th>Valor</th><th>Viento</th><th class="n">Pruebas</th><th class="n">VMG ceñida vs top 5</th><th class="n">VMG popa vs top 5</th><th class="n">Puesto</th><th>Velocidad</th></tr></thead>
           <tbody>{#each t.reglajes as r}<tr><td>{r.ajuste}</td><td>{r.valor}</td><td>{r.franja}</td><td class="n num">{r.pruebas}</td>
             <td class="n num">{fmt(r.vmg_ceñida_frente_top5)} kn.</td><td class="n num">{fmt(r.vmg_popa_frente_top5)} kn.</td>
             <td class="n num">{r.puesto_relativo == null ? '—' : num(r.puesto_relativo * 100, 0) + ' %'}</td>
-            <td class="sens">{#each SEM as [k, c]}{#if r.sensacion?.[k]}<span title={`${r.sensacion[k]} prueba(s) ${k}`}><i style:background={c}></i>{r.sensacion[k]}</span>{/if}{/each}{#if !SEM.some(([k]) => r.sensacion?.[k])}<span class="tenue">—</span>{/if}</td></tr>{/each}</tbody>
+            <td class="sens">{#each SEM as [k, c]}{#if r.semaforo?.[k]}<span title={`${r.semaforo[k]} prueba(s) ${k}`}><i style:background={c}></i>{r.semaforo[k]}</span>{/if}{/each}{#if !SEM.some(([k]) => r.semaforo?.[k])}<span class="tenue">—</span>{/if}</td></tr>{/each}</tbody>
         </table></div>
-        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian. Sensación: el semáforo que apuntó la tripulación (cuántas pruebas fueron bien, normal y mal con ese valor); compárala con la VMG medida.</p></Nota>
+        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian. Velocidad: cuántas pruebas fueron bien, normal y mal con ese valor según la VMG frente a toda la flota (tercio de arriba, del medio y de abajo).</p></Nota>
       {:else}
         <p class="tenue">Apunta el reglaje de cada prueba en la página del campeonato (botón «Reglaje») y el viento de referencia: aquí verás qué valor de cada ajuste fue mejor en cada franja de viento cuando haya al menos dos valores distintos.</p>
       {/if}
@@ -92,12 +92,12 @@
     <section class="tarjeta bloque">
       <h3>Pruebas</h3>
       <div class="rodillo"><table class="mini">
-        <thead><tr><th>Día</th><th>Campeonato</th><th class="n">Prueba</th><th class="n">Puesto</th><th>Viento</th><th>Sensación</th><th class="n">VMG ceñida vs top 5</th><th>Reglaje</th></tr></thead>
+        <thead><tr><th>Día</th><th>Campeonato</th><th class="n">Prueba</th><th class="n">Puesto</th><th>Viento</th><th>Velocidad</th><th class="n">VMG ceñida vs top 5</th><th>Reglaje</th></tr></thead>
         <tbody>{#each [...t.filas].reverse() as f}<tr>
           <td class="num">{f.dia.split('-').reverse().join('/')}</td><td>{f.nombre}</td>
           <td class="n"><a href={`#/c/${encodeURIComponent(f.campeonato)}/p/${f.clave}`}>P{f.numero}</a></td>
           <td class="n num">{f.puesto}/{f.barcos}</td><td class="num">{f.viento_kn ? num(f.viento_kn, 0) + ' kn.' : '—'}</td>
-          <td class="sens">{#if f.sensacion}<span><i style:background={SEM.find(([k]) => k === f.sensacion)?.[1]}></i>{f.sensacion}</span>{:else}<span class="tenue">—</span>{/if}</td>
+          <td class="sens">{#if f.semaforo}<span title={`VMG mejor que el ${f.semaforo.percentil} % de la flota`}><i style:background={SEM.find(([k]) => k === f.semaforo.nivel)?.[1]}></i>{f.semaforo.nivel} · {f.semaforo.percentil} %</span>{:else}<span class="tenue">—</span>{/if}</td>
           <td class="n num" class:bien={f.vmg_ceñida_frente_top5 > 0.02} class:mal={f.vmg_ceñida_frente_top5 < -0.02}>{fmt(f.vmg_ceñida_frente_top5)} kn.</td>
           <td class="tenue">{Object.entries(f.reglaje).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</td></tr>{/each}</tbody>
       </table></div>

@@ -4,7 +4,6 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
-from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
@@ -44,7 +43,6 @@ class AjustePrueba(BaseModel):
     excluida: bool | None = None
     viento_kn: float | None = None
     viento_dir: float | None = None
-    sensacion: Literal["bien", "normal", "mal"] | None = None   # semáforo de la tripulación con ese reglaje
 
 
 class PeticionSesion(BaseModel):
@@ -168,6 +166,13 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
         return [dict(r) for r in alm.sql(
             "select id, coalesce(nullif(alias, ''), nombre) as nombre, nombre as nombre_original, clase, division, "
             "inicio, fin, estado, progreso, error, cargado_en from campeonato order by coalesce(inicio, 0) desc")]
+
+    @app.get("/api/campeonatos/{camp_id:path}/semaforos")
+    def semaforos(camp_id: str, barco: str):
+        try:
+            return servicio.semaforos_campeonato(alm, camp_id, barco)
+        except KeyError as e:
+            raise HTTPException(404, "Campeonato no encontrado") from e
 
     @app.get("/api/campeonatos/{camp_id:path}/estado")
     def estado(camp_id: str):

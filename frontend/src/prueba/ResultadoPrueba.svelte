@@ -1,7 +1,7 @@
 <script>
   // Resumen de la prueba para el barco de referencia, lo primero que se ve: puesto, distancia al
   // ganador, frente al top 5 y causa principal (desglose del motor), y el mejor y el peor tramo.
-  import { tiempo } from './datos.js';
+  import { tiempo, semaforo, SEMAFORO } from './datos.js';
 
   let { an, ref, nombreRef = '' } = $props();
   const k = $derived(an.clasificacion.findIndex((c) => c.vela === ref));
@@ -18,6 +18,7 @@
   const tramos = $derived((d?.por_tramo || []).filter((x) => !x.sin_datos && x.total_s != null));
   const mejor = $derived(tramos.length > 1 ? tramos.reduce((a, b) => (b.total_s < a.total_s ? b : a)) : null);
   const peor = $derived(tramos.length > 1 ? tramos.reduce((a, b) => (b.total_s > a.total_s ? b : a)) : null);
+  const sem = $derived(semaforo(an, ref));
   const t = (s) => tiempo(Math.abs(s));
   const frase = (s) => (s > 0 ? `${t(s)} perdidos` : s < 0 ? `${t(s)} ganados` : 'igual');
 </script>
@@ -29,6 +30,13 @@
     <b class="num">{k + 1}.º<small>/{total}</small></b>
     <span class="det">{k === 0 ? 'ganador de la prueba' : alGanador != null ? `a ${tiempo(alGanador)} del ganador` : ''}</span>
   </div>
+  {#if sem}
+    <div class="dato">
+      <span class="et">Velocidad frente a la flota</span>
+      <b class="txt"><i class="sem" style:background={SEMAFORO[sem.nivel]}></i>{sem.nivel}</b>
+      <span class="det">VMG mejor que el {sem.percentil} % de la flota{sem['ceñida'] != null && sem.popa != null ? ` (ceñida ${sem['ceñida']} %, popa ${sem.popa} %)` : ''}</span>
+    </div>
+  {/if}
   {#if d}
     <div class="dato">
       <span class="et">Frente al top 5</span>
@@ -54,5 +62,6 @@
 {/if}
 
 <style>
+  .sem { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 0 3px rgba(255, 255, 255, .12); }
   .flecha { color: #8fb0bd; font-weight: 400; }
 </style>

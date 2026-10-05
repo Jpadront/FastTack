@@ -46,6 +46,33 @@ def _ruta_analisis(alm: Almacen, camp: dict, prueba: dict):
     return alm._dir(camp["event_id"], camp["division"]) / nombre
 
 
+_SEMAFOROS: dict = {}
+
+
+def semaforos_campeonato(alm: Almacen, camp_id: str, barco: str) -> dict:
+    """Semáforo de datos (motor/semaforo.py) de las pruebas ya analizadas del campeonato: {clave: …}.
+    No analiza nada: las pruebas sin análisis guardado no salen."""
+    from .ingesta.normalizar import vela
+    from .motor.semaforo import semaforo
+    camp = camp_mod.leer(alm, camp_id)
+    if camp is None:
+        raise KeyError(camp_id)
+    v, out = vela(barco), {}
+    for p in camp["pruebas"]:
+        if not p["llegadas"]:
+            continue
+        ruta = _ruta_analisis(alm, camp, p)
+        if not ruta.exists():
+            continue
+        clave = (str(ruta), ruta.stat().st_mtime, v)
+        if clave not in _SEMAFOROS:
+            an = json.loads(ruta.read_text())
+            _SEMAFOROS[clave] = None if "error" in an else semaforo(an, v)
+        if _SEMAFOROS[clave]:
+            out[p["clave"]] = _SEMAFOROS[clave]
+    return out
+
+
 def _ruta_meteo(alm: Almacen, camp: dict, prueba: dict):
     return alm._dir(camp["event_id"], camp["division"]) / f"meteo_{prueba['clave']}.json"
 

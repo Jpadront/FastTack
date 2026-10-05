@@ -9,6 +9,7 @@ import statistics
 from .ingesta import campeonato as camp_mod
 from .ingesta.almacen import Almacen
 from . import servicio
+from .motor.semaforo import semaforo
 
 FRANJAS_KN = ((0, 8, "< 8 kn"), (8, 12, "8–12 kn"), (12, 16, "12–16 kn"), (16, 99, "> 16 kn"))
 
@@ -85,15 +86,15 @@ def temporada(alm: Almacen, barco: str) -> dict:
                           "clave": p["clave"], "numero": p["numero"], "senal": p["senal"],
                           "dia": servicio.dia_de(p["senal"], tz), "viento_kn": viento,
                           "franja": _franja(viento), "reglaje": p.get("reglaje") or {},
-                          "sensacion": p.get("sensacion"), **f})
+                          "semaforo": semaforo(an, v), **f})
     filas.sort(key=lambda x: x["senal"])
     return {"barco": v, "filas": filas, "pendientes": pendientes, "reglajes": comparar_reglajes(filas)}
 
 
 def comparar_reglajes(filas: list[dict]) -> list[dict]:
     """Para cada ajuste que ha tenido al menos dos valores: VMG frente al top 5 con cada valor, por
-    franja de viento (media de las pruebas; con pocas pruebas es orientativo), y el semáforo que puso
-    la tripulación (cuántas pruebas bien, normal y mal)."""
+    franja de viento (media de las pruebas; con pocas pruebas es orientativo), y el semáforo de datos
+    (cuántas pruebas fueron bien, normal y mal por VMG frente a la flota: motor/semaforo.py)."""
     claves = sorted({k for f in filas for k in f["reglaje"]})
     out = []
     for k in claves:
@@ -110,6 +111,6 @@ def comparar_reglajes(filas: list[dict]) -> list[dict]:
                         "vmg_ceñida_frente_top5": media("vmg_ceñida_frente_top5"),
                         "vmg_popa_frente_top5": media("vmg_popa_frente_top5"),
                         "puesto_relativo": media("puesto_relativo"),
-                        # semáforo de la tripulación con ese valor: cuántas pruebas bien, normal y mal
-                        "sensacion": {x: sum(1 for f in fs if f.get("sensacion") == x) for x in ("bien", "normal", "mal")}})
+                        # semáforo de datos con ese valor: cuántas pruebas bien, normal y mal
+                        "semaforo": {x: sum(1 for f in fs if (f.get("semaforo") or {}).get("nivel") == x) for x in ("bien", "normal", "mal")}})
     return out

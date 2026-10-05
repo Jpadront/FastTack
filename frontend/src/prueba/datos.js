@@ -451,3 +451,24 @@ export function corrienteEn(an, T) {
   const v = (c.por_vuelta || []).find((x) => x.confianza && T >= x.desde_s && T <= x.hasta_s);
   return v ? { ...v, ambito: `vuelta ${v.vuelta}` } : { ...c, ambito: 'toda la prueba' };
 }
+
+// Semáforo de datos (como motor/semaforo.py): % de la flota que el barco superó en VMG en ceñida y en
+// popa, y su media; tercio de arriba = bien, del medio = normal, de abajo = mal.
+export const SEMAFORO = { bien: '#1a7f4b', normal: '#d39b00', mal: '#c0392b' };
+export function semaforo(an, v) {
+  const rd = an.rendimiento || {}, mio = rd[v];
+  if (!mio) return null;
+  const pct = {};
+  for (const m of ['ceñida', 'popa']) {
+    const k = `vmg_${m}`;
+    const otros = Object.entries(rd).filter(([x, r]) => x !== v && r[k] != null).map(([, r]) => r[k]);
+    if (mio[k] != null && otros.length + 1 >= 5) {
+      const menos = otros.filter((x) => x < mio[k]).length + 0.5 * otros.filter((x) => x === mio[k]).length;
+      pct[m] = Math.round((100 * menos) / otros.length);
+    }
+  }
+  const vals = Object.values(pct);
+  if (!vals.length) return null;
+  const p = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return { nivel: p < 100 / 3 ? 'mal' : p < 200 / 3 ? 'normal' : 'bien', percentil: Math.round(p), ...pct };
+}

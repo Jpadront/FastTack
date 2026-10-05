@@ -1,1 +1,1 @@
-__version__ = "0.39.0"  # semáforo del reglaje
+__version__ = "0.39.1"  # semáforo de velocidad automático
