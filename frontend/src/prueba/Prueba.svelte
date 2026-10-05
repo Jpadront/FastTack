@@ -2,7 +2,7 @@
   import Nota from '../Nota.svelte';
   import { onMount, untrack } from 'svelte';
   import { api, horaLocal, clave as claveVela } from '../api.js';
-  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, tiempo, velaCorta, tramoEn, twdEn, faseEn, corrienteEn } from './datos.js';
+  import { decodificarPistas, pestanas, ventana as ventanaDe, colorBarco, fmtT, fmtDur, num, tiempo, velaCorta, tramoEn, twdEn, faseEn, corrienteEn, mediana } from './datos.js';
   import Mapa from './Mapa.svelte';
   import Reproductor from './Reproductor.svelte';
   import Panel from './Panel.svelte';
@@ -107,9 +107,24 @@
   const seg = (ms) => (ms - an.senal) / 1000;
   const filasSalida = $derived(an?.salida ? Object.entries(an.salida.barcos).filter(([v]) => sel.has(v))
     .map(([v, f]) => ({ vela: v, ...f, pos_final: posFinal[v], llegada_txt: f.diagnostico?.llegada?.split(':')[0] || '' })) : []);
+  // Contexto del tramo con toda la flota: puesto al entrar (orden de paso por la baliza anterior; en la
+  // primera ceñida no hay), y medianas de VMG y distancia de los barcos con datos fiables
+  const ctxTramo = $derived.by(() => {
+    if (tab?.tipo !== 'tramo') return null;
+    const bs = Object.entries(tab.tramo.barcos);
+    const buenas = bs.filter(([, f]) => f.calidad !== 'baja' && f.calidad !== 'insuficiente');
+    const ent = tab.tramo.desde === 'salida' ? [] : bs.filter(([, f]) => f.t_entrada != null).sort((a, b) => a[1].t_entrada - b[1].t_entrada).map(([v]) => v);
+    return { ent, vmg: mediana(buenas.map(([, f]) => f.vmg).filter((x) => x != null)), dist: mediana(buenas.map(([, f]) => f.distancia_m).filter((x) => x != null)) };
+  });
+  const VERDE = '#1b7f3b', ROJO = 'var(--error, #c62828)';
+  const conSigno = (v, d, u) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + num(Math.abs(v), d) + u);
   const filasTramo = $derived(tab?.tipo === 'tramo' ? Object.entries(tab.tramo.barcos).filter(([v]) => sel.has(v))
     .map(([v, f]) => ({ vela: v, ...f, baja: f.calidad === 'baja' || f.calidad === 'insuficiente',
-      motivo_txt: f.layline?.estado !== 'SOBREPASADA' ? '' : ({ no_podia_virar: 'tráfico: no podía virar', layline_con_trafico: 'tráfico en la layline', calculo: 'cálculo' })[f.layline.trafico?.motivo] || 'sin datos',
+      pos_entrada: ctxTramo.ent.includes(v) ? ctxTramo.ent.indexOf(v) + 1 : null,
+      ganados: ctxTramo.ent.includes(v) && f.posicion != null ? ctxTramo.ent.indexOf(v) + 1 - f.posicion : null,
+      d_vmg: f.vmg != null && ctxTramo.vmg != null ? f.vmg - ctxTramo.vmg : null,
+      d_dist: f.distancia_m != null && ctxTramo.dist != null ? f.distancia_m - ctxTramo.dist : null,
+      motivo_txt: f.layline?.estado !== 'SOBREPASADA' ? '' : ({ no_podia_virar: 'no podía virar', layline_con_trafico: 'layline ocupada', calculo: 'cálculo' })[f.layline.trafico?.motivo] || 'sin datos',
       amura_fav: f.tactica?.amura_favorecida_pct ?? null,
       layline_txt: f.layline?.estado === 'SOBREPASADA' ? `${f.layline.lado === 'DERECHA' ? 'Dcha' : 'Izda'} +${num(f.layline.metros, 0)} m.` : f.layline?.estado === 'OK' ? 'OK' : '—' })) : []);
   function filasPaso(cid) {
@@ -280,18 +295,22 @@
       {/if}
       {@const colBase = [
         { k: 'vela', titulo: 'Barco', fmt: fBarco },
-        { k: 'posicion', titulo: 'Pos.', num: true },
+        { k: 'posicion', titulo: 'Pos.', num: true, ayuda: 'Puesto al final del tramo' },
+      ]}
+      {@const colPos = tr.desde === 'salida' ? [] : [
+        { k: 'pos_entrada', titulo: 'Entrada', num: true, ayuda: 'Puesto al entrar en el tramo (orden de paso por la baliza anterior)' },
+        { k: 'ganados', titulo: 'Ganados', num: true, ayuda: 'Puestos ganados (+) o perdidos (−) en el tramo', fmt: (v) => conSigno(v, 0, ''), color: (v) => (!v ? null : v > 0 ? VERDE : ROJO) },
       ]}
       {@const colVel = [
         { k: 'parcial_s', titulo: 'Parcial', num: true, fmt: fmtDur },
         { k: 'gap_s', titulo: 'Gap', num: true, fmt: (v) => (v ? '+' + fmtDur(v) : '—') },
         tr.tipo === 'largo' ? { k: 'vmg', titulo: 'VMC', num: true, ayuda: 'Velocidad hacia la baliza (a lo largo del tramo)', fmt: fKn } : { k: 'vmg', titulo: 'VMG', num: true, est: true, fmt: fKn },
+        { k: 'd_vmg', titulo: tr.tipo === 'largo' ? 'Δ VMC' : 'Δ VMG', num: true, est: tr.tipo !== 'largo', ayuda: 'Frente a la mediana de la flota en el tramo (barcos con datos fiables)', fmt: (v) => conSigno(v, 2, ' kn.'), color: (v) => (v == null || Math.abs(v) < 0.05 ? null : v > 0 ? VERDE : ROJO) },
         { k: 'sog', titulo: 'SOG', num: true, fmt: fKn },
         { k: 'twa', titulo: 'TWA', num: true, est: true, fmt: fGrados(1) },
         ...(tr.tipo === 'largo' ? [] : [{ k: 'modo', titulo: 'Modo', est: true, fmt: (v) => ({ VMG: 'VMG', ALTURA: 'altura', VELOCIDAD: 'velocidad', BAJO: 'bajo', PROFUNDO: 'bajo' })[v] || '—' }]),
-        ...(tr.tipo === 'largo' ? [] : [{ k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') }]),
         { k: 'distancia_m', titulo: 'Distancia', num: true, fmt: fM },
-        ...(tr.tipo === 'largo' ? [] : [{ k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) }]),
+        { k: 'd_dist', titulo: 'Δ dist.', num: true, ayuda: 'Metros navegados frente a la mediana de la flota en el tramo: − = camino más corto', fmt: (v) => conSigno(v, 0, ' m.'), color: (v) => (v == null || Math.abs(v) < 20 ? null : v < 0 ? VERDE : ROJO) },
         { k: 'calidad', titulo: 'Datos', fmt: (v, f) => `${v} (${num(f.cobertura * 100, 0)} %)` },
       ]}
       {@const colTac = tr.tipo === 'largo' ? [] : [
@@ -300,6 +319,8 @@
         { k: 'amura_fav', titulo: 'Amura fav.', num: true, est: true, ayuda: 'Tiempo en la amura favorecida por la rolada (la que apunta más a la baliza)', fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
         { k: 'layline_txt', titulo: 'Layline', est: true },
         { k: 'motivo_txt', titulo: 'Motivo', est: true, ayuda: 'Por qué se sobrepasó: tráfico (no podía virar o la layline ya estaba ocupada) o cálculo', fmt: (v) => v || '—' },
+        { k: 'eficiencia_pct', titulo: 'vs fantasma', num: true, est: true, fmt: (v, f) => (v == null ? '—' : `${f.vs_fantasma_m > 0 ? '+' : ''}${num(f.vs_fantasma_m, 0)} m. · ${num(v, 1)} %`) },
+        { k: 'regularidad_pct', titulo: 'Regularidad', num: true, est: true, ayuda: 'Variación de la VMG de cada 30 s. frente a la de la flota en esos 30 s: cuanto menor, más regular', fmt: (v) => (v == null ? '—' : '±' + num(v, 0) + ' %') },
       ]}
       {@const colTrim = [
         { k: 'escora', titulo: 'Escora', num: true, fmt: fGrados(0) },
@@ -309,13 +330,13 @@
       {@const notaVel = 'En gris, barcos con pocos datos en el tramo (calidad baja). * estimado con el viento reconstruido.'}
       {#if tr.tipo === 'largo'}
         <Tabla titulo={`Rendimiento en ${tr.nombre}`} {ref} {colores} filas={filasTramo} ordenInicial="posicion" nota={notaVel}
-          columnas={[...colBase, ...colVel, ...colTrim]} />
+          columnas={[...colBase, ...colPos, ...colVel, ...colTrim]} />
       {:else}
         <!-- dos tablas por grupos de datos para que se vean enteras sin desplazamiento lateral -->
         <Tabla titulo={`Rendimiento en ${tr.nombre} · velocidad y rumbo`} {ref} {colores} filas={filasTramo} ordenInicial="posicion" nota={notaVel}
-          columnas={[...colBase, ...colVel]} />
+          columnas={[...colBase, ...colPos, ...colVel]} />
         <Tabla titulo={`${tr.nombre} · maniobras, táctica y trimado`} {ref} {colores} filas={filasTramo} ordenInicial="posicion"
-          nota={`* estimado. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «tráfico en la layline» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
+          nota={`* estimado. Pérdida: suma de las maniobras con datos suficientes. Layline: lado del campo ${tr.tipo === 'popa' ? 'mirando a sotavento' : 'mirando a barlovento'}. Motivo del sobrepaso (entre el cruce de la layline y la última maniobra): «no podía virar» si un barco a menos de 3 esloras le impedía virar la mitad del tiempo o más; «layline ocupada» si ya había 3 o más barcos por ella delante (virar debajo era aire sucio); «cálculo» si no había nadie.`}
           columnas={[...colBase, ...colTac, ...colTrim]} />
       {/if}
       {#if tr.tipo !== 'largo'}

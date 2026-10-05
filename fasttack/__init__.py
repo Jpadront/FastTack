@@ -1,1 +1,1 @@
-__version__ = "0.33.0"  # aceleración en la salida
+__version__ = "0.33.1"  # tramo: entrada, ganados y diferencias con la mediana
