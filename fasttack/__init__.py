@@ -1,1 +1,1 @@
-__version__ = "0.34.1"  # capa de presión acumulada
+__version__ = "0.35.0"  # qué decidió cada tramo

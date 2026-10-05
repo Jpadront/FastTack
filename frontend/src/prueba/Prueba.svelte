@@ -16,6 +16,7 @@
   import DondeSePerdio from './DondeSePerdio.svelte';
   import AceleracionSalida from './AceleracionSalida.svelte';
   import ManiobrasPrueba from './ManiobrasPrueba.svelte';
+  import CausaTramo from './CausaTramo.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -294,6 +295,7 @@
       {#if tr.tipo === 'largo'}
         <p class="nota-largo">Largo: tramo de través hacia una baliza de ala (recorrido triangular, sin popa). Se compara la <b>VMC</b> (velocidad hacia la baliza) y la SOG; no hay VMG al viento, maniobras, laylines ni táctica de roles. El viento es el del tramo anterior.</p>
       {/if}
+      <CausaTramo desglose={an.rendimiento?.[ref]?.desglose} tramo={tr} {ref} top5={an.rendimiento?.[ref]?.desglose?.frente_a || []} salida={an.salida} nombreRef={vc(ref)} />
       {@const colBase = [
         { k: 'vela', titulo: 'Barco', fmt: fBarco },
         { k: 'posicion', titulo: 'Pos.', num: true, ayuda: 'Puesto al final del tramo' },
