@@ -210,14 +210,27 @@
     // Salida: paralelas a 25 y 50 m. por detrás, cerradas por las laylines de comité (estribor) y pin (babor)
     const rj = enSalida ? rejillaSalida(an, pistas, T) : null;
     if (rj) {
-      const COL = '#0f766e', ult = rj.lineas[rj.lineas.length - 1];
-      // laylines: blanco discontinuo, con un filo oscuro tenue para que se vean sobre el fondo claro
-      const tramos = [[rj.pin, ult.a], [rj.comite, ult.b]].map(([a, b]) => [px(...a), px(...b)]);
-      ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(16,34,43,0.25)';
-      ctx.beginPath(); for (const [A, B] of tramos) { ctx.moveTo(...A); ctx.lineTo(...B); } ctx.stroke();
-      ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff';
-      ctx.beginPath(); for (const [A, B] of tramos) { ctx.moveTo(...A); ctx.lineTo(...B); } ctx.stroke();
+      const COL = '#0f766e';
+      // las cuatro laylines de los extremos: blanco discontinuo, con un filo oscuro tenue para que se vean
+      // sobre el fondo claro; estribor con trazo largo y babor con trazo corto
+      const tramos = rj.laylines.map((l) => [px(...l.a), px(...l.b), l]);
+      for (const [A, B, l] of tramos) {
+        ctx.setLineDash(l.amura === 'estribor' ? [8, 4] : [3, 4]);
+        ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(16,34,43,0.25)';
+        ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke();
+      }
       ctx.setLineDash([]);
+      // rótulo al final de cada layline
+      ctx.font = '600 11px "Barlow Semi Condensed", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const [A, B, l] of tramos) {
+        const ux = B[0] - A[0], uy = B[1] - A[1], n = Math.hypot(ux, uy) || 1;
+        const X = B[0] + (ux / n) * 14, Y = B[1] + (uy / n) * 14, t = l.amura === 'estribor' ? 'E' : 'B';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.strokeText(t, X, Y);
+        ctx.fillStyle = '#10222b'; ctx.fillText(t, X, Y);
+      }
+      ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
       ctx.strokeStyle = COL; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
       for (const ln of rj.lineas) {
         const A = px(...ln.a), B = px(...ln.b);
@@ -333,6 +346,8 @@
     <div class="leyenda"><i style:background="#2a78d6"></i>más presión <i style:background="#e8862a"></i>menos, durante todo el tramo (SOG frente a la flota, celdas de 100 m.) <span class="est">est.</span></div>
   {:else if capa === 'presion'}
     <div class="leyenda"><i style:background="#2a78d6"></i>más SOG que la flota (racha) · anillo: la acaba de recibir <span class="est">est.</span></div>
+  {:else if enSalida}
+    <div class="leyenda"><span class="raya larga"></span>E: layline de estribor <span class="raya corta"></span>B: layline de babor, a comité y pin · paralelas a 25 y 50 m. <span class="est">est.</span></div>
   {/if}
 </div>
 
@@ -344,6 +359,8 @@
     color: #10222b; border-radius: 4px; padding: 2px 8px 2px 4px; font: 500 12px var(--display); }
   .corr svg { color: #2a78d6; }
   .corr .est { color: #6a5acd; }
+  .raya { display: inline-block; width: 18px; height: 0; border-top: 2px dashed #4b5e67; vertical-align: middle; }
+  .raya.corta { border-top-style: dotted; }
   .leyenda { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
     background: rgba(255,255,255,.9); color: #10222b; border-radius: 4px; padding: 3px 8px; font: 500 12px var(--display); max-width: calc(100% - 120px); }
   .lider-info { position: absolute; left: 50%; transform: translateX(-50%); top: 8px; z-index: 3; background: rgba(255,255,255,.92); color: #10222b;

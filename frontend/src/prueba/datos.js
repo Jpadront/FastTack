@@ -102,8 +102,15 @@ export function rejillaSalida(an, pistas, T, distancias = [25, 50]) {
     a: [pin.x - (d / kB) * bab[0], pin.y - (d / kB) * bab[1]],
     b: [com.x - (d / kE) * est[0], com.y - (d / kE) * est[1]],
   }));
-  return { lineas, comite: [com.x, com.y], pin: [pin.x, pin.y] };
+  // Las cuatro laylines de ceñida que llegan a los extremos (estribor y babor en el comité y en el pin),
+  // hacia atrás hasta LAYLINE_SALIDA_M por detrás de la línea
+  const rayo = (p, d, k, amura, extremo) => ({ amura, extremo, a: [p.x, p.y],
+    b: [p.x - (LAYLINE_SALIDA_M / k) * d[0], p.y - (LAYLINE_SALIDA_M / k) * d[1]] });
+  const laylines = [rayo(com, est, kE, 'estribor', 'comité'), rayo(com, bab, kB, 'babor', 'comité'),
+                    rayo(pin, est, kE, 'estribor', 'pin'), rayo(pin, bab, kB, 'babor', 'pin')];
+  return { lineas, laylines, comite: [com.x, com.y], pin: [pin.x, pin.y] };
 }
+const LAYLINE_SALIDA_M = 250;
 
 // Distancia firmada a la línea de salida en T (m): + en el lado del recorrido (pasado), − por detrás.
 // Como el «margen» del motor (motor/salida.py): normal a la recta pin–comité, orientada hacia el eje.
