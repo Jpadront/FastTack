@@ -12,6 +12,20 @@
 
   onMount(async () => { guardados = await api.campeonatos().catch(() => []); });
 
+  // Buscador: por nombre, clase, división, año o mes (sin tildes ni mayúsculas) y filtro por clase;
+  // los más recientes primero
+  let busca = $state(''), clase = $state('');
+  const norm = (t) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  const MESES_B = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const clases = $derived([...new Set(guardados.map((c) => c.clase).filter(Boolean))].sort());
+  const ordenados = $derived([...guardados].sort((a, b) => (b.inicio || 0) - (a.inicio || 0)));
+  const visibles = $derived(ordenados.filter((c) => {
+    if (clase && c.clase !== clase) return false;
+    const f = c.inicio ? new Date(c.inicio) : null;
+    const texto = norm([c.nombre, c.nombre_original, c.id, c.clase, c.division, f?.getFullYear(), f ? MESES_B[f.getMonth()] : ''].join(' '));
+    return norm(busca).split(/\s+/).filter(Boolean).every((p) => texto.includes(p));
+  }));
+
   let editando = $state(null), nuevoNombre = $state('');
   async function renombrar(c) {
     try {
@@ -51,7 +65,7 @@
     }
   }
 
-  const fecha = (ms) => (ms ? horaLocal(ms, 0).split(' · ')[0] : '');
+  const fecha = (ms) => (ms ? horaLocal(ms, 0).split(' · ')[0] + ' ' + new Date(ms).getFullYear() : '');
 </script>
 
 <header class="intro">
@@ -69,8 +83,19 @@
   <div class="titulo-lista"><h2>Tus campeonatos</h2>{#if guardados.length}<a class="acceso" href="#/temporada">Tu temporada →</a>{/if}</div>
   {#if error && !url}<p class="error" role="alert">{error}</p>{/if}
   {#if guardados.length}
+    <div class="buscador">
+      <input class="campo" type="search" bind:value={busca} placeholder="Buscar regata, clase, año o mes…" aria-label="Buscar campeonato">
+      {#if clases.length > 1}
+        <div class="clases" role="group" aria-label="Filtrar por clase">
+          <button class:activo={!clase} aria-pressed={!clase} onclick={() => (clase = '')}>Todas</button>
+          {#each clases as k}<button class:activo={clase === k} aria-pressed={clase === k} onclick={() => (clase = clase === k ? '' : k)}>{k}</button>{/each}
+        </div>
+      {/if}
+      {#if busca || clase}<span class="tenue cuenta">{visibles.length} de {guardados.length}</span>{/if}
+    </div>
+    {#if !visibles.length}<p class="tenue">Ningún campeonato coincide con la búsqueda.</p>{/if}
     <ul>
-      {#each guardados as c}
+      {#each visibles as c (c.id)}
         <li>
           <div class="tarjeta ficha">
             <a class="nombre" href={`#/c/${encodeURIComponent(c.id)}`}>
@@ -147,6 +172,12 @@
   .dos-cargas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 800px) { .dos-cargas { grid-template-columns: minmax(0, 1fr); } }
   .cargar { padding: 16px; display: grid; gap: 8px; }
+  .buscador { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 0 0 10px; }
+  .buscador .campo { max-width: 360px; flex: 1 1 240px; }
+  .clases { display: flex; flex-wrap: wrap; gap: 4px; }
+  .clases button { font: 600 13px var(--display); padding: 4px 10px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); }
+  .clases button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
+  .cuenta { font-size: 13px; }
   .titulo-lista { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   h2 { font-size: 22px; margin: 0 0 10px; }
   .cargar h2 { margin: 0; }
