@@ -15,6 +15,7 @@
   import Polar from './Polar.svelte';
   import DondeSePerdio from './DondeSePerdio.svelte';
   import AceleracionSalida from './AceleracionSalida.svelte';
+  import ManiobrasPrueba from './ManiobrasPrueba.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -437,6 +438,8 @@
           { k: 'cabeceo_popa', titulo: 'Cabeceo ↓', num: true, fmt: fGrados(0) },
           { k: 'cobertura', titulo: 'Datos', num: true, fmt: (v) => (v == null ? '—' : num(v * 100, 0) + ' %') },
         ]} />
+    {:else if tab.tipo === 'maniobras'}
+      <ManiobrasPrueba {an} {pistas} {ref} {nombres} />
     {:else if tab.tipo === 'debrief'}
       <div class="modos-ia" role="group" aria-label="Qué texto">
         <button class:activo={!cronica} aria-pressed={!cronica} onclick={() => (cronica = false)}>Debrief de {vc(ref)}</button>

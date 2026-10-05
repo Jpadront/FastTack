@@ -152,6 +152,7 @@ export function pestanas(an) {
   }
   out.push({ id: 'llegada', nombre: 'Llegada', tipo: 'llegada' });
   out.push({ id: 'rendimiento', nombre: 'Rendimiento', tipo: 'rendimiento' });
+  out.push({ id: 'maniobras', nombre: 'Maniobras', tipo: 'maniobras' });
   out.push({ id: 'debrief', nombre: 'Debrief IA', tipo: 'debrief' });
   return out;
 }
@@ -162,7 +163,7 @@ export function ventana(p, an, sel) {
   const seg = (ms) => (ms - s) / 1000;
   const fin = Math.max(...an.clasificacion.map((c) => seg(c.t)));
   if (p.tipo === 'salida') return [-180, 180];
-  if (p.tipo === 'rendimiento' || p.tipo === 'debrief') return [-60, fin + 30];
+  if (p.tipo === 'rendimiento' || p.tipo === 'maniobras' || p.tipo === 'debrief') return [-60, fin + 30];
   if (p.tipo === 'llegada') {
     const ts = an.clasificacion.filter((c) => sel.has(c.vela)).map((c) => seg(c.t));
     const t0 = seg(an.clasificacion[0].t);
