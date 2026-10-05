@@ -1,0 +1,7 @@
+Logos de las clases, descargados de sus webs oficiales solo para identificar la clase de cada
+regata en la página principal de FastTack. Son marcas de sus propietarios:
+- j70.png: J/70 Class Association (j70class.com)
+- snipe.svg: Snipe Class International Racing Association, SCIRA (snipe.org)
+- orc.png: Offshore Racing Congress, ORC (orc.org)
+Para otra clase, pon su logo en <carpeta de datos>/logos con el nombre de la clase sin signos
+(por ejemplo, ilca.png o j80.svg); tiene prioridad sobre estos.

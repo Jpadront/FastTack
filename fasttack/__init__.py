@@ -1,1 +1,1 @@
-__version__ = "0.39.1"  # semáforo de velocidad automático
+__version__ = "0.40.0"  # logos de las clases en la página principal

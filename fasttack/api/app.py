@@ -350,6 +350,24 @@ def crear_app(alm: Almacen | None = None) -> FastAPI:
     def temporada(barco: str | None = None):
         return temporada_mod.temporada(alm, barco or alm.preferencia("barco", BARCO_POR_DEFECTO))
 
+    # Logos oficiales de las clases que ponga el usuario en <datos>/logos (j70.png, snipe.svg, orc.png…):
+    # FastTack no los trae (son marcas de cada clase); sin archivo, la web dibuja una insignia propia
+    LOGOS = alm.raiz / "logos"
+    TIPOS_LOGO = {".png": "image/png", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+
+    @app.get("/api/logos")
+    def logos():
+        return sorted({f.stem.lower() for f in LOGOS.glob("*") if f.suffix.lower() in TIPOS_LOGO}) if LOGOS.is_dir() else []
+
+    @app.get("/api/logos/{nombre}")
+    def logo(nombre: str):
+        if not nombre.isalnum():
+            raise HTTPException(404, "Logo no encontrado")
+        for f in LOGOS.glob("*") if LOGOS.is_dir() else []:
+            if f.stem.lower() == nombre.lower() and f.suffix.lower() in TIPOS_LOGO:
+                return FileResponse(f, media_type=TIPOS_LOGO[f.suffix.lower()], headers={"Cache-Control": "max-age=3600"})
+        raise HTTPException(404, "Logo no encontrado")
+
     @app.get("/api/version")
     def version():
         return {"version": __version__}

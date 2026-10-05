@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api, horaLocal } from './api.js';
   import SubirVkx from './SubirVkx.svelte';
+  import Insignia from './Insignia.svelte';
 
   let url = $state('');
   let divisiones = $state(null);   // si el campeonato tiene varias, hay que elegir
@@ -98,9 +99,10 @@
       {#each visibles as c (c.id)}
         <li>
           <div class="tarjeta ficha">
+            <Insignia clase={c.clase || c.division} />
             <a class="nombre" href={`#/c/${encodeURIComponent(c.id)}`}>
               <b>{c.nombre || c.id}</b>
-              <span class="tenue">{c.clase || c.division}{#if c.id.startsWith('vkx-')} · archivos .vkx{/if} · {#if c.estado === 'cargando'}cargando…{:else if c.estado === 'error'}<span class="error">error al cargar</span>{:else}{fecha(c.inicio)}{/if}</span>
+              <span class="tenue">{c.clase || c.division}{c.id.startsWith('vkx-') ? ' · archivos .vkx' : ''} · {#if c.estado === 'cargando'}cargando…{:else if c.estado === 'error'}<span class="error">error al cargar</span>{:else}{fecha(c.inicio)}{/if}</span>
             </a>
             <div class="accesos">
               <a class="acceso" href={`#/c/${encodeURIComponent(c.id)}`}>Pruebas</a>
@@ -188,7 +190,7 @@
   .ficha { display: flex; justify-content: space-between; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 14px 16px; border-left: 4px solid var(--yo); transition: border-color .15s, box-shadow .15s; }
   .ficha:hover { box-shadow: 0 4px 14px -10px rgba(8, 24, 32, .5); }
   .ficha:hover { border-color: var(--tinta-3); }
-  .nombre { display: grid; gap: 2px; color: var(--tinta); text-decoration: none; font: 700 20px var(--display); }
+  .nombre { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; color: var(--tinta); text-decoration: none; font: 700 20px var(--display); }
   .nombre .tenue { font: 400 14px var(--texto); }
   .accesos { display: flex; gap: 6px; align-items: center; }
   .icono { background: none; border: 0; padding: 3px 6px; font-size: 15px; color: var(--tinta-3); cursor: pointer; border-radius: 8px; }

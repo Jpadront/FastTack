@@ -1,3 +1,4 @@
+import { writable } from 'svelte/store';
 // Llamadas a la API de FastTack. Los errores llevan el mensaje del servidor, ya en español.
 async function pedir(metodo, ruta, cuerpo) {
   const r = await fetch(ruta, {
@@ -75,3 +76,7 @@ export const clave = (v) => (v || '').replace(/\s/g, '').toUpperCase();
 
 // 'ESP1214' → 'ESP 1214' (para mostrar una vela guardada como clave)
 export const velaBonita = (v) => (v || '').replace(/^([A-Z]+)\s*(\d)/, '$1 $2');
+
+// Logos de clase que el usuario ha puesto en <datos>/logos (se pide la lista una vez)
+export const logosDisponibles = writable(new Set());
+fetch('/api/logos').then((r) => (r.ok ? r.json() : [])).then((l) => logosDisponibles.set(new Set(l))).catch(() => {});
