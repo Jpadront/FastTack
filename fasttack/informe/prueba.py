@@ -54,11 +54,11 @@ def tiempo(s, signo=False) -> str:
 # ---------------------------------------------------------------- documento
 
 class _PDF(FPDF):
-    def __init__(self, pie: str):
-        super().__init__(format="A4", unit="mm")
+    def __init__(self, pie: str, orientacion: str = "P"):
+        super().__init__(orientation=orientacion, format="A4", unit="mm")
         self.pie = pie
         self.set_margins(MARGEN, MARGEN, MARGEN)
-        self.set_auto_page_break(True, 18)
+        self.set_auto_page_break(True, 16)
         self.add_font("Barlow", "", str(FUENTES / "BarlowSemiCondensed-SemiBold.ttf"))
         self.add_font("Barlow", "B", str(FUENTES / "BarlowSemiCondensed-Bold.ttf"))
         self.add_font("Texto", "", str(FUENTES / "SourceSans3-Regular.ttf"))
@@ -82,14 +82,14 @@ class _PDF(FPDF):
 
     # -- piezas
     def seccion(self, titulo: str, sub: str | None = None):
-        if self.get_y() > 250:
+        if self.get_y() > self.h - 45:
             self.add_page()
         self.ln(3)
         self.set_font("Barlow", "B", 11)
         self.set_text_color(*TINTA2)
         self.cell(0, 6, titulo.upper(), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*LINEA)
-        self.line(MARGEN, self.get_y(), self.w - MARGEN, self.get_y())
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(1.5)
         if sub:
             self.set_font("Texto", "I", 8.5)
@@ -106,10 +106,10 @@ class _PDF(FPDF):
         """[(etiqueta, valor, detalle, color del valor)] en una fila de recuadros."""
         n = len(fichas)
         hueco = 3
-        ancho = (self.w - 2 * MARGEN - hueco * (n - 1)) / n
+        ancho = (self.w - self.l_margin - self.r_margin - hueco * (n - 1)) / n
         y = self.get_y()
         for k, (et, val, det, col) in enumerate(fichas):
-            x = MARGEN + k * (ancho + hueco)
+            x = self.l_margin + k * (ancho + hueco)
             self.set_fill_color(*FONDO)
             self.set_draw_color(*REJILLA)
             self.rect(x, y, ancho, 19, style="DF")
@@ -118,12 +118,20 @@ class _PDF(FPDF):
             self.set_text_color(*TINTA3)
             self.cell(ancho - 6, 4, et.upper())
             self.set_xy(x + 3, y + 6.5)
-            self.set_font("Mono", "B", 13)
+            tam = 13
+            self.set_font("Mono", "B", tam)
+            while self.get_string_width(val) > ancho - 6 and tam > 8:   # que quepa en la ficha
+                tam -= 0.5
+                self.set_font("Mono", "B", tam)
             self.set_text_color(*(col or TINTA))
             self.cell(ancho - 6, 6.5, val)
             if det:
                 self.set_xy(x + 3, y + 13.5)
-                self.set_font("Texto", "", 7.5)
+                tam = 7.5
+                self.set_font("Texto", "", tam)
+                while self.get_string_width(det) > ancho - 6 and tam > 5.5:
+                    tam -= 0.25
+                    self.set_font("Texto", "", tam)
                 self.set_text_color(*TINTA2)
                 self.cell(ancho - 6, 4, det)
         self.set_y(y + 22)
@@ -151,7 +159,7 @@ class _PDF(FPDF):
         if not fr:
             return
         # gráfico
-        x0, x1 = MARGEN + 14, self.w - MARGEN - 2
+        x0, x1 = self.l_margin + 14, self.w - self.r_margin - 2
         y0 = self.get_y() + 2
         y1 = y0 + 40
         xlo, xhi = fr[0]["desde"], fr[-1]["hasta"]
@@ -170,7 +178,7 @@ class _PDF(FPDF):
             self.set_draw_color(*(LINEA if v == 100 else REJILLA))
             self.set_line_width(0.2)
             self.line(x0, Y(v), x1, Y(v))
-            self.set_xy(MARGEN, Y(v) - 2)
+            self.set_xy(self.l_margin, Y(v) - 2)
             self.cell(12.5, 4, f"{num(v, 0)} %", align="R")
         for e in [q["desde"] for q in fr] + [xhi]:
             self.set_xy(X(e) - 6, y1 + 0.8)
@@ -268,8 +276,9 @@ class _PDF(FPDF):
     def barras(self, filas: list[tuple[str, float | None]], escala: float):
         """Barras divergentes: + (perdido) en rojo a la derecha, − (ganado) en azul a la izquierda."""
         ancho_et, ancho_val = 32, 32
-        ancho = self.w - 2 * MARGEN - ancho_et - ancho_val
-        medio = MARGEN + ancho_et + ancho / 2
+        x0 = self.l_margin
+        ancho = self.w - self.l_margin - self.r_margin - ancho_et - ancho_val
+        medio = x0 + ancho_et + ancho / 2
         for et, s in filas:
             y = self.get_y()
             self.set_font("Texto", "", 9.5)
@@ -281,7 +290,7 @@ class _PDF(FPDF):
                 w = min(abs(s) / escala, 1) * (ancho / 2 - 2)
                 self.set_fill_color(*(ROJO if s > 0 else AZUL))
                 self.rect(medio if s > 0 else medio - w, y + 1.4, w, 3.2, style="F")
-            self.set_x(MARGEN + ancho_et + ancho)
+            self.set_x(x0 + ancho_et + ancho)
             self.set_font("Mono", "B", 9)
             self.set_text_color(*(TINTA3 if s is None else ROJO if s > 0 else AZUL if s < 0 else TINTA))
             self.cell(ancho_val, 6, "sin datos" if s is None else tiempo(s, signo=True), align="R")
@@ -337,7 +346,7 @@ def _markdown(pdf: _PDF, texto: str):
         pdf.set_font("Texto", "", 10)
         pdf.set_text_color(*TINTA)
         if marca:
-            pdf.set_x(MARGEN + 2)
+            pdf.set_x(pdf.l_margin + 2)
             pdf.cell(5, 5.2, marca)
             pdf.multi_cell(0, 5.2, cuerpo, new_x="LMARGIN", new_y="NEXT", markdown=True)
         else:
@@ -345,216 +354,4 @@ def _markdown(pdf: _PDF, texto: str):
         pdf.ln(0.6)
 
 
-def _maniobras(pdf: _PDF, tramos: list[dict]):
-    """Fases de las maniobras de cada tramo tal como las da el motor (mediana de las medidas del tramo)
-    frente a la referencia del top 5 de la prueba: los mismos datos que la web y el debrief."""
-    filas, col = [], []
-    for t in tramos:
-        d = t.get("maniobras_detalle")
-        if not d:
-            continue
-        def par(k, k5, fmt):
-            yo, t5 = d.get(k), d.get(k5)
-            return (fmt(yo) if yo is not None else "—") + " / " + (fmt(t5) if t5 is not None else "—"), yo, t5
-        seg = lambda x: f"{num(x, 1)} s."
-        fila, c = [t["nombre"], f"{d.get('medidas', 0)} de {t.get('maniobras', '—')}"], [None, None]
-        for k, k5, fmt in (("perdida_mediana_s", "top5_perdida_mediana_s", seg),
-                           ("duracion_del_giro_mediana_s", "top5_duracion_del_giro_mediana_s", seg),
-                           ("tiempo_en_acelerar_mediano_s", "top5_tiempo_en_acelerar_mediano_s", seg),
-                           ("caida_de_velocidad_mediana_pct", "top5_caida_de_velocidad_mediana_pct", lambda x: f"{num(x, 0)} %")):
-            txt, yo, t5 = par(k, k5, fmt)
-            fila.append(txt)
-            c.append(None if yo is None or t5 is None or abs(yo - t5) < 0.1 * max(abs(t5), 1) else ROJO if yo > t5 else AZUL)
-        sal = d.get("angulo_de_salida_frente_al_top5_grados")
-        fila.append("—" if sal is None else con_signo(sal, 1) + "°")
-        c.append(None if sal is None or abs(sal) < 2 else ROJO)
-        filas.append(fila)
-        col.append(c)
-    if not filas:
-        return
-    pdf.seccion("Maniobras", "Por tramo: mediana de las maniobras medidas (tú / top 5 de la prueba). Pérdida frente a lo que "
-                "habría avanzado sin maniobrar con la VMG de cada amura; giro; tiempo hasta el 95 % de la velocidad estable; "
-                "caída de velocidad; ángulo de salida frente al del top 5 (en ceñida + = más abierta, pierde altura, y − = más "
-                "cerrada, tarda en acelerar; en popa + = más baja y − = más alta). No se miden las encadenadas, las de más de 115° "
-                "ni las que caen en huecos de datos.")
-    pdf.tabla(["Tramo", "Medidas", "Pérdida", "Giro", "Aceleración", "Caída vel.", "Salida"], filas,
-              [20, 18, 32, 30, 32, 28, 18], ["L", "R", "R", "R", "R", "R", "R"], col, tam=8)
-    for t in tramos:
-        sal = (t.get("maniobras_detalle") or {}).get("salidas")
-        if sal:
-            pdf.texto(f"**{t['nombre']}**, salidas: " + " · ".join(f"{c} {x}" for x, c in sal.items()) + ".", tam=8.5, color=TINTA2, alto=4.3)
-
-
-def generar(alm: Almacen, camp_id: str, clave: str, barco: str) -> bytes:
-    camp = camp_mod.leer(alm, camp_id)
-    if camp is None:
-        raise KeyError(camp_id)
-    prueba = next((p for p in camp["pruebas"] if p["clave"] == clave), None)
-    if prueba is None:
-        raise KeyError(clave)
-    h = debrief_mod.datos_de(alm, camp_id, clave, barco)
-    alias = alm.sql("select alias from campeonato where id=?", (camp_id,))
-    nombre_camp = (alias[0]["alias"] if alias and alias[0]["alias"] else None) or camp.get("nombre") or camp_id
-    info_barco = next((b for b in camp["barcos"] if b["clave"] == barco), {})
-    nombre_barco = h.get("barco") + (f" · {info_barco['nombre']}" if info_barco.get("nombre") else "")
-    tz = camp.get("tz_offset_ms") or 0
-    fecha = dt.datetime.fromtimestamp((prueba["senal"] + tz) / 1000, tz=dt.timezone.utc)
-    p = h.get("prueba", {})
-    num_prueba = p.get("numero") or prueba.get("numero")
-
-    pdf = _PDF(f"FastTack {__version__} · {nombre_camp} · prueba {num_prueba} · {h.get('barco')} · "
-               "cifras estimadas a partir del GPS de los barcos (sin anemómetro)")
-    pdf.alias_nb_pages()
-    pdf.add_page()
-
-    # Cabecera
-    pdf.set_fill_color(*TINTA)
-    pdf.rect(0, 0, pdf.w, 30, style="F")
-    pdf.set_xy(MARGEN, 7)
-    pdf.set_font("Barlow", "B", 20)
-    pdf.set_text_color(255, 255, 255)
-    pdf.cell(0, 9, f"Prueba {num_prueba} · Informe de rendimiento", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Texto", "", 10)
-    pdf.set_text_color(200, 210, 214)
-    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    pdf.cell(0, 5, f"{nombre_camp} · {camp.get('clase') or ''} · {fecha.day} de {meses[fecha.month - 1]} de {fecha.year}, "
-                   f"{fecha:%H:%M}".replace(" ·  ·", " ·"), new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Barlow", "", 11)
-    pdf.set_text_color(*NARANJA)
-    pdf.cell(0, 6, nombre_barco)
-    pdf.set_y(36)
-
-    # Fichas
-    dsp = h.get("donde_se_perdio_la_prueba") or {}
-    tot = dsp.get("total_frente_al_top5_s")
-    fichas = [("Puesto", f"{p['puesto']}.º" if p.get("puesto") else "—", f"de {p.get('barcos_llegados')} llegados" if p.get("barcos_llegados") else None, None),
-              ("Detrás del ganador", tiempo(p.get("detras_del_ganador_s")), None, None)]
-    if tot is not None:
-        fichas.append(("Frente al top 5", tiempo(tot, signo=True), "tiempo perdido (+) o ganado (−)", ROJO if tot > 0 else AZUL))
-    vref = p.get("viento_referencia_kn")
-    fichas.append(("Viento", f"{num(vref, 0)} kn." if vref else "—", None if vref else "sin viento de referencia", None))
-    pdf.fichas(fichas)
-    if p.get("llegadas") and "oficial" not in str(p.get("llegadas")):
-        pdf.texto(f"Llegadas {p['llegadas']}.", tam=8.5, estilo="I", color=TINTA3, alto=4)
-    if p.get("recorrido"):
-        pdf.texto(f"Recorrido {p['recorrido']}: en los largos se compara la VMC (velocidad hacia la baliza) y la SOG.",
-                  tam=8.5, estilo="I", color=TINTA3, alto=4)
-
-    # Dónde se perdió
-    if dsp:
-        pdf.seccion("Dónde se perdió la prueba", "En el orden de la prueba. Tiempo perdido (+) o ganado (−) frente al tiempo mediano de los 5 primeros. "
-                    "Velocidad: con tu VMG navegando estable; maniobras: viradas y trasluchadas; táctica y resto: lo que falta "
-                    "hasta la diferencia real (roladas, lado, laylines, rodeos).")
-        # En el orden de la prueba: la salida y cada tramo (el primero, sin la salida)
-        sal = dsp.get("salida_s") if not isinstance(dsp.get("salida_s"), str) else None
-        pt = dsp.get("por_tramo", [])
-        partes = [("Salida", sal)] + [(x["tramo"], None if x.get("sin_datos") else
-                                       x["total_s"] - ((x.get("salida_s") or 0) if k == 0 else 0)) for k, x in enumerate(pt)]
-        escala = max([30] + [abs(v) for _, v in partes if v])
-        pdf.barras(partes, escala)
-        pdf.ln(1)
-        tipos = [("velocidad", dsp.get("velocidad_s")), ("maniobras", dsp.get("maniobras_s")), ("táctica y resto", dsp.get("tactica_y_resto_s"))]
-        pdf.texto("Por tipo: " + " · ".join(f"{k} **{tiempo(v, True)}**" for k, v in tipos if v is not None), tam=9.5, color=TINTA2)
-        con = [x for x in pt if not x.get("sin_datos")]
-        if con:
-            pdf.ln(1)
-            filas = [[x["tramo"], tiempo(x["total_s"] - ((x.get("salida_s") or 0) if x is pt[0] else 0), True), tiempo(x.get("velocidad_s"), True),
-                      tiempo(x.get("maniobras_s"), True), tiempo(x.get("tactica_y_resto_s"), True)] for x in con]
-            col = [[None] + [ROJO if (v or 0) > 0 else AZUL if (v or 0) < 0 else None
-                             for v in (x["total_s"] - ((x.get("salida_s") or 0) if x is pt[0] else 0), x.get("velocidad_s"),
-                                       x.get("maniobras_s"), x.get("tactica_y_resto_s"))] for x in con]
-            pdf.tabla(["Tramo", "Total", "Velocidad", "Maniobras", "Táctica y resto"], filas,
-                      [42, 34, 34, 34, 34], ["L", "R", "R", "R", "R"], col)
-        pdf.texto("Cada tramo se compara con la mediana del top 5 en ese tramo: la suma no coincide exactamente con la diferencia en la llegada.",
-                  tam=8, estilo="I", color=TINTA3, alto=4)
-
-    # Medias frente al top 5
-    md = h.get("medias_de_la_prueba") or {}
-    if md:
-        pdf.seccion("Medias de la prueba frente al top 5", "Top 5 = mediana de los 5 primeros de la prueba (sin contarte). "
-                    "VMG, TWA y pérdidas son estimadas con el viento reconstruido.")
-        filas, col = [], []
-        for et, base, u, d, mas_mejor in MEDIAS:
-            yo, t5, dif = md.get(_clave(base, u)), md.get(_clave(base, u, "_top5")), md.get(_clave(base, u, "_frente_al_top5"))
-            if yo is None and t5 is None:
-                continue
-            ud = UNIDAD[u]
-            filas.append([et, num(yo, d) + ud if yo is not None else "—", num(t5, d) + ud if t5 is not None else "—",
-                          con_signo(dif, d) + ud if dif is not None else "—"])
-            bien = None if dif is None or mas_mejor is None or abs(dif) < 10 ** -d else (dif > 0) == mas_mejor
-            col.append([None, None, None, None if bien is None else AZUL if bien else ROJO])
-        pdf.tabla(["", "Tú", "Top 5", "Diferencia"], filas, [62, 38, 38, 40], ["L", "R", "R", "R"], col)
-        pq = [(m, md.get(f"vmg_{m}_frente_al_top5_por_que")) for m in ("ceñida", "popa")]
-        pq = [(m, x) for m, x in pq if x]
-        if pq:
-            pdf.ln(1.5)
-            for m, x in pq:
-                pdf.texto(f"**VMG en {m}:** {_por_que(x)}.", tam=9.5, alto=5)
-
-    # Maniobras: fases de cada virada y trasluchada (motor/tramos.py, analizar_maniobra) frente al top 5
-    _maniobras(pdf, [t for t in h.get("tramos", []) if not t.get("sin_datos_del_barco")])
-
-    # Tramo a tramo
-    tramos = [t for t in h.get("tramos", []) if not t.get("sin_datos_del_barco")]
-    if tramos:
-        pdf.seccion("Tramo a tramo", "Puesto al final del tramo; VMG frente a la mediana del top 5 y por qué; "
-                    "escora frente a la óptima (media de los 5 con más VMG del tramo); tiempo en la amura favorecida "
-                    "con el viento en tu sitio (roles locales).")
-        filas, col = [], []
-        for t in tramos:
-            lay = t.get("layline") or {}
-            esc = (t.get("escora_optima") or {}).get("escora_del_barco_frente_a_ella_grados")
-            tac = t.get("tactica") or {}
-            gan = t.get("puestos_ganados")
-            filas.append([t["nombre"],
-                          f"{t.get('puesto_al_final') or '—'}" + (f" ({con_signo(gan, 0)})" if gan else ""),
-                          (con_signo(vv, 2) + " kn.") if (vv := t.get("vmc_frente_al_top5_kn" if (es_l := t["tipo"] == "largo") else "vmg_frente_al_top5_kn")) is not None else "—",
-                          (("SOG " + con_signo(t["sog_frente_al_top5_kn"], 2) + " kn.") if es_l and t.get("sog_frente_al_top5_kn") is not None
-                           else "largo" if es_l else _por_que(t.get("vmg_frente_al_top5_por_que"), corto=True)),
-                          f"{t.get('maniobras', '—')}" + (f" · {num(t.get('perdida_en_maniobras_m'), 0)} m." if t.get("perdida_en_maniobras_m") else ""),
-                          ("+" + num(lay.get("exceso_m"), 0) + " m." if lay.get("estado") == "sobrepasada" else "ok" if lay.get("estado") == "correcta" else "—"),
-                          (con_signo(esc, 1) + "°") if esc is not None else "—",
-                          (num(tac.get("amura_favorecida_pct"), 0) + " %") if tac.get("amura_favorecida_pct") is not None else "—"])
-            v = t.get("vmc_frente_al_top5_kn") if t["tipo"] == "largo" else t.get("vmg_frente_al_top5_kn")
-            col.append([None, (AZUL if (gan or 0) > 0 else ROJO if (gan or 0) < 0 else None),
-                        (None if v is None or abs(v) < 0.03 else AZUL if v > 0 else ROJO), None, None,
-                        ROJO if lay.get("estado") == "sobrepasada" else None, (ROJO if esc is not None and abs(esc) > 2 else None), None])
-        pdf.tabla(["Tramo", "Puesto", "VMG / VMC vs top 5" if any(t["tipo"] == "largo" for t in tramos) else "VMG vs top 5", "Por qué / SOG", "Maniobras", "Layline", "Escora", "Amura fav."],
-                  filas, [18, 19, 26, 43, 20, 17, 17, 18], ["L", "R", "R", "L", "R", "R", "R", "R"], col, tam=8)
-
-    # Escora óptima en cada ceñida: el mismo gráfico que la pestaña del tramo en la web
-    from .. import servicio
-    an = servicio.analisis_prueba(alm, camp_id, clave)
-    cen = [t for t in an.get("tramos", []) if t.get("tipo") == "ceñida" and (t.get("escora_optima") or {}).get("escora") is not None
-           and barco in t.get("barcos", {})]
-    if cen:
-        pdf.seccion("Escora óptima en ceñida", "Óptima = media de la escora de los 5 barcos con más VMG del tramo, navegando estable. "
-                    "Cada punto: VMG (y SOG) media de la flota en esa franja de escora, en % de la de sus vecinos "
-                    "(misma amura, a menos de 300 m., en los mismos 30 s.). Si con más escora sube la SOG y baja la VMG, "
-                    "se va más rápido pero más abierto; si bajan las dos, falta potencia. Estimada.")
-        for t in cen:
-            pdf.escora(t["nombre"], t["escora_optima"], t["barcos"][barco], "Tú")
-            pdf.ln(1)
-
-    # Debrief
-    d = debrief_mod.leer(alm, camp_id, clave, barco)
-    pdf.add_page()
-    pdf.set_font("Barlow", "B", 16)
-    pdf.set_text_color(*TINTA)
-    pdf.cell(0, 8, f"Debrief de la prueba {num_prueba}", new_x="LMARGIN", new_y="NEXT")
-    if not d:
-        pdf.texto("Aún no hay debrief de esta prueba: genéralo en la pestaña «Debrief» de la web y vuelve a descargar el informe.",
-                  tam=10, estilo="I", color=TINTA2)
-    else:
-        vigente = d["huella"] == debrief_mod.huella(h)
-        cuando = dt.datetime.fromtimestamp(d["creado_en"] / 1000, tz=dt.timezone.utc) + dt.timedelta(milliseconds=tz)
-        nota = f"Redactado por IA ({'Claude Code' if d['origen'] == 'claude-code' else 'texto pegado'}) el {cuando:%d/%m/%Y} con las cifras de FastTack."
-        if not vigente:
-            nota += " Las cifras han cambiado desde entonces (nueva versión del cálculo o viento de referencia): conviene regenerarlo."
-        avisos = debrief_mod.no_verificadas(d["texto"], h)
-        if avisos:
-            nota += f" Cifras sin comprobar en los datos: {', '.join(avisos[:6])}."
-        pdf.texto(nota, tam=8.5, estilo="I", color=TINTA3, alto=4.2)
-        pdf.ln(1)
-        _markdown(pdf, d["texto"])
-    return bytes(pdf.output())
+from .paginas import generar  # noqa: E402,F401  (el informe se compone en paginas.py)
