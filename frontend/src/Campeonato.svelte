@@ -46,6 +46,24 @@
   const nombres = $derived(Object.fromEntries((camp?.barcos || []).map((b) => [b.clave, b])));
   const miClave = $derived(clave(barco));
 
+  // Días del campeonato: cada prueba con su día (hora local), su número de día y un color de franja
+  const COLORES_DIA = ['#2a78d6', '#1a7f4b', '#8a4fd1', '#d97706', '#0f8b8d', '#c2410c', '#4b5e67'];
+  const diaDe = (p) => horaLocal(p.senal, camp.tz_offset_ms).split(' · ')[0];
+  const dias = $derived.by(() => {
+    if (!camp?.pruebas) return {};
+    // solo se numeran los días con alguna prueba que cuenta (un día de entrenamiento no es «Día 1»)
+    const out = {}, orden = [];
+    const cuentan = new Set(camp.pruebas.filter((p) => !p.excluida && p.n_llegadas).map(diaDe));
+    for (const p of camp.pruebas) {
+      const d = diaDe(p);
+      if (cuentan.has(d) && !orden.includes(d)) orden.push(d);
+      const k = orden.indexOf(d);
+      out[p.clave] = { dia: d, n: k >= 0 ? k + 1 : null, color: k >= 0 ? COLORES_DIA[k % COLORES_DIA.length] : '#9aa8ae' };
+    }
+    return out;
+  });
+  const primeraDelDia = (k) => k === 0 || dias[camp.pruebas[k].clave].dia !== dias[camp.pruebas[k - 1].clave].dia;
+  const delDia = (d) => camp.pruebas.filter((p) => dias[p.clave].dia === d);
   let ajustes = $state(false);   // columnas de ajuste (viento de referencia, cuenta, reglaje)
   // Tus puestos en las pruebas que cuentan, para la banda de arriba
   const mios = $derived(!camp?.pruebas ? [] : camp.pruebas.filter((p) => !p.excluida && p.n_llegadas).map((p) => {
@@ -188,11 +206,11 @@
       <div class="dato puestos">
         <span class="et">Puesto en cada prueba</span>
         <div class="barras-p" role="img" aria-label={mios.map((m) => `prueba ${m.numero}: ${m.pos ?? (m.ocs ? 'OCS' : 'sin llegada')}`).join(', ')}>
-          {#each mios as m (m.clave)}
-            <a class="bp" href={`#/c/${encodeURIComponent(id)}/p/${m.clave}`} title={`Prueba ${m.numero ?? '—'}: ${m.pos ? m.pos + '.º de ' + m.de : m.ocs ? 'OCS' : 'sin llegada'}`}>
+          {#each mios as m, j (m.clave)}
+            <a class="bp" class:nuevo-dia={j > 0 && dias[m.clave]?.dia !== dias[mios[j - 1].clave]?.dia} style:--dc={dias[m.clave]?.color} href={`#/c/${encodeURIComponent(id)}/p/${m.clave}`} title={`Prueba ${m.numero ?? '—'}: ${m.pos ? m.pos + '.º de ' + m.de : m.ocs ? 'OCS' : 'sin llegada'}`}>
               <span class="v num">{m.pos ?? (m.ocs ? 'OCS' : '—')}</span>
               <span class="col"><span class="rel" style:height={m.pos ? `${Math.max(6, (1 - (m.pos - 1) / Math.max(1, m.de - 1)) * 100)}%` : '0'}></span></span>
-              <span class="n num">{m.numero ?? '—'}</span>
+              <span class="n num">{m.numero ?? '—'}</span><span class="raya-dia"></span>
             </a>
           {/each}
         </div>
@@ -214,9 +232,18 @@
         </tr>
       </thead>
       <tbody>
-        {#each camp.pruebas as p (p.clave)}
+        {#each camp.pruebas as p, k (p.clave)}
           {@const r = resultado(p)}
-          <tr class:excluida={p.excluida}>
+          {@const dd = dias[p.clave]}
+          {#if primeraDelDia(k)}
+            {@const ps = delDia(dd.dia).filter((q) => !q.excluida && q.n_llegadas)}
+            {@const puestos = ps.map((q) => resultado(q).mio).filter((x) => x && x !== '—')}
+            <tr class="dia" style:--dc={dd.color}><td colspan={ajustes ? 7 : 5}>
+              <span class="dia-n">{dd.n ? `Día ${dd.n}` : 'Sin pruebas'}</span><span class="dia-f">{dd.dia}</span>
+              <span class="dia-d">{dd.n ? `${ps.length} ${ps.length === 1 ? 'prueba' : 'pruebas'}` : 'ninguna cuenta (entrenamiento o anuladas)'}{puestos.length ? ` · tus puestos: ${puestos.join(' · ')}` : ''}</span>
+            </td></tr>
+          {/if}
+          <tr class:excluida={p.excluida} class="en-dia" style:--dc={dd.color}>
             <td class="n num grande">{#if p.n_llegadas}<a class="abrir" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`} aria-label={`Analizar la prueba ${p.numero ?? ''}`}>{p.numero ?? '—'}</a>{:else}{p.numero ?? '—'}{/if}</td>
             <td>
               {horaLocal(p.senal, camp.tz_offset_ms)}
@@ -312,11 +339,20 @@
   .selector { display: grid; gap: 4px; min-width: min(320px, 100%); }
   .fila { display: flex; gap: 6px; }
   .lista { overflow-x: auto; }
+  tr.dia td { padding: 12px 10px 6px; border-bottom: 1px solid var(--linea); background: color-mix(in srgb, var(--dc) 7%, var(--panel)); box-shadow: inset 4px 0 0 var(--dc); }
+  tr.dia:hover td { background: color-mix(in srgb, var(--dc) 7%, var(--panel)); }
+  .dia-n { font: 700 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--dc); margin-right: 8px; }
+  .dia-f { display: inline-block; font: 600 15px var(--display); color: var(--tinta); margin-right: 10px; }
+  .dia-f::first-letter { text-transform: uppercase; }
+  .dia-d { font-size: 13px; color: var(--tinta-2); }
+  tr.en-dia td:first-child { box-shadow: inset 4px 0 0 var(--dc); }
+  .bp.nuevo-dia { margin-left: 8px; }
+  .bp .raya-dia { width: 100%; height: 3px; border-radius: 2px; background: var(--dc); }
   .semaforo { margin: 4px 0 6px; font-size: 14px; }
   .sem { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 6px 1px 4px; vertical-align: middle; }
   .puestos { gap: 6px; }
   .barras-p { display: flex; gap: 6px; align-items: end; height: 92px; overflow-x: auto; }
-  .bp { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 2px; min-width: 28px; height: 100%; text-decoration: none; color: inherit; }
+  .bp { display: grid; grid-template-rows: auto 1fr auto auto; justify-items: center; gap: 2px; min-width: 28px; height: 100%; text-decoration: none; color: inherit; }
   .bp .v { font-size: 12px; color: #e6eff2; }
   .bp .col { width: 18px; height: 100%; background: rgba(143, 176, 189, .15); border-radius: 3px; display: flex; align-items: end; }
   .bp .rel { width: 100%; background: #ff8a52; border-radius: 3px; }
@@ -349,6 +385,10 @@
     thead { display: none; }
     tr { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; padding: 10px 12px; border-bottom: 1px solid var(--rejilla); }
     td { border: 0; padding: 0; }
+    tr.dia { display: block; padding: 0; }
+    tr.dia td { display: block; padding: 10px 12px 6px; }
+    tr.en-dia { box-shadow: inset 4px 0 0 var(--dc); }
+    tr.en-dia td:first-child { box-shadow: none; }
     td:nth-child(1) { grid-row: span 2; align-self: center; }
     td:nth-child(2) { grid-column: 2; }
     td:nth-child(3) { grid-column: 3; justify-self: end; }

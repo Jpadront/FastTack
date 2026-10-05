@@ -1,1 +1,1 @@
-__version__ = "0.40.1"  # logos de clase en PNG sin recuadro
+__version__ = "0.41.0"  # pruebas agrupadas por día
