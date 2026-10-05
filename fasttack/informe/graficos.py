@@ -221,7 +221,10 @@ def logo(pdf, x: float, y: float, lado: float, marca: bool = True, tam_texto: fl
     pdf.rect(x, y, lado, lado, style="DF", round_corners=True, corner_radius=16 * k)
     P = lambda pts: [(x + a * k, y + b * k) for a, b in pts]
     pdf.set_fill_color(238, 244, 246)
-    pdf.polygon(P([(35.87, 10), (27.37, 50), (9.37, 50)]), style="F")
+    # mayor cuadrada: puño de driza ancho y baluma con alunamiento (curva cuadrática de la puño de escota al de driza)
+    curva = [((1 - u) ** 2 * 9.37 + 2 * (1 - u) * u * 12.5 + u * u * 25.8, (1 - u) ** 2 * 50 + 2 * (1 - u) * u * 28 + u * u * 8.2)
+             for u in [k / 12 for k in range(13)]]
+    pdf.polygon(P([(35.87, 10), (27.37, 50)] + curva), style="F")
     pdf.set_fill_color(255, 138, 82)
     pdf.polygon(P([(39.17, 18), (47.37, 50), (32.37, 50)]), style="F")
     pdf.set_fill_color(61, 127, 150)

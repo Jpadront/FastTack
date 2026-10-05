@@ -55,6 +55,7 @@
 </script>
 
 <header class="intro">
+  <div class="autor">Software de análisis de datos para vela · desarrollado por <b>Javier Padrón</b></div>
   <h1>Análisis post-regata de vela</h1>
   <p>Para cualquier clase que navegue con Atlas 2 de Vakaros (RaceSense): sabe dónde ganaste y dónde perdiste en cada tramo, frente a la flota y al top 5.</p>
   <ul class="rasgos">
@@ -132,6 +133,8 @@
   .intro { margin: 6px 0 18px; padding: 22px 24px 20px; border-radius: 12px; color: #e6eff2;
     background: radial-gradient(120% 140% at 100% 0%, #1d4a5c 0%, #0f2a36 55%, #0b222c 100%);
     box-shadow: 0 8px 26px -14px rgba(8, 24, 32, .7); }
+  .autor { font: 600 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #8fb0bd; margin-bottom: 6px; }
+  .autor b { color: #ff8a52; font-weight: 700; }
   .intro h1 { font-size: clamp(28px, 4.5vw, 40px); color: #fff; }
   .intro p { margin-top: 8px; color: #b8ced6; font-size: 17px; }
   .rasgos { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
