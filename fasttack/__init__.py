@@ -1,1 +1,1 @@
-__version__ = "0.32.0"  # el fantasma sale del mejor punto de la línea
+__version__ = "0.33.0"  # aceleración en la salida

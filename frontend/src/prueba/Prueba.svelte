@@ -14,6 +14,7 @@
   import Maniobras from './Maniobras.svelte';
   import Polar from './Polar.svelte';
   import DondeSePerdio from './DondeSePerdio.svelte';
+  import AceleracionSalida from './AceleracionSalida.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -264,6 +265,7 @@
           { k: 'hueco_sotavento_esloras', titulo: 'Hueco sot.', num: true, est: true, ayuda: 'Esloras hasta el barco de sotavento a la par en la señal (vacío: nadie a menos de 6 esloras)', fmt: (v, f) => (v == null ? (f.diagnostico ? 'libre' : '—') : num(v, 1)) },
           { k: 'aire_sucio_pct', titulo: 'Aire sucio', num: true, est: true, ayuda: 'Tiempo de los primeros 90 s. en la sombra de viento de otro barco (a ≤ 6 esloras de donde llega el viento aparente)', fmt: (v, f) => (v == null ? '—' : `${num(v, 0)} %${v >= 30 && f.aire_sucio_de ? ' · ' + vc(f.aire_sucio_de) + (f.aire_sucio_lado === 'barlovento' ? ' (barl.)' : '') : ''}`) },
         ]} />
+      <AceleracionSalida {pistas} {sel} {ref} {colores} {nombres} />
     {:else if tab.tipo === 'tramo'}
       {@const tr = tab.tramo}
       <section class="tarjeta resumen">
