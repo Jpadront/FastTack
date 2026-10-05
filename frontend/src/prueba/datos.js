@@ -372,6 +372,39 @@ export function presionEn(an, pistas, tr, T) {
   return { pts, lr, med };
 }
 
+// Presión acumulada de un tramo: la SOG de cada barco frente a la mediana de la flota en ese momento
+// (como la capa de presión), cada 15 s. de todo el tramo, promediada en celdas de 100 m. Enseña qué zonas
+// del campo tuvieron más viento durante el tramo, no solo en el instante del reproductor.
+const ACUM_PASO_S = 15, ACUM_CELDA_M = 100;
+const _acum = new Map();
+export function presionAcumulada(an, pistas, tr) {
+  const clave = an.senal + ':' + tr.id;
+  if (_acum.has(clave)) return _acum.get(clave);
+  const s = an.senal, t0 = (tr.t0 - s) / 1000, t1 = (tr.t1 - s) / 1000;
+  const fin = Math.max(t1, ...Object.values(tr.barcos).map((f) => (f.t_salida - s) / 1000));
+  const celdas = new Map();
+  for (let T = t0 + ACUM_PASO_S; T < fin; T += ACUM_PASO_S) {
+    for (const p of presionEn(an, pistas, tr, T).pts) {
+      const k = Math.floor(p.x / ACUM_CELDA_M) + ':' + Math.floor(p.y / ACUM_CELDA_M);
+      const c = celdas.get(k) || { x: Math.floor(p.x / ACUM_CELDA_M) * ACUM_CELDA_M, y: Math.floor(p.y / ACUM_CELDA_M) * ACUM_CELDA_M, suma: 0, n: 0 };
+      c.suma += p.rel; c.n += 1;
+      celdas.set(k, c);
+    }
+  }
+  // suavizado: cada celda con sus 8 vecinas (ponderado por muestras), para quitar el ruido de barco a barco
+  const lista = [...celdas.values()].map((c) => {
+    let suma = 0, n = 0;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      const v = celdas.get((c.x / ACUM_CELDA_M + dx) + ':' + (c.y / ACUM_CELDA_M + dy));
+      if (v) { const w = dx || dy ? 0.5 : 1; suma += v.suma * w; n += v.n * w; }
+    }
+    return { x: c.x, y: c.y, rel: suma / n, n: c.n };
+  }).filter((c) => c.n >= 2);
+  const out = { celda: ACUM_CELDA_M, celdas: lista };
+  _acum.set(clave, out);
+  return out;
+}
+
 export function mediana(a) {
   const x = [...a].sort((p, q) => p - q);
   return x.length ? (x.length % 2 ? x[(x.length - 1) / 2] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2) : null;

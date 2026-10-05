@@ -78,7 +78,7 @@
   const twdAhora = $derived(trMapa ? twdEn(trMapa, T, an.senal) : null);
   const faseAhora = $derived(trMapa ? faseEn(trMapa, T, an.senal) : null);
   const corrAhora = $derived(an ? corrienteEn(an, T) : null);
-  const CAPAS = [['presion', 'Presión'], ['twd', 'TWD'], ['rol', 'Amura favorecida'], ['sog', 'SOG']];
+  const CAPAS = [['presion', 'Presión'], ['acumulada', 'Presión acumulada'], ['twd', 'TWD'], ['rol', 'Amura favorecida'], ['sog', 'SOG']];
   let lider = $state(false);
   let fantasma = $state(false);
   // métrica elegida en el gráfico de rendimiento → su columna en «Medias de la prueba» (resaltada)

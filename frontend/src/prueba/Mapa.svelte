@@ -3,7 +3,7 @@
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { estado, puntosControl, colorBarco, indice, HUECO_S, velaCorta, derivados, presionEn, laylines, twdEn, dif,
-           DIVERGENTE, RAMPA_SOG, corrienteEn, num, lineaLider, tramoEn, rejillaSalida } from './datos.js';
+           DIVERGENTE, RAMPA_SOG, corrienteEn, num, lineaLider, tramoEn, rejillaSalida, presionAcumulada } from './datos.js';
 
   // pistas: decodificadas; an: análisis; sel: Set de velas; ref: vela de referencia
   // T: tiempo actual (s desde la señal); ventana: [t0, t1] de la pestaña; nombres: vela → texto
@@ -172,6 +172,20 @@
       const a = Math.min(Math.abs(d), 10) / 10 * 0.28;
       if (Math.abs(d) >= 1) { ctx.fillStyle = d > 0 ? DIVERGENTE.contra : DIVERGENTE.favor; ctx.globalAlpha = a; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
     }
+    // Capa de presión acumulada: celdas de 100 m. con la SOG media frente a la flota durante todo el tramo
+    // (azul = más presión, naranja = menos; ±6 % satura el color)
+    if (capa === 'acumulada' && tramo && tramo.tipo !== 'largo') {
+      const ac = presionAcumulada(an, pistas, tramo);
+      for (const c of ac.celdas) {
+        const d = c.rel - 1;
+        if (Math.abs(d) < 0.01) continue;
+        const [X0, Y0] = px(c.x, c.y + ac.celda), [X1, Y1] = px(c.x + ac.celda, c.y);
+        ctx.fillStyle = d > 0 ? '#2a78d6' : '#e8862a';
+        ctx.globalAlpha = Math.min(0.55, (Math.abs(d) / 0.06) * 0.55);
+        ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+      }
+      ctx.globalAlpha = 1;
+    }
     // Capa de presión: manchas alrededor de cada barco del tramo según su SOG frente a la flota
     if (capa === 'presion' && tramo) {
       const pr = presionEn(an, pistas, tramo, T), r = Math.max(14, metrosPx(120));
@@ -315,6 +329,8 @@
       {#if tramo?.barcos[ref]?.tactica?.amura_favorecida_pct != null}<span class="pct">· {velaCorta(ref, nombres)}: <b class="num">{num(tramo.barcos[ref].tactica.amura_favorecida_pct, 0)} %</b> del {tramo.nombre} en la favorecida</span>{/if}</div>
   {:else if capa === 'twd'}
     <div class="leyenda"><i style:background={DIVERGENTE.favor}></i>rolada izquierda <i style:background={DIVERGENTE.contra}></i>rolada derecha (±10°) <span class="est">est.</span></div>
+  {:else if capa === 'acumulada'}
+    <div class="leyenda"><i style:background="#2a78d6"></i>más presión <i style:background="#e8862a"></i>menos, durante todo el tramo (SOG frente a la flota, celdas de 100 m.) <span class="est">est.</span></div>
   {:else if capa === 'presion'}
     <div class="leyenda"><i style:background="#2a78d6"></i>más SOG que la flota (racha) · anillo: la acaba de recibir <span class="est">est.</span></div>
   {/if}
