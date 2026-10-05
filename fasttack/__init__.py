@@ -1,1 +1,1 @@
-__version__ = "0.38.0"  # buscador de campeonatos y elegir vela desde la barra
+__version__ = "0.38.1"  # favicon PNG transparente y mayor recta

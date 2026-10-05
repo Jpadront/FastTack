@@ -37,7 +37,7 @@
 </script>
 
 <header class="barra">
-  <a class="marca" href="#/" aria-label="FastTack, inicio"><svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><defs><linearGradient id="logo-f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d4a5c"/><stop offset="1" stop-color="#0b222c"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#logo-f)" stroke="#2f5a6b" stroke-width="1.5"/><path d="M35.87 10 L27.37 50 L9.37 50 Q12.5 28 25.8 8.2 Z" fill="#eef4f6"/><path d="M39.17 18 L47.37 50 L32.37 50 Z" fill="#ff8a52"/><rect x="10" y="53" width="44" height="3.5" rx="1.75" fill="#3d7f96"/></svg><span>Fast<b>Tack</b></span></a>
+  <a class="marca" href="#/" aria-label="FastTack, inicio"><svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><defs><linearGradient id="logo-f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d4a5c"/><stop offset="1" stop-color="#0b222c"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#logo-f)" stroke="#2f5a6b" stroke-width="1.5"/><path d="M35.87 10 L27.37 50 L9.37 50 L16.7 29.7 L25.2 10 Z" fill="#eef4f6"/><path d="M39.17 18 L47.37 50 L32.37 50 Z" fill="#ff8a52"/><rect x="10" y="53" width="44" height="3.5" rx="1.75" fill="#3d7f96"/></svg><span>Fast<b>Tack</b></span></a>
   <div class="ref">
     <button class="barco" title="Tu barco de referencia: pulsa para cambiarlo" aria-expanded={editandoBarco}
             onclick={() => { editandoBarco = !editandoBarco; textoBarco = velaBonita(barco); }}><span class="punto"></span>{velaBonita(barco)} <span class="lapiz" aria-hidden="true">✎</span></button>
