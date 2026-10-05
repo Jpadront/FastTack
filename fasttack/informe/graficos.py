@@ -210,3 +210,27 @@ def leyenda(pdf, x: float, y: float, elementos: list, tam: float = 7):
         pdf.cell(ww, 3.2, et)
         x += 5.5 + ww + 3.5
     pdf.set_line_width(0.2)
+
+
+def logo(pdf, x: float, y: float, lado: float, marca: bool = True, tam_texto: float = 13):
+    """Logo de FastTack (velas en ceñida) y, si marca, el nombre «Fast» en blanco y «Tack» en naranja."""
+    k = lado / 64
+    pdf.set_fill_color(22, 58, 72)
+    pdf.set_draw_color(47, 90, 107)
+    pdf.set_line_width(0.2)
+    pdf.rect(x, y, lado, lado, style="DF", round_corners=True, corner_radius=16 * k)
+    P = lambda pts: [(x + a * k, y + b * k) for a, b in pts]
+    pdf.set_fill_color(238, 244, 246)
+    pdf.polygon(P([(35.87, 10), (27.37, 50), (9.37, 50)]), style="F")
+    pdf.set_fill_color(255, 138, 82)
+    pdf.polygon(P([(39.17, 18), (47.37, 50), (32.37, 50)]), style="F")
+    pdf.set_fill_color(61, 127, 150)
+    pdf.rect(x + 10 * k, y + 53 * k, 44 * k, 3.5 * k, style="F", round_corners=True, corner_radius=1.75 * k)
+    if marca:
+        pdf.set_font("Barlow", "B", tam_texto)
+        pdf.set_xy(x + lado + 2, y + (lado - tam_texto * 0.35) / 2 - 0.4)
+        pdf.set_text_color(238, 244, 246)
+        w = pdf.get_string_width("Fast")
+        pdf.cell(w, tam_texto * 0.35, "Fast")
+        pdf.set_text_color(255, 138, 82)
+        pdf.cell(pdf.get_string_width("Tack") + 1, tam_texto * 0.35, "Tack")

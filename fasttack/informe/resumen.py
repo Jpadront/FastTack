@@ -11,6 +11,7 @@ from .. import __version__
 from ..ia import debrief as debrief_mod
 from ..ingesta import campeonato as camp_mod
 from ..ingesta.almacen import Almacen
+from .graficos import logo
 from .prueba import (AZUL, MARGEN, NARANJA, ROJO, TINTA, TINTA3, _PDF, _clave, _markdown, _por_que,
                      con_signo, num, tiempo)
 
@@ -38,8 +39,9 @@ def _fecha(ms, tz):
 
 
 def _cabecera(pdf: _PDF, titulo: str, sub: str, barco: str):
-    pdf.set_fill_color(*TINTA)
+    pdf.set_fill_color(15, 42, 54)
     pdf.rect(0, 0, pdf.w, 30, style="F")
+    logo(pdf, pdf.w - MARGEN - 31, 8, 8.5)
     pdf.set_xy(MARGEN, 7)
     pdf.set_font("Barlow", "B", 20)
     pdf.set_text_color(255, 255, 255)
