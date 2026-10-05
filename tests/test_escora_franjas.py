@@ -64,3 +64,16 @@ def test_orientativa_con_muy_pocos_datos():
     c = esc.orientativa(segs)
     assert c is not None and c["orientativa"] and c["propia"]
     assert len(c["franjas"]) >= 2
+
+
+def test_reglajes_con_semaforo():
+    """La comparación de reglajes cuenta cuántas pruebas fueron bien, normal y mal con cada valor."""
+    from fasttack.temporada import comparar_reglajes
+    base = {"franja": "8–12 kn", "vmg_ceñida_frente_top5": 0.1, "vmg_popa_frente_top5": None, "puesto_relativo": 0.3}
+    filas = [{**base, "reglaje": {"Backstay": "3"}, "sensacion": "bien"},
+             {**base, "reglaje": {"Backstay": "3"}, "sensacion": "normal"},
+             {**base, "reglaje": {"Backstay": "5"}, "sensacion": "mal"},
+             {**base, "reglaje": {"Backstay": "5"}, "sensacion": None}]
+    r = {x["valor"]: x["sensacion"] for x in comparar_reglajes(filas)}
+    assert r["3"] == {"bien": 1, "normal": 1, "mal": 0}
+    assert r["5"] == {"bien": 0, "normal": 0, "mal": 1}

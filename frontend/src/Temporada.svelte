@@ -1,4 +1,5 @@
 <script>
+  const SEM = [['bien', '#1a7f4b'], ['normal', '#d39b00'], ['mal', '#c0392b']];
   // Temporada: la evolución del barco de referencia en todos sus campeonatos y sesiones, y qué
   // reglaje fue mejor por franja de viento. Solo pruebas ya analizadas; las pendientes se analizan aquí.
   import { onMount } from 'svelte';
@@ -77,12 +78,13 @@
       <h3>Reglaje por franja de viento <span class="est">orientativo</span></h3>
       {#if t.reglajes.length}
         <div class="rodillo"><table class="mini">
-          <thead><tr><th>Ajuste</th><th>Valor</th><th>Viento</th><th class="n">Pruebas</th><th class="n">VMG ceñida vs top 5</th><th class="n">VMG popa vs top 5</th><th class="n">Puesto</th></tr></thead>
+          <thead><tr><th>Ajuste</th><th>Valor</th><th>Viento</th><th class="n">Pruebas</th><th class="n">VMG ceñida vs top 5</th><th class="n">VMG popa vs top 5</th><th class="n">Puesto</th><th>Sensación</th></tr></thead>
           <tbody>{#each t.reglajes as r}<tr><td>{r.ajuste}</td><td>{r.valor}</td><td>{r.franja}</td><td class="n num">{r.pruebas}</td>
             <td class="n num">{fmt(r.vmg_ceñida_frente_top5)} kn.</td><td class="n num">{fmt(r.vmg_popa_frente_top5)} kn.</td>
-            <td class="n num">{r.puesto_relativo == null ? '—' : num(r.puesto_relativo * 100, 0) + ' %'}</td></tr>{/each}</tbody>
+            <td class="n num">{r.puesto_relativo == null ? '—' : num(r.puesto_relativo * 100, 0) + ' %'}</td>
+            <td class="sens">{#each SEM as [k, c]}{#if r.sensacion?.[k]}<span title={`${r.sensacion[k]} prueba(s) ${k}`}><i style:background={c}></i>{r.sensacion[k]}</span>{/if}{/each}{#if !SEM.some(([k]) => r.sensacion?.[k])}<span class="tenue">—</span>{/if}</td></tr>{/each}</tbody>
         </table></div>
-        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian.</p></Nota>
+        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian. Sensación: el semáforo que apuntó la tripulación (cuántas pruebas fueron bien, normal y mal con ese valor); compárala con la VMG medida.</p></Nota>
       {:else}
         <p class="tenue">Apunta el reglaje de cada prueba en la página del campeonato (botón «Reglaje») y el viento de referencia: aquí verás qué valor de cada ajuste fue mejor en cada franja de viento cuando haya al menos dos valores distintos.</p>
       {/if}
@@ -90,11 +92,13 @@
     <section class="tarjeta bloque">
       <h3>Pruebas</h3>
       <div class="rodillo"><table class="mini">
-        <thead><tr><th>Día</th><th>Campeonato</th><th class="n">Prueba</th><th class="n">Puesto</th><th>Viento</th><th>Reglaje</th></tr></thead>
+        <thead><tr><th>Día</th><th>Campeonato</th><th class="n">Prueba</th><th class="n">Puesto</th><th>Viento</th><th>Sensación</th><th class="n">VMG ceñida vs top 5</th><th>Reglaje</th></tr></thead>
         <tbody>{#each [...t.filas].reverse() as f}<tr>
           <td class="num">{f.dia.split('-').reverse().join('/')}</td><td>{f.nombre}</td>
           <td class="n"><a href={`#/c/${encodeURIComponent(f.campeonato)}/p/${f.clave}`}>P{f.numero}</a></td>
           <td class="n num">{f.puesto}/{f.barcos}</td><td class="num">{f.viento_kn ? num(f.viento_kn, 0) + ' kn.' : '—'}</td>
+          <td class="sens">{#if f.sensacion}<span><i style:background={SEM.find(([k]) => k === f.sensacion)?.[1]}></i>{f.sensacion}</span>{:else}<span class="tenue">—</span>{/if}</td>
+          <td class="n num" class:bien={f.vmg_ceñida_frente_top5 > 0.02} class:mal={f.vmg_ceñida_frente_top5 < -0.02}>{fmt(f.vmg_ceñida_frente_top5)} kn.</td>
           <td class="tenue">{Object.entries(f.reglaje).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</td></tr>{/each}</tbody>
       </table></div>
     </section>
@@ -102,6 +106,10 @@
 {/if}
 
 <style>
+  .sens span { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; white-space: nowrap; }
+  .sens i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  td.bien { color: #1a7f4b; }
+  td.mal { color: var(--error); }
   .volver { display: inline-block; font: 600 14px var(--display); color: var(--tinta-2); text-decoration: none; margin-bottom: 4px; }
   h1 { font-size: clamp(24px, 4vw, 34px); margin: 2px 0 4px; }
   .bloque { padding: 10px 14px; margin-top: 10px; min-width: 0; }

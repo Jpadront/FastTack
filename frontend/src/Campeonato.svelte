@@ -101,9 +101,13 @@
   const AJUSTES = ['Obenques altos', 'Obenques bajos', 'Backstay', 'Pie de mástil', 'Mayor', 'Foque / génova', 'Spi', 'Peso tripulación'];
   let reglajeDe = $state(null);   // clave de la prueba que se edita
   let filasReglaje = $state([]);
+  let sensacion = $state(null);   // semáforo de la tripulación: bien | normal | mal
+  const SEMAFORO = [['bien', 'Bien', '#1a7f4b'], ['normal', 'Normal', '#d39b00'], ['mal', 'Mal', '#c0392b']];
+  const colorSem = (x) => SEMAFORO.find((s) => s[0] === x)?.[2];
   function editarReglaje(p) {
     if (reglajeDe === p.clave) { reglajeDe = null; return; }
     reglajeDe = p.clave;
+    sensacion = p.sensacion ?? null;
     const r = Object.entries(p.reglaje || {});
     filasReglaje = r.length ? r.map(([k, v]) => ({ k, v })) : AJUSTES.slice(0, 3).map((k) => ({ k, v: '' }));
   }
@@ -114,7 +118,7 @@
   }
   async function guardarReglaje(p) {
     const r = Object.fromEntries(filasReglaje.filter((f) => f.k.trim() && f.v.trim()).map((f) => [f.k.trim(), f.v.trim()]));
-    await ajustar(p, { reglaje: r });
+    await ajustar(p, { reglaje: r, sensacion });
     reglajeDe = null;
   }
   async function quitarPropio(a) {
@@ -218,7 +222,7 @@
               {#if p.nota}<div class="nota" title={p.nota}>{p.nota}</div>{/if}
             </td>
             <td><span class="chip {p.estado.replace(' ', '-')}">{estadoTexto[p.estado]}</span></td>
-            <td class="n num mio">{r.mio}{#if r.de}<span class="tenue de">/{r.de}</span>{/if}</td>
+            <td class="n num mio">{#if p.sensacion}<i class="sem" style:background={colorSem(p.sensacion)} title={`Según la tripulación: ${p.sensacion}`}></i>{/if}{r.mio}{#if r.de}<span class="tenue de">/{r.de}</span>{/if}</td>
             <td>{r.ganador}{#if r.tiempo}<span class="tenue num tiempo">{r.tiempo}</span>{/if}
               {#if p.n_llegadas}<a class="analizar" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`}>Analizar →</a>{/if}</td>
             {#if ajustes}<td class="n">
@@ -228,7 +232,7 @@
             <td>
               <label class="cuenta"><input type="checkbox" checked={!p.excluida}
                      onchange={(e) => ajustar(p, { excluida: !e.currentTarget.checked })}> {p.excluida ? 'no' : 'sí'}</label>
-              {#if p.n_llegadas}<button class="enlace reglaje" onclick={() => editarReglaje(p)} title={Object.entries(p.reglaje || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'Sin reglaje apuntado'}>Reglaje{Object.keys(p.reglaje || {}).length ? ' ✓' : ''}</button>{/if}
+              {#if p.n_llegadas}<button class="enlace reglaje" onclick={() => editarReglaje(p)} title={Object.entries(p.reglaje || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'Sin reglaje apuntado'}>Reglaje{Object.keys(p.reglaje || {}).length ? ' ✓' : ''}{#if p.sensacion}<i class="sem" style:background={colorSem(p.sensacion)}></i>{/if}</button>{/if}
             </td>{/if}
           </tr>
           {#if reglajeDe === p.clave}
@@ -241,6 +245,12 @@
                     <button type="button" class="enlace" aria-label="Quitar" onclick={() => filasReglaje.splice(k, 1)}>✕</button>
                   </div>
                 {/each}
+                <div class="semaforo" role="group" aria-label="¿Cómo fuisteis con este reglaje?">
+                  <span class="etq">¿Cómo fuisteis?</span>
+                  {#each SEMAFORO as [k, t, c]}
+                    <button type="button" class:activo={sensacion === k} aria-pressed={sensacion === k} style:--c={c} onclick={() => (sensacion = sensacion === k ? null : k)}><i></i>{t}</button>
+                  {/each}
+                </div>
                 <datalist id="ajustes">{#each AJUSTES as a}<option value={a}></option>{/each}</datalist>
                 <div class="acciones-reglaje">
                   <button type="button" class="enlace" onclick={() => filasReglaje.push({ k: '', v: '' })}>+ ajuste</button>
@@ -306,6 +316,13 @@
   .selector { display: grid; gap: 4px; min-width: min(320px, 100%); }
   .fila { display: flex; gap: 6px; }
   .lista { overflow-x: auto; }
+  .semaforo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 6px; }
+  .semaforo .etq { font: 600 13px var(--display); color: var(--tinta-2); margin-right: 4px; }
+  .semaforo button { display: inline-flex; align-items: center; gap: 6px; font: 600 14px var(--display); padding: 4px 12px; border-radius: 16px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); }
+  .semaforo button i { width: 11px; height: 11px; border-radius: 50%; background: var(--c); opacity: .35; }
+  .semaforo button.activo { border-color: var(--c); color: var(--tinta); background: color-mix(in srgb, var(--c) 12%, var(--panel)); }
+  .semaforo button.activo i { opacity: 1; }
+  .sem { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 6px 1px 4px; vertical-align: middle; }
   .puestos { gap: 6px; }
   .barras-p { display: flex; gap: 6px; align-items: end; height: 92px; overflow-x: auto; }
   .bp { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 2px; min-width: 28px; height: 100%; text-decoration: none; color: inherit; }

@@ -1,1 +1,1 @@
-__version__ = "0.38.1"  # favicon PNG transparente y mayor recta
+__version__ = "0.39.0"  # semáforo del reglaje

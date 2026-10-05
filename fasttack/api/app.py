@@ -4,6 +4,7 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
@@ -43,6 +44,7 @@ class AjustePrueba(BaseModel):
     excluida: bool | None = None
     viento_kn: float | None = None
     viento_dir: float | None = None
+    sensacion: Literal["bien", "normal", "mal"] | None = None   # semáforo de la tripulación con ese reglaje
 
 
 class PeticionSesion(BaseModel):

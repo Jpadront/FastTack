@@ -39,6 +39,7 @@ Reglas estrictas:
 - En la salida, usa «posicionamiento» para explicar cómo fue: si llegó pronto (y tuvo que frenar) o tarde (lejos de la línea), si tenía hueco a sotavento para arribar y acelerar, si un barco a sotavento en posición segura no le dejó desarrollar su navegación o si un barco de barlovento le planchó (aire sucio) y por qué, relacionándolo solo con cifras de los datos (distancia a la línea, SOG en el disparo frente a la primera fila, huecos, primera virada).
 - Si hay «set_tras_barlovento» o «rodeo_final», úsalos solo cuando expliquen una ganancia o una pérdida clara del tramo (set directo o trasluchando al montar frente a lo que hizo el top 5; tiempo en la zona de la baliza y velocidad mínima frente al top 5).
 - Si hay «reglaje_apuntado», es lo que la tripulación apuntó que llevaba: puedes relacionarlo con la velocidad o la escora como hipótesis, nunca como causa demostrada.
+- Si hay «sensacion_de_la_tripulacion» (bien, normal o mal), es cómo creyó la tripulación que fue: di si las cifras lo confirman o no (por ejemplo, «os pareció que ibais bien, pero en ceñida la VMG fue 0,10 kn. peor que la del top 5»).
 - El offset no es un tramo: menciónalo dentro de la popa («offset») solo si el tiempo de la baliza al offset es claramente peor o mejor que el del top 5.
 - «donde_se_perdio_la_prueba» reparte el tiempo perdido frente al top 5 en salida, velocidad, maniobras y táctica y resto: úsalo para ordenar qué pesó más (y di que es estimado).
 - «regularidad_vmg_pct»: cuanto menor, más regular. Menciónala si es claramente peor o mejor que la del top 5.
@@ -330,7 +331,9 @@ def _datos_de(alm: Almacen, camp_id: str, ambito: str, barco: str) -> dict:
             h["meteo_modelo"] = mm | {"nota": "modelo meteorológico (Open-Meteo), viento a 10 m promediado a las horas de la prueba: referencia, no medido en el campo"}
     except Exception:  # noqa: BLE001 - sin red o sin datos: el debrief sigue sin ellos
         pass
-    reg = next((p.get("reglaje") for p in camp["pruebas"] if p["clave"] == ambito), None)
-    if reg:
-        h["reglaje_apuntado"] = reg
+    pr = next((p for p in camp["pruebas"] if p["clave"] == ambito), {})
+    if pr.get("reglaje"):
+        h["reglaje_apuntado"] = pr["reglaje"]
+    if pr.get("sensacion"):   # semáforo de la tripulación: contrástalo con las cifras, no lo des por bueno
+        h["sensacion_de_la_tripulacion"] = pr["sensacion"]
     return h

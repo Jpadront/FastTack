@@ -73,6 +73,9 @@ class Almacen:
         if "reglaje" not in {r[1] for r in self.db.execute("pragma table_info(ajuste_prueba)")}:   # v0.19
             self.db.execute("alter table ajuste_prueba add column reglaje text")
             self.db.commit()
+        if "sensacion" not in {r[1] for r in self.db.execute("pragma table_info(ajuste_prueba)")}:   # v0.39
+            self.db.execute("alter table ajuste_prueba add column sensacion text")   # bien | normal | mal
+            self.db.commit()
 
     # ------------------------------------------------------------------ SQLite
     def sql(self, q: str, args=()):

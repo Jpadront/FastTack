@@ -195,6 +195,7 @@ def con_ajustes(alm: Almacen, camp: dict) -> dict:
         p["viento_kn"] = a["viento_kn"] if a else None
         p["viento_dir"] = a["viento_dir"] if a else None
         p["reglaje"] = json.loads(a["reglaje"]) if a and a["reglaje"] else {}
+        p["sensacion"] = a["sensacion"] if a and "sensacion" in a.keys() else None   # cómo fue, según la tripulación
         p["excluida"] = bool(a["excluida"]) if a and a["excluida"] is not None else not p["llegadas"]
         p["numero"] = None
         if not p["excluida"]:
