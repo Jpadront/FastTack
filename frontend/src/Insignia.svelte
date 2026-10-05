@@ -1,7 +1,7 @@
 <script>
   // Insignia de la clase en pequeño: el logo que el usuario haya puesto en <datos>/logos; si no, el
   // oficial de las clases que trae FastTack (public/clases: J/70, Snipe, ORC; ver LEEME.txt); si no,
-  // una insignia propia, como la de la vela.
+  // sus siglas en el color de la clase, como en la vela (sin recuadro).
   import { logosDisponibles } from './api.js';
 
   let { clase = '', tam = 34 } = $props();
@@ -23,7 +23,7 @@
     const texto = (clase || '?').replace(/[^A-Za-z0-9/]/g, '').slice(0, 4).toUpperCase() || '?';
     return { texto, color: PALETA[h % PALETA.length] };
   });
-  const INCLUIDOS = [[/^j70/, '/clases/j70.png'], [/^snipe/, '/clases/snipe.svg'], [/orc|crucero/, '/clases/orc.png']];
+  const INCLUIDOS = [[/^j70/, '/clases/j70.png'], [/^snipe/, '/clases/snipe.png'], [/orc|crucero/, '/clases/orc.png']];
   let fallo = $state(false);
   const src = $derived(fallo || !slug ? null : $logosDisponibles.has(slug) ? `/api/logos/${slug}` : INCLUIDOS.find(([re]) => re.test(slug))?.[1] ?? null);
   const tamTexto = $derived(propia.texto.length >= 5 ? tam * 0.24 : propia.texto.length >= 4 ? tam * 0.27 : propia.texto.length === 3 ? tam * 0.32 : tam * 0.4);
@@ -34,13 +34,11 @@
 {:else}
   <svg class="ins" viewBox="0 0 40 40" width={tam} height={tam} role="img" aria-label={`Clase ${clase}`}>
     <title>{clase}</title>
-    <rect x="1" y="1" width="38" height="38" rx="10" fill={propia.color} />
-    <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Barlow Semi Condensed, Arial Narrow, Arial, sans-serif"
-          font-weight="700" font-style="italic" font-size={tamTexto * 40 / tam}>{propia.texto}</text>
+    <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" fill={propia.color} font-family="Barlow Semi Condensed, Arial Narrow, Arial, sans-serif"
+          font-weight="800" font-style="italic" font-size={tamTexto * 48 / tam}>{propia.texto}</text>
   </svg>
 {/if}
 
 <style>
-  .ins { flex: none; display: block; border-radius: 10px; object-fit: contain; }
-  img.ins { background: #fff; border: 1px solid var(--linea); padding: 2px; }
+  .ins { flex: none; display: block; object-fit: contain; }
 </style>

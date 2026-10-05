@@ -1,1 +1,1 @@
-__version__ = "0.40.0"  # logos de las clases en la página principal
+__version__ = "0.40.1"  # logos de clase en PNG sin recuadro
