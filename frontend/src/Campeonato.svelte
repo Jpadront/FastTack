@@ -46,6 +46,16 @@
   const nombres = $derived(Object.fromEntries((camp?.barcos || []).map((b) => [b.clave, b])));
   const miClave = $derived(clave(barco));
 
+  let ajustes = $state(false);   // columnas de ajuste (viento de referencia, cuenta, reglaje)
+  // Tus puestos en las pruebas que cuentan, para la banda de arriba
+  const mios = $derived(!camp?.pruebas ? [] : camp.pruebas.filter((p) => !p.excluida && p.n_llegadas).map((p) => {
+    const orden = Object.entries(p.llegadas).sort((a, b) => a[1] - b[1]).map(([v]) => v);
+    const k = orden.indexOf(miClave);
+    return { clave: p.clave, numero: p.numero, pos: k >= 0 ? k + 1 : null, de: orden.length, ocs: p.ocs.includes(miClave) };
+  }));
+  const conPuesto = $derived(mios.filter((m) => m.pos != null));
+  const media = $derived(conPuesto.length ? conPuesto.reduce((a, m) => a + m.pos, 0) / conPuesto.length : null);
+  const mejorP = $derived(conPuesto.length ? conPuesto.reduce((a, m) => (m.pos < a.pos ? m : a)) : null);
   function resultado(p) {
     const orden = Object.entries(p.llegadas).sort((a, b) => a[1] - b[1]).map(([v]) => v);
     const ganador = orden[0];
@@ -147,6 +157,7 @@
       <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} {camp.barcos.length === 1 ? 'barco' : 'barcos'} · {propia ? `archivos .vkx del Atlas (${camp.archivos.length})` : `datos de RaceSense (revisión ${camp.revision})`}</p>
       <div class="acciones-camp">
         <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen {propia ? 'de la sesión' : 'del campeonato'} →</a>
+        <button class="boton claro" aria-pressed={ajustes} onclick={() => (ajustes = !ajustes)} title="Viento de referencia, qué pruebas cuentan y reglaje de cada prueba">{ajustes ? 'Ocultar ajustes' : '⚙ Ajustes de las pruebas'}</button>
         {#if !propia}<button class="boton claro recargar" onclick={actualizar} title="Vuelve a leer el campeonato en RaceSense: pruebas y llegadas nuevas (la telemetría ya descargada se reutiliza)">↻ Actualizar pruebas</button>{/if}
       </div>
     </div>
@@ -162,6 +173,27 @@
     </form>
   </header>
 
+  {#if mios.length}
+    <section class="heroe" aria-label="Tus resultados en el campeonato">
+      <div class="dato principal">
+        <span class="et">{nombres[miClave]?.vela || barco}</span>
+        <b class="num">{media == null ? '—' : media.toFixed(1).replace('.', ',') + '.º'}<small> de media</small></b>
+        <span class="det">{conPuesto.length} de {mios.length} pruebas con llegada{mejorP ? ` · mejor: ${mejorP.pos}.º en la ${mejorP.numero ?? '—'}` : ''}</span>
+      </div>
+      <div class="dato puestos">
+        <span class="et">Puesto en cada prueba</span>
+        <div class="barras-p" role="img" aria-label={mios.map((m) => `prueba ${m.numero}: ${m.pos ?? (m.ocs ? 'OCS' : 'sin llegada')}`).join(', ')}>
+          {#each mios as m (m.clave)}
+            <a class="bp" href={`#/c/${encodeURIComponent(id)}/p/${m.clave}`} title={`Prueba ${m.numero ?? '—'}: ${m.pos ? m.pos + '.º de ' + m.de : m.ocs ? 'OCS' : 'sin llegada'}`}>
+              <span class="v num">{m.pos ?? (m.ocs ? 'OCS' : '—')}</span>
+              <span class="col"><span class="rel" style:height={m.pos ? `${Math.max(6, (1 - (m.pos - 1) / Math.max(1, m.de - 1)) * 100)}%` : '0'}></span></span>
+              <span class="n num">{m.numero ?? '—'}</span>
+            </a>
+          {/each}
+        </div>
+      </div>
+    </section>
+  {/if}
   {#if camp.desactualizado && !propia}
     <section class="tarjeta aviso-act" role="status">
       <p><b>Hay una versión mejor de la detección de pruebas y llegadas.</b> Vuelve a cargar el campeonato para aplicarla: la telemetría ya descargada se reutiliza y tus ajustes (viento, numeración, «Cuenta») se mantienen.</p>
@@ -173,7 +205,7 @@
       <thead>
         <tr>
           <th class="n">Nº</th><th>Día y señal</th><th>Estado</th><th class="n">{nombres[miClave]?.vela || barco}</th>
-          <th>Ganador</th><th class="n">Viento ref. (kn)</th><th>Cuenta</th>
+          <th>Ganador</th>{#if ajustes}<th class="n">Viento ref. (kn)</th><th>Cuenta</th>{/if}
         </tr>
       </thead>
       <tbody>
@@ -189,7 +221,7 @@
             <td class="n num mio">{r.mio}{#if r.de}<span class="tenue de">/{r.de}</span>{/if}</td>
             <td>{r.ganador}{#if r.tiempo}<span class="tenue num tiempo">{r.tiempo}</span>{/if}
               {#if p.n_llegadas}<a class="analizar" href={`#/c/${encodeURIComponent(id)}/p/${p.clave}`}>Analizar →</a>{/if}</td>
-            <td class="n">
+            {#if ajustes}<td class="n">
               <input class="campo viento num" inputmode="decimal" aria-label={`Viento de referencia de la prueba ${p.numero ?? ''}`}
                      value={p.viento_kn ?? ''} placeholder="—" title="Viento en el disparo (kn). Vacío: intensidad sin calibrar" onchange={(e) => viento(p, e.currentTarget.value)}>
             </td>
@@ -197,10 +229,10 @@
               <label class="cuenta"><input type="checkbox" checked={!p.excluida}
                      onchange={(e) => ajustar(p, { excluida: !e.currentTarget.checked })}> {p.excluida ? 'no' : 'sí'}</label>
               {#if p.n_llegadas}<button class="enlace reglaje" onclick={() => editarReglaje(p)} title={Object.entries(p.reglaje || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'Sin reglaje apuntado'}>Reglaje{Object.keys(p.reglaje || {}).length ? ' ✓' : ''}</button>{/if}
-            </td>
+            </td>{/if}
           </tr>
           {#if reglajeDe === p.clave}
-            <tr class="fila-reglaje"><td colspan="7">
+            <tr class="fila-reglaje"><td colspan={ajustes ? 7 : 5}>
               <form class="reglaje-form" onsubmit={(e) => { e.preventDefault(); guardarReglaje(p); }}>
                 {#each filasReglaje as f, k}
                   <div class="par">
@@ -274,6 +306,14 @@
   .selector { display: grid; gap: 4px; min-width: min(320px, 100%); }
   .fila { display: flex; gap: 6px; }
   .lista { overflow-x: auto; }
+  .puestos { gap: 6px; }
+  .barras-p { display: flex; gap: 6px; align-items: end; height: 92px; overflow-x: auto; }
+  .bp { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 2px; min-width: 28px; height: 100%; text-decoration: none; color: inherit; }
+  .bp .v { font-size: 12px; color: #e6eff2; }
+  .bp .col { width: 18px; height: 100%; background: rgba(143, 176, 189, .15); border-radius: 3px; display: flex; align-items: end; }
+  .bp .rel { width: 100%; background: #ff8a52; border-radius: 3px; }
+  .bp:hover .rel { background: #ffb08a; }
+  .bp .n { font-size: 11px; color: #8fb0bd; }
   table { border-collapse: collapse; width: 100%; font-size: 15px; }
   th { text-align: left; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); padding: 10px 10px 8px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
   td { padding: 9px 10px; border-bottom: 1px solid var(--rejilla); vertical-align: top; }

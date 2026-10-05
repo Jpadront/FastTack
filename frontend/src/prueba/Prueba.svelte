@@ -17,6 +17,7 @@
   import AceleracionSalida from './AceleracionSalida.svelte';
   import ManiobrasPrueba from './ManiobrasPrueba.svelte';
   import CausaTramo from './CausaTramo.svelte';
+  import ResultadoPrueba from './ResultadoPrueba.svelte';
 
   let { campId, clave, barco } = $props();
 
@@ -168,6 +169,8 @@
         <span class="tenue">· motor {an.version}</span>
       </p>
       {#if meteo}
+        <details class="cond">
+        <summary><span class="etiqueta">Condiciones</span>{#if meteo.viento} viento {num(meteo.viento.kn, 0)} kn. de {meteo.viento.desde_grados}°{/if}{#if meteo.corriente} · corriente {num(meteo.corriente.kn, 1)} kn.{/if} <span class="tenue">(modelo meteo)</span></summary>
         <p class="meteo">
           <span class="etiqueta">Modelo meteo</span>
           {#if meteo.viento}
@@ -178,6 +181,7 @@
           {#if meteo.corriente}· corriente <b class="num">{num(meteo.corriente.kn, 1)} kn.</b> hacia {meteo.corriente.hacia_grados}°{#if meteo.corriente_estimada}<span class="tenue"> (estimada con la flota: {num(meteo.corriente_estimada.velocidad_kn, 1)} kn. hacia {num(meteo.corriente_estimada.hacia_grados, 0)}°)</span>{/if}{/if}
           <span class="tenue">· Open-Meteo, {meteo.horas[0]}–{meteo.horas[meteo.horas.length - 1]} UTC; viento a 10 m. del modelo, puede diferir del del campo</span>
         </p>
+        </details>
       {:else if meteoError}
         <p class="meteo tenue">Modelo meteo no disponible: {meteoError}</p>
       {/if}
@@ -192,6 +196,7 @@
       </div>
     </div>
   </header>
+  <ResultadoPrueba {an} {ref} nombreRef={vc(ref)} />
   {#if verSelector}
     <section class="tarjeta elegir">
       {#each clasif as v}
@@ -485,6 +490,9 @@
   .rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 424px; grid-template-rows: auto auto auto; gap: 8px 10px; align-items: start; }
   .izq { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; min-width: 0; }
   .der { grid-column: 2; grid-row: 2 / span 2; min-width: 0; }
+  .cond { margin: 6px 0 0; font-size: 14px; }
+  .cond summary { cursor: pointer; color: var(--tinta-2); }
+  .cond summary .etiqueta { margin-right: 4px; }
   .meteo { font-size: 14px; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
   .meteo .etiqueta { margin-right: 2px; }
   .aviso-meteo { color: #b35c00; }

@@ -36,7 +36,7 @@
 </script>
 
 <header class="barra">
-  <a class="marca" href="#/"><svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><rect x="1" y="1" width="62" height="62" rx="14" fill="#10222b" stroke="#4b5e67" stroke-width="2"/><path d="M20 48 L34 12 L34 48 Z" fill="#eef2f3"/><path d="M37 20 L48 44 L37 44 Z" fill="#e0622e"/><path d="M12 52 H52" stroke="#eef2f3" stroke-width="3" stroke-linecap="round"/></svg>FastTack</a>
+  <a class="marca" href="#/"><svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><rect x="1" y="1" width="62" height="62" rx="14" fill="#16394a" stroke="#3d6070" stroke-width="2"/><path d="M20 48 L34 12 L34 48 Z" fill="#eef2f3"/><path d="M37 20 L48 44 L37 44 Z" fill="#e0622e"/><path d="M12 52 H52" stroke="#eef2f3" stroke-width="3" stroke-linecap="round"/></svg>FastTack</a>
   <span class="barco" title="Barco de referencia"><span class="punto"></span>{velaBonita(barco)}</span>
 </header>
 
@@ -79,11 +79,12 @@
     height: var(--alto-barra);
     position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--linea);
+    padding: 10px 16px; background: #0f2a36; border-bottom: 1px solid #24414d;
+    box-shadow: 0 2px 10px -6px rgba(8, 24, 32, .6);
   }
-  .marca { font: 700 20px var(--display); color: var(--tinta); text-decoration: none; letter-spacing: .02em; display: inline-flex; align-items: center; gap: 8px; }
-  .barco { font: 600 15px var(--display); color: var(--yo); display: inline-flex; align-items: center; gap: 6px; }
-  .punto { width: 9px; height: 9px; border-radius: 50%; background: var(--yo); }
+  .marca { font: 700 20px var(--display); color: #eef4f6; text-decoration: none; letter-spacing: .02em; display: inline-flex; align-items: center; gap: 8px; }
+  .barco { font: 600 15px var(--display); color: #ff8a52; background: rgba(255, 138, 82, .12); border: 1px solid rgba(255, 138, 82, .35); padding: 2px 10px; border-radius: 14px; display: inline-flex; align-items: center; gap: 6px; }
+  .punto { width: 9px; height: 9px; border-radius: 50%; background: #ff8a52; }
   .pie-app { text-align: center; font: 500 12px var(--mono); color: var(--tinta-3); padding: 8px 0 20px; }
   main { max-width: 1180px; margin: 0 auto; padding: 16px 16px 48px; }
 </style>

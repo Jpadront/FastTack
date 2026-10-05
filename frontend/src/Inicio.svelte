@@ -56,7 +56,12 @@
 
 <header class="intro">
   <h1>Análisis post-regata de vela</h1>
-  <p class="tenue">Para cualquier clase que navegue con Atlas 2 de Vakaros (RaceSense): recorrido y viento reconstruidos, métricas por tramo frente a la flota y al top 5, general calculada y debrief escrito por IA con cifras comprobadas.</p>
+  <p>Para cualquier clase que navegue con Atlas 2 de Vakaros (RaceSense): sabe dónde ganaste y dónde perdiste en cada tramo, frente a la flota y al top 5.</p>
+  <ul class="rasgos">
+    <li><b>Recorrido y viento</b> reconstruidos con los GPS de la flota</li>
+    <li><b>Tramo a tramo</b>: velocidad, maniobras, táctica y escora</li>
+    <li><b>Debrief e informe PDF</b> con cifras comprobadas</li>
+  </ul>
 </header>
 <div class="columnas">
 <section class="guardados">
@@ -94,6 +99,9 @@
       <button class="enlace" onclick={() => (url = 'https://player.vakaros.com/watch/oRkxbTpSZPbSkrmKrbj2/J%2F70')}>usar el enlace del Mundial</button></p>
   {/if}
 </section>
+<details class="anadir" open={!guardados.length}>
+<summary class="boton">＋ Cargar un campeonato o una sesión .vkx</summary>
+<div class="dos-cargas">
 <section class="tarjeta cargar">
   <h2>Cargar un campeonato</h2>
   <p class="tenue">Pega el enlace del visor de RaceSense (player.vakaros.com/watch/…). Sirve cualquier campeonato; lo que ya está descargado no se vuelve a descargar.</p>
@@ -117,28 +125,37 @@
   <SubirVkx onHecho={(id) => (location.hash = `#/c/${encodeURIComponent(id)}`)} />
 </section>
 </div>
+</details>
+</div>
 
 <style>
-  .intro { margin: 6px 0 16px; }
-  .intro h1 { font-size: clamp(26px, 4vw, 34px); }
-  .intro p { margin-top: 6px; }
-  .columnas { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-  @media (max-width: 800px) { .columnas { grid-template-columns: minmax(0, 1fr); } }
+  .intro { margin: 6px 0 18px; padding: 22px 24px 20px; border-radius: 12px; color: #e6eff2;
+    background: radial-gradient(120% 140% at 100% 0%, #1d4a5c 0%, #0f2a36 55%, #0b222c 100%);
+    box-shadow: 0 8px 26px -14px rgba(8, 24, 32, .7); }
+  .intro h1 { font-size: clamp(28px, 4.5vw, 40px); color: #fff; }
+  .intro p { margin-top: 8px; color: #b8ced6; font-size: 17px; }
+  .rasgos { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .rasgos li { font-size: 14px; color: #cfe0e6; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); border-radius: 16px; padding: 4px 12px; }
+  .rasgos b { color: #ff8a52; font-weight: 600; }
+  .columnas { display: grid; gap: 16px; }
+  .anadir > summary { list-style: none; display: inline-block; }
+  .anadir > summary::-webkit-details-marker { display: none; }
+  .anadir[open] > summary { margin-bottom: 12px; }
+  .dos-cargas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 800px) { .dos-cargas { grid-template-columns: minmax(0, 1fr); } }
   .cargar { padding: 16px; display: grid; gap: 8px; }
-  .guardados { grid-row: span 2; }
   .titulo-lista { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .vkx { grid-column: 2; }
-  @media (max-width: 800px) { .vkx { grid-column: auto; } .guardados { grid-row: auto; } }
   h2 { font-size: 22px; margin: 0 0 10px; }
   .cargar h2 { margin: 0; }
   p { margin: 0; max-width: 65ch; }
   form { display: grid; gap: 8px; margin-top: 8px; }
   form .boton { justify-self: start; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  .ficha { display: flex; justify-content: space-between; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px; }
+  .guardados ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+  .ficha { display: flex; justify-content: space-between; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 14px 16px; border-left: 4px solid var(--yo); transition: border-color .15s, box-shadow .15s; }
+  .ficha:hover { box-shadow: 0 4px 14px -10px rgba(8, 24, 32, .5); }
   .ficha:hover { border-color: var(--tinta-3); }
-  .nombre { display: grid; gap: 2px; color: var(--tinta); text-decoration: none; font-size: 17px; }
-  .nombre .tenue { font-size: 14px; }
+  .nombre { display: grid; gap: 2px; color: var(--tinta); text-decoration: none; font: 700 20px var(--display); }
+  .nombre .tenue { font: 400 14px var(--texto); }
   .accesos { display: flex; gap: 6px; align-items: center; }
   .icono { background: none; border: 0; padding: 3px 6px; font-size: 15px; color: var(--tinta-3); cursor: pointer; border-radius: 8px; }
   .icono:hover { color: var(--tinta); background: color-mix(in srgb, var(--foco) 8%, transparent); }
