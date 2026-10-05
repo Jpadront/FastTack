@@ -1,1 +1,1 @@
-__version__ = "0.37.1"  # logo nuevo
+__version__ = "0.37.2"  # favicon claro
