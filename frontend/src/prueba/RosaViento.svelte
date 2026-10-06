@@ -67,7 +67,11 @@
       </g>
     {/if}
   </svg>
-  <div class="pie"><span>← izquierda</span><span class="med">media {norte(media)}°</span><span>derecha →</span></div>
+  <div class="pie">
+    <span><i>← máx. izquierda</i><b>{norte(media + lo)}°</b> <small>({lo > 0 ? '+' : lo < 0 ? '−' : '±'}{num(Math.abs(lo), 0)}°)</small></span>
+    <span class="med"><i>media</i><b>{norte(media)}°</b></span>
+    <span class="der"><i>máx. derecha →</i><b>{norte(media + hi)}°</b> <small>({hi > 0 ? '+' : hi < 0 ? '−' : '±'}{num(Math.abs(hi), 0)}°)</small></span>
+  </div>
   <p class="res">De <b>{norte(cortes[0].twd)}°</b> a <b>{norte(cortes[cortes.length - 1].twd)}°</b>: {lado(delta)} · horquilla {num(hi - lo, 0)}°</p>
 </div>
 
@@ -90,7 +94,12 @@
   .ahora { fill: var(--tinta); stroke: var(--panel); stroke-width: 2; }
   .tip { fill: var(--tinta); }
   .tiptxt { font: 500 11px var(--mono); fill: var(--panel); }
-  .pie { display: flex; justify-content: space-between; gap: 12px; width: 100%; max-width: 340px; font: 500 11px var(--mono); color: var(--tinta-3); }
+  .pie { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: baseline; width: 100%; max-width: 440px; font: 500 11px var(--mono); color: var(--tinta-3); }
+  .pie b { color: var(--tinta-2); font-weight: 700; }
+  .pie small { font-size: 10px; }
+  .pie .der { text-align: right; }
+  .pie i { display: block; font-style: normal; }
+  .pie .med { text-align: center; }
   .med { color: var(--tinta-2); }
   .res { font-size: 13px; color: var(--tinta-2); margin: 4px 0 0; text-align: center; }
 </style>

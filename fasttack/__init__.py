@@ -1,1 +1,1 @@
-__version__ = "0.45.0"  # tira de intensidad del viento
+__version__ = "0.45.1"  # rosa: máx. izquierda y derecha

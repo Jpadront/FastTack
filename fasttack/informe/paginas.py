@@ -487,11 +487,16 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
     cal = bool(vi.get("tws_calibrada"))
     pres = [c.get("tws") if cal else c.get("sog_mediana") for c in cortes]
     if cortes:
-        g.rosa(pdf, xw, y0, ww, 41, cortes, vi["twd_media"], titulo="TWD · rosa del tramo")
+        g.rosa(pdf, xw, y0, ww, 40, cortes, vi["twd_media"], titulo="TWD · rosa del tramo")
         d = _dif(cortes[-1]["twd"] - cortes[0]["twd"])
-        pdf.set_xy(xw, y0 + 42.5)
+        pdf.set_xy(xw, y0 + 42.2)
         pdf.set_font("Texto", "", 7)
         pdf.set_text_color(*TINTA2)
+        izq, der = min(rol), max(rol)
+        sg = lambda x: ("+" if round(x) > 0 else "−" if round(x) < 0 else "±") + num(abs(x), 0)
+        pdf.cell(ww, 3.4, f"Máx. izquierda {round((vi['twd_media'] + izq) % 360)}° ({sg(izq)}°) · "
+                 f"media {round(vi['twd_media'] % 360)}° · máx. derecha {round((vi['twd_media'] + der) % 360)}° ({sg(der)}°)", align="C")
+        pdf.set_xy(xw, y0 + 45.8)
         pdf.cell(ww, 3.4, f"De {round(cortes[0]['twd'] % 360)}° a {round(cortes[-1]['twd'] % 360)}°: "
                  + ("sin rolada neta" if abs(d) < 0.5 else f"{num(abs(d), 0)}° a la {'derecha' if d > 0 else 'izquierda'}")
                  + f" · horquilla {num(max(rol) - min(rol), 0)}°", align="C")
