@@ -110,30 +110,35 @@ def generar(alm: Almacen, camp_id: str, ambito: str, barco: str) -> bytes:
     # Prueba a prueba
     pruebas = h.get("pruebas") or []
     if pruebas:
-        pdf.seccion("Prueba a prueba", "VMG media de las ceñidas y de las popas frente a la mediana del top 5 "
+        pdf.seccion("Prueba a prueba", "Velocidad: semáforo de la VMG frente a toda la flota (bien, normal o mal por tercios). VMG media de las ceñidas y de las popas frente a la mediana del top 5 "
                     "de la prueba, y por qué (velocidad o ángulo)."
                     + (" Tiempo frente al top 5: dónde se perdió cada prueba." if dia else ""))
-        cab = ["Prueba", "Puesto", "Ceñida", "Por qué", "Popa", "Por qué"]
-        anchos = [16, 16, 22, 50, 22, 52]
+        from .. import servicio
+        from .paginas import SEMAFORO
+        sems = servicio.semaforos_campeonato(alm, camp_id, barco)
+        clave_de = {q["numero"]: q["clave"] for q in camp["pruebas"]}
+        cab = ["Prueba", "Puesto", "Velocidad", "Ceñida", "Por qué", "Popa", "Por qué"]
+        anchos = [15, 15, 19, 21, 43, 21, 44]
         if dia:
             cab += ["Total"]
-            anchos = [15, 14, 20, 43, 20, 43, 23]
+            anchos = [14, 13, 18, 19, 37, 19, 37, 21]
         filas, col = [], []
         for p in pruebas:
             vc, vp = p.get("vmg_ceñida_frente_al_top5_kn"), p.get("vmg_popa_frente_al_top5_kn")
-            fila = [f"P{p['prueba']}", str(p.get("puesto") or "—"),
+            sem = sems.get(clave_de.get(p["prueba"]))
+            fila = [f"P{p['prueba']}", str(p.get("puesto") or "—"), sem["nivel"] if sem else "—",
                     (con_signo(vc, 2) + " kn.") if vc is not None else "—", _por_que(p.get("vmg_ceñida_frente_al_top5_por_que"), corto=True),
                     (con_signo(vp, 2) + " kn.") if vp is not None else "—", _por_que(p.get("vmg_popa_frente_al_top5_por_que"), corto=True)]
-            c = [None, None, _color(vc, True, 2), None, _color(vp, True, 2), None]
+            c = [None, None, SEMAFORO[sem["nivel"]] if sem else None, _color(vc, True, 2), None, _color(vp, True, 2), None]
             if dia:
                 tot = (p.get("donde_se_perdio_la_prueba") or {}).get("total_frente_al_top5_s")
                 fila.append(tiempo(tot, True))
                 c.append(ROJO if (tot or 0) > 0 else AZUL if (tot or 0) < 0 else None)
             if p.get("metricas", "sí") != "sí":
-                fila[2:6] = ["—", "sin métricas", "—", ""]
+                fila[3:7] = ["—", "sin métricas", "—", ""]
             filas.append(fila)
             col.append(c)
-        pdf.tabla(cab, filas, anchos, ["L", "R", "R", "L", "R", "L"] + (["R"] if dia else []), col, tam=8)
+        pdf.tabla(cab, filas, anchos, ["L", "R", "L", "R", "L", "R", "L"] + (["R"] if dia else []), col, tam=8)
         rec = h.get("vmg_frente_al_top5_prueba_a_prueba") or {}
         lineas = []
         for m in ("ceñida", "popa"):

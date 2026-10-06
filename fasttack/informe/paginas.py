@@ -17,9 +17,11 @@ from ..ia import debrief as debrief_mod
 from ..ingesta import campeonato as camp_mod
 from ..ingesta.almacen import Almacen
 from . import graficos as g
+from ..motor.semaforo import semaforo
 from .prueba import AZUL, LINEA, MARGEN, NARANJA, ROJO, TINTA, TINTA2, TINTA3, _PDF, _markdown, con_signo, num, tiempo
 
 VERDE = (26, 127, 75)
+SEMAFORO = {"bien": (26, 127, 75), "normal": (211, 155, 0), "mal": (192, 57, 43)}   # los de la web
 MAR = (15, 42, 54)
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
          "noviembre", "diciembre"]
@@ -168,6 +170,7 @@ def _portada(pdf, ctx: _Ctx, h: dict, banda: str, titulo: str, sub: str):
     sal = an.get("salida") or {}
     corr = an.get("corriente")
     gap = (an["clasificacion"][k]["t"] - an["clasificacion"][0]["t"]) / 1000 if k else 0
+    sem = semaforo(an, ref)
     pdf.fichas([
         ("Puesto", f"{k + 1}/{len(clas)}" if k is not None else "—", ("ganador" if k == 0 else f"a {tiempo(gap)} del ganador") if k is not None else None, NARANJA),
         ("Frente al top 5", tiempo(tot, signo=True) if tot is not None else "—", "perdido (+) o ganado (−) en la llegada", ROJO if (tot or 0) > 0 else AZUL if tot else None),
@@ -175,7 +178,9 @@ def _portada(pdf, ctx: _Ctx, h: dict, banda: str, titulo: str, sub: str):
         ("Viento en el disparo", f"{num(sal.get('twd_disparo'), 0)}°" if sal.get("twd_disparo") is not None else "—",
          f"{num(sal['tws_disparo'], 1)} kn. (estimado)" if sal.get("tws_disparo") else "intensidad sin calibrar", None),
         ("Corriente", f"{num(corr['velocidad_kn'], 1)} kn." if corr else "—", f"hacia {num(corr['hacia_grados'], 0)}° (estimada)" if corr else None, None),
-        ("Flota", f"{len(clas)} barcos", f"{an.get('vueltas', '—')} vueltas", None),
+        ("Velocidad frente a la flota", sem["nivel"].capitalize() if sem else "—",
+         f"VMG mejor que el {sem['percentil']} % de la flota" if sem else "faltan barcos con datos (mín. 5)",
+         SEMAFORO[sem["nivel"]] if sem else None),
     ])
     pdf.set_font("Texto", "", 8.5)
     pdf.set_text_color(*TINTA2)
@@ -537,11 +542,30 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
             vm = _vmg_por_progreso(ctx, tramo, v)
             if vm:
                 series.append((xs, [np.nan if x is None else x for x in vm], ctx.color[v], 0.7 if v == ref else 0.35, False))
+        # escora frente a VMG (como en la web): a la derecha, con el gráfico de VMG más estrecho
+        eo = tramo.get("escora_optima") or {}
+        curva = None if es_l else eo.get("curva")
+        hv = pdf.h - yv - 16
         if series:
-            g.grafico(pdf, MARGEN, yv, 200, pdf.h - yv - 16, series, (0, 100), xticks=(0, 25, 50, 75, 100), xfmt=lambda t: f"{t} %",
-                      titulo=("VMC" if es_l else "VMG") + " a lo largo del tramo, en kn. (cada décima del tramo de cada barco)")
-            g.leyenda(pdf, MARGEN + 206, yv + 6, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[:3]])
-            g.leyenda(pdf, MARGEN + 206, yv + 11, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[3:]])
+            wv = 138 if curva else 200
+            g.grafico(pdf, MARGEN, yv, wv, hv, series, (0, 100), xticks=(0, 25, 50, 75, 100), xfmt=lambda t: f"{t} %",
+                      titulo=("VMC" if es_l else "VMG") + (" a lo largo del tramo, en kn." if curva else
+                                                         " a lo largo del tramo, en kn. (cada décima del tramo de cada barco)"))
+            if curva:
+                for k, v in enumerate(ctx.velas):
+                    g.leyenda(pdf, MARGEN + wv + 3, yv + 6 + 4 * k, [(ctx.color[v], ctx.vela(v), False)])
+            else:
+                g.leyenda(pdf, MARGEN + 206, yv + 6, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[:3]])
+                g.leyenda(pdf, MARGEN + 206, yv + 11, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[3:]])
+        if curva:
+            popa = tramo["tipo"] != "ceñida"
+            mia = (tramo["barcos"].get(ref) or {}).get("escora_sotavento" if popa else "escora")
+            gr = lambda x: f"{num(x, 1).removesuffix(',0')}°"
+            tit = ("Escora en popa (+ sotavento)" if popa else "Escora frente a VMG") + (
+                f" · 5 con más VMG {gr(eo['escora'])}" if eo.get("escora") is not None else "") + (
+                f" · tú {gr(mia)}" if mia is not None else "") + (" · orientativa" if curva.get("orientativa") else "")
+            xe = MARGEN + 168
+            g.escora(pdf, xe, yv, pdf.w - MARGEN - xe, hv, curva, eo.get("escora"), mia, ctx.vela(ref), titulo=tit)
 
 
 # ---------------------------------------------------------------- maniobras

@@ -271,6 +271,85 @@ def rosa(pdf, x0: float, y0: float, w: float, h: float, cortes: list, media: flo
     pdf.set_line_width(0.2)
 
 
+def escora(pdf, x0: float, y0: float, w: float, h: float, curva: dict, optima: float | None, mia: float | None,
+           nombre: str, titulo: str | None = None):
+    """VMG (y SOG) relativa por franja de escora, como en la web: puntos en % de los vecinos (o del propio
+    barco), sombreado de las franjas sin pérdida, la óptima de los 5 con más VMG (discontinua) y la del
+    barco (naranja)."""
+    if titulo:
+        pdf.set_font("Barlow", "", 8)
+        pdf.set_text_color(*TINTA2)
+        pdf.set_xy(x0, y0)
+        pdf.cell(w, 4, titulo.upper())
+        y0 += 5
+        h -= 5
+    fr = curva.get("franjas") or []
+    if not fr:
+        return
+    azul, gris = (42, 120, 214), (138, 150, 156)
+    # leyenda en una línea bajo el título (las etiquetas dentro del gráfico se pisan)
+    leyenda(pdf, x0, y0, [(azul, "VMG", False), (gris, "SOG", True)] + ([(NARANJA, nombre, False)] if mia is not None else [])
+            + ([(TINTA2, "5 con más VMG", True)] if optima is not None else []), tam=6)
+    if not curva.get("orientativa") and curva.get("rango"):
+        pdf.set_fill_color(222, 234, 248)
+        pdf.rect(pdf.get_x() + 1, y0 + 0.4, 4.5, 2.4, style="F")
+        pdf.set_xy(pdf.get_x() + 6.5, y0)
+        pdf.set_text_color(*TINTA2)
+        pdf.cell(25, 3.2, "sin pérdida")
+    y0 += 4.5
+    h -= 4.5
+    ml, mb = 11, 5
+    ax0, ax1, ay0, ay1 = x0 + ml, x0 + w - 1, y0 + 1, y0 + h - mb
+    xlo, xhi = fr[0]["desde"], fr[-1]["hasta"]
+    ys = [f["vmg_rel_pct"] for f in fr] + [f["sog_rel_pct"] for f in fr if f.get("sog_rel_pct") is not None]
+    ylo, yhi = min(ys + [99]) - 1, max(ys + [100]) + 1
+    X = lambda e: ax0 + (min(max(e, xlo), xhi) - xlo) / ((xhi - xlo) or 1) * (ax1 - ax0)
+    Y = lambda v: ay1 - (v - ylo) / ((yhi - ylo) or 1) * (ay1 - ay0)
+    if not curva.get("orientativa") and curva.get("rango"):
+        pdf.set_fill_color(222, 234, 248)
+        pdf.rect(X(curva["rango"][0]), ay0, X(curva["rango"][1]) - X(curva["rango"][0]), ay1 - ay0, style="F")
+    pdf.set_line_width(0.15)
+    pdf.set_font("Mono", "", 5.5)
+    pdf.set_text_color(*TINTA3)
+    marcas = [100] + [v for v in (ylo + 1, yhi - 1) if abs(v - 100) > (yhi - ylo) * 0.15]
+    for v in marcas:
+        pdf.set_draw_color(*(LINEA if v == 100 else REJILLA))
+        pdf.line(ax0, Y(v), ax1, Y(v))
+        pdf.set_xy(x0, Y(v) - 1.6)
+        pdf.cell(ml - 1.5, 3.2, f"{v:.0f} %", align="R")
+    for e in [f["desde"] for f in fr] + [xhi]:
+        pdf.set_xy(X(e) - 5, ay1 + 0.6)
+        pdf.cell(10, 3, f"{e}°", align="C")
+    cen = [(f["desde"] + f["hasta"]) / 2 for f in fr]
+    if fr[0].get("sog_rel_pct") is not None:
+        pdf.set_draw_color(*gris)
+        pdf.set_line_width(0.35)
+        pdf.set_dash_pattern(dash=1.2, gap=0.9)
+        pdf.polyline([(X(c), Y(f["sog_rel_pct"])) for c, f in zip(cen, fr)], style="D")
+        pdf.set_dash_pattern()
+    pdf.set_draw_color(*azul)
+    pdf.set_line_width(0.5)
+    pdf.polyline([(X(c), Y(f["vmg_rel_pct"])) for c, f in zip(cen, fr)], style="D")
+    pdf.set_line_width(0.25)
+    for c, f in zip(cen, fr):
+        dentro = not curva.get("orientativa") and curva.get("rango") and f["desde"] >= curva["rango"][0] and f["hasta"] <= curva["rango"][1]
+        pdf.set_draw_color(255, 255, 255)
+        pdf.set_fill_color(*(azul if dentro else gris))
+        pdf.circle(X(c), Y(f["vmg_rel_pct"]), 0.9, style="DF")
+    pdf.set_font("Mono", "", 5.5)
+    if optima is not None:
+        pdf.set_draw_color(*TINTA2)
+        pdf.set_line_width(0.3)
+        pdf.set_dash_pattern(dash=1, gap=0.7)
+        pdf.line(X(optima), ay0, X(optima), ay1)
+        pdf.set_dash_pattern()
+    if mia is not None:
+        pdf.set_draw_color(*NARANJA)
+        pdf.set_line_width(0.5)
+        pdf.line(X(mia), ay0, X(mia), ay1)
+    pdf.set_line_width(0.2)
+
+
 def leyenda(pdf, x: float, y: float, elementos: list, tam: float = 7):
     """[(color, texto, discontinua)] en una línea."""
     pdf.set_font("Texto", "", tam)
