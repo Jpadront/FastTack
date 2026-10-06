@@ -484,8 +484,7 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
     cortes = vi.get("cortes") or []
     pct = [c["pct"] for c in cortes]
     rol = [_dif(c["twd"] - vi["twd_media"]) for c in cortes]
-    cal = bool(vi.get("tws_calibrada"))
-    pres = [c.get("tws") if cal else c.get("sog_mediana") for c in cortes]
+    pres = [c.get("sog_mediana") for c in cortes]   # presión medida en el campo (sin anemómetro)
     if cortes:
         g.rosa(pdf, xw, y0, ww, 40, cortes, vi["twd_media"], titulo="TWD · rosa del tramo")
         d = _dif(cortes[-1]["twd"] - cortes[0]["twd"])
@@ -502,9 +501,9 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
                  + f" · horquilla {num(max(rol) - min(rol), 0)}°", align="C")
     ok = [p for p in pres if p is not None]
     if cortes and ok:
-        dec = 1 if cal else 2
+        dec = 2
         g.tira(pdf, xw, y0 + 50, ww, 26, cortes, pres, vi["twd_media"], dec,
-               titulo=("TWS" if cal else "Presión: SOG mediana de la flota") + " · tira del tramo (kn.)")
+               titulo="Presión: SOG mediana de la flota · tira del tramo (kn.)")
         kmx, kmn = pres.index(max(ok)), pres.index(min(ok))
         pdf.set_xy(xw, y0 + 76)
         pdf.set_font("Texto", "", 7)

@@ -4,19 +4,20 @@
   // 10 casillas al estilo de las previsiones: los nudos, la flecha con la rolada frente a la media
   // (mismo giro que la rosa: viento de arriba) y la diferencia con la media del tramo. El color es
   // relativo al tramo (claro = menos presión, oscuro = más): con una escala absoluta de nudos todas
-  // las casillas de un tramo saldrían casi iguales. Sin calibrar, la presión es la SOG mediana.
+  // las casillas de un tramo saldrían casi iguales. La presión es la SOG mediana de la flota.
   import { num, dif } from './datos.js';
   import RosaViento from './RosaViento.svelte';
 
   let { tramo, T, senalMs } = $props();
   const cortes = $derived(tramo.viento.cortes);
-  const calibrada = $derived(tramo.viento.tws_calibrada);
   const pct = $derived(Math.max(0, Math.min(100, ((T * 1000 + senalMs - tramo.t0) / (tramo.t1 - tramo.t0)) * 100)));
-  const vals = $derived(cortes.map((c) => (calibrada ? c.tws : c.sog_mediana)));
+  // siempre la SOG mediana de la flota: es lo medido en el campo (la TWS sale de un modelo o de la
+  // propia SOG, sin anemómetro)
+  const vals = $derived(cortes.map((c) => c.sog_mediana));
   const validos = $derived(vals.filter((v) => v != null));
   const media = $derived(validos.length ? validos.reduce((a, b) => a + b, 0) / validos.length : null);
   const lo = $derived(Math.min(...validos)), hi = $derived(Math.max(...validos));
-  const dec = $derived(calibrada ? 1 : 2);
+  const dec = 2;
   const ahora = $derived(cortes.findIndex((c) => Math.abs(c.pct - pct) <= 5));
 
   const RELATIVA = [[0, [232, 245, 233]], [0.5, [129, 199, 132]], [1, [27, 110, 60]]];
@@ -31,7 +32,7 @@
   function color(v) {
     if (v == null) return null;
     // horquilla mínima (1 kn. de TWS, 0,3 kn. de SOG) para no pintar como grandes diferencias mínimas
-    const span = Math.max(hi - lo, calibrada ? 1 : 0.3), base = (lo + hi) / 2 - span / 2;
+    const span = Math.max(hi - lo, 0.3), base = (lo + hi) / 2 - span / 2;
     const c = mezcla(RELATIVA, (v - base) / span);
     const claro = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) > 150;
     return { fondo: `rgb(${c.join(',')})`, tinta: claro ? '#10222b' : '#ffffff' };
@@ -47,7 +48,7 @@
   <div class="rejilla">
     <RosaViento {tramo} {T} {senalMs} />
     <div class="pres">
-      <div class="tit">{calibrada ? 'TWS' : 'Presión: SOG mediana de la flota'} · tira del tramo</div>
+      <div class="tit">Presión: SOG mediana de la flota · tira del tramo</div>
       <div class="tira" style:--n={cortes.length} role="table" aria-label="Intensidad del viento por décimas del tramo">
         <div class="fila etq" role="row">{#each cortes as c}<span role="columnheader">{c.pct} %</span>{/each}</div>
         <div class="fila flechas" role="row">
@@ -66,15 +67,15 @@
             </span>
           {/each}
         </div>
-        <div class="fila difs" role="row">{#each vals as v}<span role="cell" class:mas={v != null && v - media >= 0.05} class:menos={v != null && v - media <= -0.05}>{v == null || media == null ? '' : signo(v - media, dec)}</span>{/each}</div>
+        <div class="fila difs" role="row">{#each vals as v}<span role="cell" class:mas={v != null && v - media >= 0.005} class:menos={v != null && v - media <= -0.005}>{v == null || media == null ? '' : signo(v - media, dec)}</span>{/each}</div>
       </div>
       {#if media != null}
         <p class="res">Media <b>{num(media, dec)} kn.</b> · de {num(lo, dec)} a {num(hi, dec)} kn. · más presión al <b>{cortes[kMax].pct} %</b>, menos al <b>{cortes[kMin].pct} %</b></p>
       {/if}
-      <p class="sub">Color relativo al tramo: claro = menos presión, oscuro = más.{calibrada ? '' : ' Sin calibrar: SOG mediana de la flota en kn.'}</p>
+      <p class="sub">Color relativo al tramo: claro = menos presión, oscuro = más. Velocidad mediana de la flota en kn.: no hay anemómetro, así que es la presión medida en el campo.</p>
     </div>
   </div>
-  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (anillo interior = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Tira: cada casilla es una décima del tiempo del líder en el tramo; el número son los nudos, la flecha la rolada frente a la media (mismo giro que la rosa) y debajo la diferencia con la media del tramo. Casillas tenues: cortes sin datos suficientes (se arrastra el valor anterior). La casilla recuadrada sigue al reproductor.</Nota>
+  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (anillo interior = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Tira: cada casilla es una décima del tiempo del líder en el tramo; el número es la SOG mediana de la flota en kn. (la presión), la flecha la rolada frente a la media (mismo giro que la rosa) y debajo la diferencia con la media del tramo. Casillas tenues: cortes sin datos suficientes (se arrastra el valor anterior). La casilla recuadrada sigue al reproductor.</Nota>
 </section>
 
 <style>
