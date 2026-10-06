@@ -484,7 +484,8 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
     cortes = vi.get("cortes") or []
     pct = [c["pct"] for c in cortes]
     rol = [_dif(c["twd"] - vi["twd_media"]) for c in cortes]
-    pres = [c.get("sog_mediana") for c in cortes]
+    cal = bool(vi.get("tws_calibrada"))
+    pres = [c.get("tws") if cal else c.get("sog_mediana") for c in cortes]
     if cortes:
         g.rosa(pdf, xw, y0, ww, 41, cortes, vi["twd_media"], titulo="TWD · rosa del tramo")
         d = _dif(cortes[-1]["twd"] - cortes[0]["twd"])
@@ -494,8 +495,17 @@ def _pagina_tramo(pdf, ctx: _Ctx, tramo, banda: str):
         pdf.cell(ww, 3.4, f"De {round(cortes[0]['twd'] % 360)}° a {round(cortes[-1]['twd'] % 360)}°: "
                  + ("sin rolada neta" if abs(d) < 0.5 else f"{num(abs(d), 0)}° a la {'derecha' if d > 0 else 'izquierda'}")
                  + f" · horquilla {num(max(rol) - min(rol), 0)}°", align="C")
-    g.grafico(pdf, xw, y0 + 50, ww, 30, [(pct, [p if p is not None else np.nan for p in pres], VERDE, 0.6, False)], (0, 100),
-              xticks=(0, 50, 100), xfmt=lambda t: f"{t} %", titulo="Presión: SOG mediana de la flota (kn.)")
+    ok = [p for p in pres if p is not None]
+    if cortes and ok:
+        dec = 1 if cal else 2
+        g.tira(pdf, xw, y0 + 50, ww, 26, cortes, pres, vi["twd_media"], dec,
+               titulo=("TWS" if cal else "Presión: SOG mediana de la flota") + " · tira del tramo (kn.)")
+        kmx, kmn = pres.index(max(ok)), pres.index(min(ok))
+        pdf.set_xy(xw, y0 + 76)
+        pdf.set_font("Texto", "", 7)
+        pdf.set_text_color(*TINTA2)
+        pdf.cell(ww, 3.4, f"Media {num(sum(ok) / len(ok), dec)} kn. · más presión al {cortes[kmx]['pct']} %, menos al {cortes[kmn]['pct']} %"
+                 " · color relativo al tramo", align="C")
     # tabla comparativa
     pdf.set_y(y0 + 84)
     bs = tramo["barcos"]

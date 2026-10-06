@@ -350,6 +350,74 @@ def escora(pdf, x0: float, y0: float, w: float, h: float, curva: dict, optima: f
     pdf.set_line_width(0.2)
 
 
+def tira(pdf, x0: float, y0: float, w: float, h: float, cortes: list, vals: list, media_twd: float, dec: int = 1,
+         titulo: str | None = None):
+    """Tira de intensidad del viento (la misma que la web): una casilla por corte con los nudos, color
+    relativo al tramo (claro = menos presión, oscuro = más), flecha con la rolada frente a la media
+    (viento de arriba, como la rosa) y diferencia con la media del tramo debajo."""
+    if titulo:
+        pdf.set_font("Barlow", "", 8)
+        pdf.set_text_color(*TINTA2)
+        pdf.set_xy(x0, y0)
+        pdf.cell(w, 4, titulo.upper())
+        y0 += 5
+        h -= 5
+    ok = [v for v in vals if v is not None]
+    if not ok:
+        return
+    lo, hi = min(ok), max(ok)
+    media = sum(ok) / len(ok)
+    span = max(hi - lo, 1 if dec == 1 else 0.3)
+    base = (lo + hi) / 2 - span / 2
+    escala = [(0, (232, 245, 233)), (0.5, (129, 199, 132)), (1, (27, 110, 60))]
+
+    def color(v):
+        f = min(max((v - base) / span, 0), 1)
+        for (x0_, c0), (x1_, c1) in zip(escala, escala[1:]):
+            if f <= x1_:
+                t = (f - x0_) / (x1_ - x0_)
+                return tuple(round(a + (b - a) * t) for a, b in zip(c0, c1))
+        return escala[-1][1]
+
+    n = len(cortes)
+    hueco = 0.6
+    cw = (w - hueco * (n - 1)) / n
+    fmt = lambda x: f"{x:.{dec}f}".replace(".", ",")
+    for k, (c, v) in enumerate(zip(cortes, vals)):
+        x = x0 + k * (cw + hueco)
+        pdf.set_font("Mono", "", 5.5)
+        pdf.set_text_color(*TINTA3)
+        pdf.set_xy(x, y0)
+        pdf.cell(cw, 2.8, f"{c['pct']} %", align="C")
+        # flecha: hacia abajo (viento de arriba) girada con la rolada
+        r = math.radians(((c["twd"] - media_twd + 180) % 360) - 180)
+        cx, cy, L = x + cw / 2, y0 + 6, 2.6
+        rot = lambda px, py: (cx + px * math.cos(r) - py * math.sin(r), cy + px * math.sin(r) + py * math.cos(r))
+        pdf.set_draw_color(*TINTA2)
+        pdf.set_line_width(0.3)
+        pdf.line(*rot(0, -L), *rot(0, L))
+        pdf.polyline([rot(-1.2, L - 1.3), rot(0, L), rot(1.2, L - 1.3)], style="D")
+        yc, hc = y0 + 10, h - 15
+        if v is None:
+            continue
+        col = color(v)
+        claro = 0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2] > 150
+        if c.get("fuente") == "arrastre":
+            col = tuple(round(255 - (255 - a) * 0.45) for a in col)
+        pdf.set_fill_color(*col)
+        pdf.rect(x, yc, cw, hc, style="F")
+        pdf.set_font("Mono", "B", 8 if cw > 7 else 6.5)
+        pdf.set_text_color(*((16, 34, 43) if claro or c.get("fuente") == "arrastre" else (255, 255, 255)))
+        pdf.set_xy(x, yc)
+        pdf.cell(cw, hc, fmt(v), align="C")
+        d = round(v - media, dec)
+        pdf.set_font("Mono", "", 5.5)
+        pdf.set_text_color(*((26, 127, 75) if d > 0 else (192, 57, 43) if d < 0 else TINTA3))
+        pdf.set_xy(x, yc + hc + 0.6)
+        pdf.cell(cw, 2.8, ("+" if d > 0 else "−" if d < 0 else "±") + fmt(abs(d)), align="C")
+    pdf.set_line_width(0.2)
+
+
 def leyenda(pdf, x: float, y: float, elementos: list, tam: float = 7):
     """[(color, texto, discontinua)] en una línea."""
     pdf.set_font("Texto", "", tam)

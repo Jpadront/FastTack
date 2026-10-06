@@ -1,1 +1,1 @@
-__version__ = "0.44.0"  # semáforo y escora en los PDF
+__version__ = "0.45.0"  # tira de intensidad del viento

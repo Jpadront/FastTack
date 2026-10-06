@@ -1,91 +1,102 @@
 <script>
   import Nota from '../Nota.svelte';
-  // Evolución del viento en un tramo: la TWD en una rosa (RosaViento) y la presión frente al % del
-  // tramo. El cursor sigue al reproductor. Todo estimado a partir de la flota.
-  import { num } from './datos.js';
+  // Evolución del viento en un tramo: la TWD en una rosa (RosaViento) y la intensidad en una tira de
+  // 10 casillas al estilo de las previsiones: los nudos, la flecha con la rolada frente a la media
+  // (mismo giro que la rosa: viento de arriba) y la diferencia con la media del tramo. El color es
+  // relativo al tramo (claro = menos presión, oscuro = más): con una escala absoluta de nudos todas
+  // las casillas de un tramo saldrían casi iguales. Sin calibrar, la presión es la SOG mediana.
+  import { num, dif } from './datos.js';
   import RosaViento from './RosaViento.svelte';
 
   let { tramo, T, senalMs } = $props();
-  const H = 130, M = { l: 58, r: 14, t: 14, b: 22 };
-  let W = $state(520); // ancho real del contenedor: el texto no escala
   const cortes = $derived(tramo.viento.cortes);
   const calibrada = $derived(tramo.viento.tws_calibrada);
   const pct = $derived(Math.max(0, Math.min(100, ((T * 1000 + senalMs - tramo.t0) / (tramo.t1 - tramo.t0)) * 100)));
-  let hover = $state(null);
+  const vals = $derived(cortes.map((c) => (calibrada ? c.tws : c.sog_mediana)));
+  const validos = $derived(vals.filter((v) => v != null));
+  const media = $derived(validos.length ? validos.reduce((a, b) => a + b, 0) / validos.length : null);
+  const lo = $derived(Math.min(...validos)), hi = $derived(Math.max(...validos));
+  const dec = $derived(calibrada ? 1 : 2);
+  const ahora = $derived(cortes.findIndex((c) => Math.abs(c.pct - pct) <= 5));
 
-  function escala(vals, pad) {
-    const v = vals.filter((x) => x != null);
-    let lo = Math.min(...v), hi = Math.max(...v);
-    if (hi - lo < pad) { const c = (lo + hi) / 2; lo = c - pad / 2; hi = c + pad / 2; }
-    return [lo, hi];
+  const RELATIVA = [[0, [232, 245, 233]], [0.5, [129, 199, 132]], [1, [27, 110, 60]]];
+  function mezcla(escala, x) {
+    if (x <= escala[0][0]) return escala[0][1];
+    for (let k = 1; k < escala.length; k++) {
+      const [x1, c1] = escala[k], [x0, c0] = escala[k - 1];
+      if (x <= x1) { const f = (x - x0) / (x1 - x0); return c0.map((v, i) => Math.round(v + (c1[i] - v) * f)); }
+    }
+    return escala[escala.length - 1][1];
   }
-  const X = (p) => M.l + (p / 100) * (W - M.l - M.r);
-  function serie(vals, lo, hi) {
-    const Y = (v) => H - M.b - ((v - lo) / (hi - lo)) * (H - M.t - M.b);
-    let d = '', abierto = false;
-    cortes.forEach((c, k) => { const v = vals[k]; if (v == null) { abierto = false; return; } d += (abierto ? 'L' : 'M') + X(c.pct).toFixed(1) + ' ' + Y(v).toFixed(1); abierto = true; });
-    return { d, Y };
+  function color(v) {
+    if (v == null) return null;
+    // horquilla mínima (1 kn. de TWS, 0,3 kn. de SOG) para no pintar como grandes diferencias mínimas
+    const span = Math.max(hi - lo, calibrada ? 1 : 0.3), base = (lo + hi) / 2 - span / 2;
+    const c = mezcla(RELATIVA, (v - base) / span);
+    const claro = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) > 150;
+    return { fondo: `rgb(${c.join(',')})`, tinta: claro ? '#10222b' : '#ffffff' };
   }
-  const pres = $derived(cortes.map((c) => (calibrada ? c.tws : c.sog_mediana)));
-  const ePres = $derived(escala(pres, calibrada ? 2 : 0.6));
-  const sPres = $derived(serie(pres, ...ePres));
-
-  function mover(e) {
-    const r = e.currentTarget.getBoundingClientRect();
-    const p = ((e.clientX - r.left) / r.width * W - M.l) / (W - M.l - M.r) * 100;
-    let k = 0; cortes.forEach((c, i) => { if (Math.abs(c.pct - p) < Math.abs(cortes[k].pct - p)) k = i; });
-    hover = k;
-  }
+  const rol = (c) => dif(c.twd - tramo.viento.twd_media);
+  const signo = (x, d) => { const r = Number(x.toFixed(d)); return (r > 0 ? '+' : r < 0 ? '−' : '±') + num(Math.abs(r), d); };
+  // décimas con más y menos presión
+  const kMax = $derived(vals.indexOf(hi)), kMin = $derived(vals.indexOf(lo));
 </script>
 
 <section class="tarjeta bloque">
   <h3>Evolución del viento <span class="est">estimado</span></h3>
   <div class="rejilla">
-  <RosaViento {tramo} {T} {senalMs} />
-  <div class="pres" bind:clientWidth={W}>
-  {#each [[calibrada ? 'TWS (kn)' : 'Presión: SOG mediano de la flota (kn)', sPres, ePres, pres, (v) => num(v, calibrada ? 1 : 2) + ' kn.']] as [titulo, s, e, vals, fmt]}
-    <div class="g">
-      <div class="tit">{titulo}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={titulo} onpointermove={mover} onpointerleave={() => (hover = null)}>
-        {#each [0, 0.5, 1] as f}
-          {@const y = H - M.b - f * (H - M.t - M.b)}
-          <line x1={M.l} x2={W - M.r} y1={y} y2={y} class="rej" />
-          <text x={M.l - 6} y={y + 4} class="eje" text-anchor="end">{fmt(e[0] + f * (e[1] - e[0]))}</text>
-        {/each}
-        {#each [0, 25, 50, 75, 100] as p}<text x={X(p)} y={H - 6} class="eje" text-anchor="middle">{p} %</text>{/each}
-        <path d={s.d} class="linea" />
-        {#each cortes as c, k}{#if vals[k] != null}<circle cx={X(c.pct)} cy={s.Y(vals[k])} r={c.fuente === 'arrastre' ? 3 : 4} class:arrastre={c.fuente === 'arrastre'} class="punto" />{/if}{/each}
-        <line x1={X(pct)} x2={X(pct)} y1={M.t} y2={H - M.b} class="cursor" />
-        {#if hover != null && vals[hover] != null}
-          <g transform={`translate(${Math.min(X(cortes[hover].pct), W - 124)}, ${M.t})`}>
-            <rect width="112" height="20" rx="3" class="tip" /><text x="6" y="14" class="tiptxt">{cortes[hover].pct} % · {fmt(vals[hover])}</text>
-          </g>
-        {/if}
-      </svg>
+    <RosaViento {tramo} {T} {senalMs} />
+    <div class="pres">
+      <div class="tit">{calibrada ? 'TWS' : 'Presión: SOG mediana de la flota'} · tira del tramo</div>
+      <div class="tira" style:--n={cortes.length} role="table" aria-label="Intensidad del viento por décimas del tramo">
+        <div class="fila etq" role="row">{#each cortes as c}<span role="columnheader">{c.pct} %</span>{/each}</div>
+        <div class="fila flechas" role="row">
+          {#each cortes as c}
+            <span role="cell" title={`TWD ${Math.round(((c.twd % 360) + 360) % 360)}° (${signo(rol(c), 0)}° frente a la media)`}>
+              <svg viewBox="-10 -10 20 20" aria-hidden="true"><g transform={`rotate(${rol(c)})`}><path d="M0 -7 L0 6 M-3.5 2 L0 6.5 L3.5 2" /></g></svg>
+            </span>
+          {/each}
+        </div>
+        <div class="fila valores" role="row">
+          {#each cortes as c, k}
+            {@const col = color(vals[k])}
+            <span role="cell" class:arrastre={c.fuente === 'arrastre'} class:ahora={k === ahora} style:background={col?.fondo} style:color={col?.tinta}
+                  title={`${c.pct} %: ${vals[k] == null ? 'sin dato' : num(vals[k], dec) + ' kn.'}${c.fuente === 'arrastre' ? ' (sin datos: valor anterior)' : ''}`}>
+              {vals[k] == null ? '—' : num(vals[k], dec)}
+            </span>
+          {/each}
+        </div>
+        <div class="fila difs" role="row">{#each vals as v}<span role="cell" class:mas={v != null && v - media >= 0.05} class:menos={v != null && v - media <= -0.05}>{v == null || media == null ? '' : signo(v - media, dec)}</span>{/each}</div>
+      </div>
+      {#if media != null}
+        <p class="res">Media <b>{num(media, dec)} kn.</b> · de {num(lo, dec)} a {num(hi, dec)} kn. · más presión al <b>{cortes[kMax].pct} %</b>, menos al <b>{cortes[kMin].pct} %</b></p>
+      {/if}
+      <p class="sub">Color relativo al tramo: claro = menos presión, oscuro = más.{calibrada ? '' : ' Sin calibrar: SOG mediana de la flota en kn.'}</p>
     </div>
-  {/each}
   </div>
-  </div>
-  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (anillo interior = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Presión: eje horizontal en % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
+  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (anillo interior = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Tira: cada casilla es una décima del tiempo del líder en el tramo; el número son los nudos, la flecha la rolada frente a la media (mismo giro que la rosa) y debajo la diferencia con la media del tramo. Casillas tenues: cortes sin datos suficientes (se arrastra el valor anterior). La casilla recuadrada sigue al reproductor.</Nota>
 </section>
 
 <style>
   .bloque { padding: 10px 12px; }
   h3 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); margin-bottom: 4px; }
   .est { color: var(--estimado); font-size: 11px; }
-  .g { margin-top: 4px; }
   .rejilla { display: grid; grid-template-columns: minmax(260px, 420px) 1fr; gap: 16px; align-items: center; }
   .pres { min-width: 0; }
   @media (max-width: 720px) { .rejilla { grid-template-columns: 1fr; } }
-  .tit { font: 600 12px var(--display); color: var(--tinta-2); }
-  svg { width: 100%; height: 130px; display: block; touch-action: pan-y; }
-  .rej { stroke: var(--rejilla); stroke-width: 1; }
-  .eje { font: 500 10px var(--mono); fill: var(--tinta-3); }
-  .linea { fill: none; stroke: var(--estimado); stroke-width: 2; }
-  .punto { fill: var(--estimado); stroke: var(--panel); stroke-width: 2; }
-  .punto.arrastre { fill: var(--panel); stroke: var(--estimado); stroke-width: 1.5; }
-  .cursor { stroke: var(--tinta); stroke-width: 1; }
-  .tip { fill: var(--tinta); }
-  .tiptxt { font: 500 11px var(--mono); fill: var(--panel); }
-  .nota { font-size: 12px; color: var(--tinta-3); margin: 4px 0 0; }
+  .tit { font: 600 12px var(--display); color: var(--tinta-2); margin-bottom: 6px; }
+  .tira { display: grid; gap: 2px; }
+  .fila { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 2px; text-align: center; }
+  .etq span { font: 500 10px var(--mono); color: var(--tinta-3); }
+  .flechas svg { width: 22px; height: 22px; display: block; margin: 0 auto; }
+  .flechas path { fill: none; stroke: var(--tinta-2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .valores span { font: 700 15px var(--mono); padding: 10px 0; border-radius: 3px; border: 2px solid transparent; }
+  .valores span.arrastre { opacity: .45; }
+  .valores span.ahora { border-color: var(--tinta); }
+  .difs span { font: 500 10px var(--mono); color: var(--tinta-3); }
+  .difs span.mas { color: #1a7f4b; }
+  .difs span.menos { color: #c0392b; }
+  .res { font-size: 13px; color: var(--tinta-2); margin: 8px 0 0; }
+  .sub { font-size: 12px; color: var(--tinta-3); margin: 4px 0 0; }
+  @media (max-width: 480px) { .valores span { font-size: 12px; padding: 8px 0; } .etq span, .difs span { font-size: 8.5px; } }
 </style>
