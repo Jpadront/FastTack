@@ -1,4 +1,5 @@
 <script>
+  import Insignia from './Insignia.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { api, horaLocal, duracion, clave } from './api.js';
   import SubirVkx from './SubirVkx.svelte';
@@ -176,7 +177,7 @@
   <header class="cab">
     <div>
       <div class="etiqueta">{camp.clase} · {camp.division} · {horaLocal(camp.inicio, camp.tz_offset_ms).split(' · ')[0]} – {horaLocal(camp.fin, camp.tz_offset_ms).split(' · ')[0]}</div>
-      <h1>{camp.nombre}</h1>
+      <div class="titulo"><Insignia clase={camp.clase || camp.division} tam={46} /><h1>{camp.nombre}</h1></div>
       <p class="tenue">{camp.pruebas.filter((p) => !p.excluida).length} pruebas · {camp.barcos.length} {camp.barcos.length === 1 ? 'barco' : 'barcos'} · {propia ? `archivos .vkx del Atlas (${camp.archivos.length})` : `datos de RaceSense (revisión ${camp.revision})`}</p>
       <div class="acciones-camp">
         <a class="boton resumen" href={`#/c/${encodeURIComponent(id)}/resumen`}>Resumen {propia ? 'de la sesión' : 'del campeonato'} →</a>
@@ -334,6 +335,7 @@
   @media (prefers-reduced-motion: reduce) { .rueda { animation: none; } }
   .volver { display: inline-block; font: 600 14px var(--display); color: var(--tinta-2); text-decoration: none; margin-bottom: 4px; }
   .cab { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .titulo { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
   .cab h1 { font-size: clamp(24px, 4vw, 34px); margin-top: 2px; }
   .cab p { margin: 4px 0 0; }
   .selector { display: grid; gap: 4px; min-width: min(320px, 100%); }
