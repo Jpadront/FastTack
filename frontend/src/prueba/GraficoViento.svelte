@@ -66,7 +66,7 @@
   {/each}
   </div>
   </div>
-  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (centro = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Presión: eje horizontal en % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
+  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (anillo interior = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Presión: eje horizontal en % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
 </section>
 
 <style>

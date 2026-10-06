@@ -194,6 +194,83 @@ def grafico(pdf, x0: float, y0: float, w: float, h: float, series: list, xlim, y
     pdf.set_line_width(0.2)
 
 
+def rosa(pdf, x0: float, y0: float, w: float, h: float, cortes: list, media: float, color=(106, 90, 205),
+         titulo: str | None = None):
+    """Rosa de la TWD de un tramo (la misma que la web): ángulo = TWD real, girada con la media arriba
+    (mirando a barlovento: a la derecha, rolada a la derecha); distancia al centro = % del tramo, del
+    anillo interior (inicio) al borde (final). Sombreado: horquilla. cortes: [{pct, twd, fuente}]."""
+    if titulo:
+        pdf.set_font("Barlow", "", 8)
+        pdf.set_text_color(*TINTA2)
+        pdf.set_xy(x0, y0)
+        pdf.cell(w, 4, titulo.upper())
+        y0 += 5
+        h -= 5
+    if not cortes:
+        return
+    dif = lambda a: (a + 180) % 360 - 180
+    rel = [dif(c["twd"] - media) for c in cortes]
+    A = min(90, max(30, math.ceil((max(abs(r) for r in rel) + 5) / 10) * 10))
+    # radio que cabe a lo alto (etiquetas de grados arriba; abajo acaba en el anillo de inicio) y a lo ancho
+    R = min((h - 6) / (1 - 0.3 * math.cos(math.radians(A))), (w - 18) / (2 * math.sin(math.radians(A))))
+    R0 = 0.3 * R
+    cx, cy = x0 + w / 2, y0 + 5 + R
+    xy = lambda g, r: (cx + r * math.sin(math.radians(g)), cy - r * math.cos(math.radians(g)))
+    rad = lambda p: R0 + (R - R0) * p / 100
+
+    def corona(r1, a0, a1, n=40):
+        return [xy(a0 + (a1 - a0) * k / n, r1) for k in range(n + 1)] + [xy(a1 - (a1 - a0) * k / n, R0) for k in range(n + 1)]
+
+    pdf.set_line_width(0.2)
+    pdf.set_draw_color(*LINEA)
+    pdf.set_fill_color(*AGUA)
+    pdf.polygon(corona(R, -A, A), style="DF")
+    claro = tuple(round(255 - (255 - c) * 0.14) for c in color)
+    pdf.set_fill_color(*claro)
+    pdf.polygon(corona(R, min(rel), max(rel)), style="F")
+    pdf.set_draw_color(*REJILLA)
+    pdf.set_line_width(0.15)
+    pdf.set_font("Mono", "", 5)
+    pdf.set_text_color(*TINTA3)
+    for p in (25, 50, 75):
+        pdf.polyline([xy(-A + 2 * A * k / 40, rad(p)) for k in range(41)], style="D")
+    for p in (0, 25, 50, 75):
+        x, y = xy(-A, rad(p))
+        pdf.set_xy(x - 9, y - 1.4)
+        pdf.cell(8, 2.8, f"{p} %", align="R")
+    # marcas en grados reales de la rosa
+    paso, cada = (10, 30) if A > 60 else (5, 10)
+    g = math.ceil((media - A) / paso) * paso
+    pdf.set_draw_color(*TINTA3)
+    while g <= media + A + 1e-6:
+        etq = round(g % 360) % cada == 0
+        pdf.line(*xy(g - media, R), *xy(g - media, R + (1.6 if etq else 0.9)))
+        if etq:
+            x, y = xy(g - media, R + 3.6)
+            pdf.set_xy(x - 5, y - 1.4)
+            pdf.cell(10, 2.8, f"{round(g % 360)}°", align="C")
+        g += paso
+    pdf.set_dash_pattern(dash=0.8, gap=0.6)
+    pdf.line(*xy(0, R0), *xy(0, R))
+    pdf.set_dash_pattern()
+    pts = [xy(r, rad(c["pct"])) for r, c in zip(rel, cortes)]
+    pdf.set_draw_color(*color)
+    pdf.set_line_width(0.5)
+    pdf.polyline(pts, style="D")
+    n = max(1, len(cortes) - 1)
+    pdf.set_line_width(0.25)
+    for k, ((x, y), c) in enumerate(zip(pts, cortes)):
+        op = 0.3 + 0.7 * k / n          # se oscurecen con el tiempo
+        pdf.set_draw_color(255, 255, 255)
+        if c.get("fuente") == "arrastre":
+            pdf.set_fill_color(255, 255, 255)
+            pdf.set_draw_color(*color)
+        else:
+            pdf.set_fill_color(*(round(255 - (255 - v) * op) for v in color))
+        pdf.circle(x, y, 1.1, style="DF")
+    pdf.set_line_width(0.2)
+
+
 def leyenda(pdf, x: float, y: float, elementos: list, tam: float = 7):
     """[(color, texto, discontinua)] en una línea."""
     pdf.set_font("Texto", "", tam)

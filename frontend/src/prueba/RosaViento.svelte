@@ -1,24 +1,27 @@
 <script>
   // Rosa de la TWD de un tramo: el ángulo es la dirección real del viento (sin exagerar) y la
-  // distancia al centro, el avance del tramo (centro = inicio, borde = final). La rosa se gira para
+  // distancia al centro, el avance del tramo (anillo interior = inicio, borde = final; no se empieza
+  // en el centro porque ahí los ángulos no se distinguen). La rosa se gira para
   // que la TWD media quede arriba, como mirando a barlovento: un punto a la derecha de la media es
   // viento rolado a la derecha. Solo se dibuja el sector que hace falta (±30° como mínimo).
   import { num, dif, twdEn } from './datos.js';
 
   let { tramo, T, senalMs } = $props();
-  const R = 200, R0 = 16;
+  const R = 200, R0 = 60;
   const cortes = $derived(tramo.viento.cortes);
   const media = $derived(tramo.viento.twd_media);
   const rel = $derived(cortes.map((c) => dif(c.twd - media)));
   const A = $derived(Math.min(180, Math.max(30, Math.ceil((Math.max(...rel.map(Math.abs)) + 5) / 10) * 10)));
-  // geometría: centro abajo; si el sector pasa de 90° la rosa crece por debajo del centro
+  // geometría: centro abajo (fuera del dibujo); si el sector pasa de 90° la rosa crece por debajo
   const ANCHO = $derived(2 * R * Math.sin((Math.min(A, 90) * Math.PI) / 180) + 90);
   const cx = $derived(ANCHO / 2), cy = R + 34;
-  const ALTO = $derived(cy + Math.max(0, -Math.cos((A * Math.PI) / 180)) * R + 12);
+  const ALTO = $derived(cy - (A <= 90 ? R0 : R) * Math.cos((A * Math.PI) / 180) + 14);
   const rad = (p) => R0 + ((R - R0) * p) / 100;
   const xy = (g, r) => [cx + r * Math.sin((g * Math.PI) / 180), cy - r * Math.cos((g * Math.PI) / 180)];
   const arco = (r, a0, a1) => { const [x0, y0] = xy(a0, r), [x1, y1] = xy(a1, r); return `M${x0} ${y0}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
-  const cuña = (r, a0, a1) => `M${cx} ${cy}L${arco(r, a0, a1).slice(1)}Z`;
+  // sector de corona entre el anillo de inicio (R0) y el radio r
+  const cuña = (r, a0, a1) => { const [x, y] = xy(a1, R0), [x0, y0] = xy(a0, R0);
+    return `${arco(r, a0, a1)}L${x} ${y}A${R0} ${R0} 0 ${a1 - a0 > 180 ? 1 : 0} 0 ${x0} ${y0}Z`; };
   const norte = (g) => Math.round(((g % 360) + 360) % 360);
   // marcas cada 5° (o 10° si el sector es grande) en grados reales de la rosa
   const paso = $derived(A > 60 ? 10 : 5), cada = $derived(A > 60 ? 30 : 10);
@@ -48,8 +51,8 @@
       <line x1={x0} y1={y0} x2={x1} y2={y1} class="marca" />
       {#if m.etq}<text x={xt} y={yt + 4} class="eje" text-anchor="middle">{norte(m.g)}°</text>{/if}
     {/each}
-    {#each [25, 50, 75] as p}{@const [x, y] = xy(-A, rad(p))}<text x={x - 7} y={y + 3} class="eje peq" text-anchor="end">{p} %</text>{/each}
-    <line x1={cx} y1={cy} x2={xy(0, R)[0]} y2={xy(0, R)[1]} class="media" />
+    {#each [0, 25, 50, 75] as p}{@const [x, y] = xy(-A, rad(p))}<text x={x - 7} y={y + 3} class="eje peq" text-anchor="end">{p} %</text>{/each}
+    <line x1={cx} y1={cy - R0} x2={xy(0, R)[0]} y2={xy(0, R)[1]} class="media" />
     <path d={traza} class="linea" />
     {#each pts as p, k}
       <circle cx={p.x} cy={p.y} r={p.c.fuente === 'arrastre' ? 3 : 4.5} class="punto" class:arrastre={p.c.fuente === 'arrastre'} style:fill-opacity={p.c.fuente === 'arrastre' ? 1 : p.op} />
@@ -57,7 +60,6 @@
     {/each}
     <path d={arco(rad(pct), -A, A)} class="cursor" />
     <circle cx={ahora[0]} cy={ahora[1]} r="5" class="ahora" />
-    <circle cx={cx} cy={cy} r="3" class="centro" />
     {#if hover != null}
       {@const p = pts[hover]}
       <g transform={`translate(${Math.max(4, Math.min(p.x - 56, ANCHO - 116))}, ${Math.max(2, p.y - 30)})`}>
@@ -86,7 +88,6 @@
   .diana { fill: transparent; }
   .cursor { fill: none; stroke: var(--tinta); stroke-width: 1; stroke-dasharray: 2 3; }
   .ahora { fill: var(--tinta); stroke: var(--panel); stroke-width: 2; }
-  .centro { fill: var(--tinta-3); }
   .tip { fill: var(--tinta); }
   .tiptxt { font: 500 11px var(--mono); fill: var(--panel); }
   .pie { display: flex; justify-content: space-between; gap: 12px; width: 100%; max-width: 340px; font: 500 11px var(--mono); color: var(--tinta-3); }

@@ -1,1 +1,1 @@
-__version__ = "0.42.0"  # rosa de la TWD por tramo
+__version__ = "0.43.0"  # rosa de la TWD también en el PDF
