@@ -99,6 +99,7 @@
 
   // Gráficos
   let W1 = $state(560), W2 = $state(360), W3 = $state(360);
+  let hoverP = $state(null);   // maniobra señalada en el gráfico de consistencia
   const H1 = 220, H2 = 260, H3 = 220, M = { l: 40, r: 10, t: 12, b: 26 };
   const sogs = $derived([...pMias, ...pOtras].flatMap((p) => p.map((q) => q?.sog)).filter((x) => x != null));
   const sLo = $derived(sogs.length ? Math.floor(Math.min(...sogs)) : 0), sHi = $derived(sogs.length ? Math.ceil(Math.max(...sogs)) : 1);
@@ -180,7 +181,22 @@
         <svg viewBox={`0 0 ${W3} ${H3}`} style:height={H3 + 'px'} role="img" aria-label="SOG de entrada frente a metros perdidos">
           {#each [0, pHi / 2, pHi] as p}<line x1={M.l} x2={W3 - M.r} y1={Y3(p)} y2={Y3(p)} class="rej" /><text x={M.l - 6} y={Y3(p) + 4} class="eje" text-anchor="end">{num(p, 0)} m.</text>{/each}
           {#each Array.from({ length: eHi - eLo + 1 }, (_, k) => eLo + k) as s}<text x={X3(s)} y={H3 - 8} class="eje" text-anchor={s === eHi ? "end" : "middle"}>{s} kn.</text>{/each}
-          {#each puntos as [m, mio]}<circle cx={X3(m.detalle.sog_entrada_kn)} cy={Y3(m.detalle.perdida_m)} r={mio ? 5 : 3.5} fill={mio ? COLOR_YO : COLOR_OTRO} fill-opacity={mio ? 1 : 0.6} stroke="var(--panel)" stroke-width="1.5"><title>{vc(m.v)} · {m.tramo.nombre} · {n(m.detalle.sog_entrada_kn, 2, ' kn.')} → {n(m.detalle.perdida_m, 1, ' m.')}</title></circle>{/each}
+          {#each puntos as [m, mio], k}
+            <circle cx={X3(m.detalle.sog_entrada_kn)} cy={Y3(m.detalle.perdida_m)} r={mio ? 5 : 3.5} fill={mio ? COLOR_YO : COLOR_OTRO} fill-opacity={mio ? 1 : 0.6}
+                    stroke={hoverP === k ? 'var(--tinta)' : 'var(--panel)'} stroke-width={hoverP === k ? 2 : 1.5} />
+            <circle cx={X3(m.detalle.sog_entrada_kn)} cy={Y3(m.detalle.perdida_m)} r="11" fill="transparent" role="presentation"
+                    onpointerenter={() => (hoverP = k)} onpointerdown={() => (hoverP = k)} onpointerleave={() => (hoverP = null)} />
+          {/each}
+          {#if hoverP != null && puntos[hoverP]}
+            {@const [m, mio] = puntos[hoverP]}{@const x = X3(m.detalle.sog_entrada_kn)}{@const y = Y3(m.detalle.perdida_m)}
+            <g transform={`translate(${Math.max(2, Math.min(x - 80, W3 - 164))}, ${y > H3 / 2 ? y - 72 : y + 12})`} pointer-events="none">
+              <rect width="160" height="62" rx="3" class="tip" />
+              <text x="8" y="15" class="tiptxt">{vc(m.v)} · {m.tramo.nombre}</text>
+              <text x="8" y="29" class="tiptxt">Entrada {n(m.detalle.sog_entrada_kn, 2, ' kn.')}</text>
+              <text x="8" y="43" class="tiptxt">Pérdida {n(m.detalle.perdida_m, 1, ' m.')} · {n(m.detalle.perdida_s, 1, ' s.')}</text>
+              <text x="8" y="57" class="tiptxt">Giro {n(m.detalle.duracion_giro_s, 0, ' s.')} · {fmtT((m.t - an.senal) / 1000)}{m.detalle.encadenada ? ' · enc.' : ''}</text>
+            </g>
+          {/if}
         </svg>
       </div>
       <p class="pie">Un grupo compacto es una ejecución repetible; compara maniobras parecidas, no la mejor aislada.</p>
@@ -253,6 +269,8 @@
   .modos { display: flex; gap: 4px; }
   .modos button { font: 600 13px var(--display); padding: 4px 10px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); cursor: pointer; }
   .modos button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
+  .tip { fill: var(--tinta); }
+  .tiptxt { font: 500 11px var(--mono); fill: var(--panel); }
   .lectura { margin: 2px 0 8px; padding-left: 18px; font-size: 13px; color: var(--tinta); }
   .fichas { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 6px 0; }
   .fichas div { display: grid; gap: 1px; }
