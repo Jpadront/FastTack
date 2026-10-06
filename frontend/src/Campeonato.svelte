@@ -124,7 +124,7 @@
   const COLOR_SEM = { bien: '#1a7f4b', normal: '#d39b00', mal: '#c0392b' };
   let semaforos = $state({});
   $effect(() => { if (camp?.pruebas && miClave) api.semaforos(id, miClave).then((r) => (semaforos = r)).catch(() => {}); });
-  const textoSem = (x) => (x ? `${x.nivel}: VMG mejor que el ${x.percentil} % de la flota` + (x['percentil_ceñida'] != null && x.percentil_popa != null ? ` (ceñida ${x['percentil_ceñida']} %, popa ${x.percentil_popa} %)` : '') : '');
+  const textoSem = (x) => (x ? `${x.nivel}: más VMG que el ${x.percentil} % de la flota` + (x['percentil_ceñida'] != null && x.percentil_popa != null ? ` (en ceñida, que el ${x['percentil_ceñida']} %; en popa, que el ${x.percentil_popa} %)` : '') : '');
   function editarReglaje(p) {
     if (reglajeDe === p.clave) { reglajeDe = null; return; }
     reglajeDe = p.clave;

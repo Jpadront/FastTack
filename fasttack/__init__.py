@@ -1,1 +1,1 @@
-__version__ = "0.47.2"  # salida: datos del disparo con huecos de hasta 15 s
+__version__ = "0.47.3"  # texto del semáforo más claro

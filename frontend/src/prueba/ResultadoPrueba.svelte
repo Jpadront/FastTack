@@ -34,7 +34,7 @@
     <div class="dato">
       <span class="et">Velocidad frente a la flota</span>
       <b class="txt"><i class="sem" style:background={SEMAFORO[sem.nivel]}></i>{sem.nivel}</b>
-      <span class="det">VMG mejor que el {sem.percentil} % de la flota{sem['ceñida'] != null && sem.popa != null ? ` (ceñida ${sem['ceñida']} %, popa ${sem.popa} %)` : ''}</span>
+      <span class="det">Más VMG que el {sem.percentil} % de la flota{sem['ceñida'] != null && sem.popa != null ? ` (en ceñida, que el ${sem['ceñida']} %; en popa, que el ${sem.popa} %)` : ''}</span>
     </div>
   {/if}
   {#if d}

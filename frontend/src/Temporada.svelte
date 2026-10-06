@@ -97,7 +97,7 @@
           <td class="num">{f.dia.split('-').reverse().join('/')}</td><td>{f.nombre}</td>
           <td class="n"><a href={`#/c/${encodeURIComponent(f.campeonato)}/p/${f.clave}`}>P{f.numero}</a></td>
           <td class="n num">{f.puesto}/{f.barcos}</td><td class="num">{f.viento_kn ? num(f.viento_kn, 0) + ' kn.' : '—'}</td>
-          <td class="sens">{#if f.semaforo}<span title={`VMG mejor que el ${f.semaforo.percentil} % de la flota`}><i style:background={SEM.find(([k]) => k === f.semaforo.nivel)?.[1]}></i>{f.semaforo.nivel} · {f.semaforo.percentil} %</span>{:else}<span class="tenue">—</span>{/if}</td>
+          <td class="sens">{#if f.semaforo}<span title={`Más VMG que el ${f.semaforo.percentil} % de la flota`}><i style:background={SEM.find(([k]) => k === f.semaforo.nivel)?.[1]}></i>{f.semaforo.nivel} · {f.semaforo.percentil} %</span>{:else}<span class="tenue">—</span>{/if}</td>
           <td class="n num" class:bien={f.vmg_ceñida_frente_top5 > 0.02} class:mal={f.vmg_ceñida_frente_top5 < -0.02}>{fmt(f.vmg_ceñida_frente_top5)} kn.</td>
           <td class="tenue">{Object.entries(f.reglaje).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</td></tr>{/each}</tbody>
       </table></div>
