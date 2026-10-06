@@ -24,7 +24,7 @@ from . import tramos as tm
 from .trazas import Traza, construir
 from .viento import calibrar_tws, fases, quien_primero, tws_modelo, viento_largo, viento_tramo
 
-VERSION = "0.22.0"
+VERSION = "0.23.0"
 COBERTURA_MIN = 0.25         # fracción mínima del tramo con datos para dar medias (si no: «datos insuficientes»)
 ESCORA_ATIPICA = 6.0         # grados: una escora a más de esto (o de 3 MAD) de la mediana de la flota no cuenta para la óptima
 COBERTURA_DISTANCIA = 0.5    # la distancia navegada cruza los huecos en línea recta: exige más datos
@@ -220,7 +220,9 @@ def analizar(prueba: dict, cols: dict, roles: dict[str, int], clase: str | None 
                                  if any(d.get(k) is not None for d in dets) else None)
                 f["maniobras_detalle"] = {k: med(k) for k in ("perdida_s", "duracion_giro_s", "tiempo_aceleracion_s",
                                                                "caida_sog_pct", "sog_entrada_kn", "sog_minima_kn",
-                                                               "salida_frente_al_top5_grados")}
+                                                               "salida_frente_al_top5_grados", "giro_max_grados_s",
+                                                               "giro_primera_mitad_pct", "pasada_grados",
+                                                               "sog_minima_tras_giro_s")}
             if cob >= COBERTURA_MIN and len(i) > 5:
                 twd = vt.twd_en(tr.ts[i])
                 ref = twd if ceñida else (twd + 180) % 360

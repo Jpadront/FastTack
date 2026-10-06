@@ -60,6 +60,43 @@
   ];
   const noAcelera = (ms) => ms.filter((m) => !m.detalle.acelerado).length;
 
+  // Forma del giro (solo con registro denso: archivos .vkx del Atlas). Tus maniobras con menos
+  // pérdida frente a las de más pérdida (mitad y mitad), para ver qué forma de girar te funciona.
+  const FORMA = [
+    ['Velocidad de giro máxima', 'giro_max_grados_s', 0, '°/s.'],
+    ['Ángulo girado en la 1.ª mitad del giro', 'giro_primera_mitad_pct', 0, ' %'],
+    ['Más allá del rumbo final (8 s. tras el giro)', 'pasada_grados', 0, '°'],
+    ['SOG mínima respecto al final del giro', 'sog_minima_tras_giro_s', 1, ' s.'],
+    ['Duración del giro', 'duracion_giro_s', 1, ' s.'],
+    ['Pérdida en tiempo', 'perdida_s', 1, ' s.'],
+  ];
+  const conForma = (ms) => ms.filter((m) => m.detalle.giro_max_grados_s != null && m.detalle.perdida_s != null);
+  const fMias = $derived(conForma(mias));
+  const fOtras = $derived(conForma(otras));
+  const partir = $derived.by(() => {
+    if (fMias.length < 6) return null;
+    const o = [...fMias].sort((a, b) => a.detalle.perdida_s - b.detalle.perdida_s), h = Math.floor(o.length / 2);
+    return { mejores: o.slice(0, h), peores: o.slice(o.length - h) };
+  });
+  const tipoGiro = (pct) => (pct == null ? '—' : pct < 45 ? 'lento al principio y rápido al final' : pct > 55 ? 'rápido al principio y lento al final' : 'uniforme');
+  const lecturaForma = $derived.by(() => {
+    if (!partir) return null;
+    const out = [], m = (ms, k) => med(ms, k);
+    const a = m(partir.mejores, 'giro_primera_mitad_pct'), b = m(partir.peores, 'giro_primera_mitad_pct');
+    if (a != null && b != null && Math.abs(a - b) >= 10)
+      out.push(`En tus ${tipo}s con menos pérdida giras el ${num(a, 0)} % del ángulo en la primera mitad (${tipoGiro(a)}); en las de más pérdida, el ${num(b, 0)} % (${tipoGiro(b)}).`);
+    const da = m(partir.mejores, 'duracion_giro_s'), db = m(partir.peores, 'duracion_giro_s');
+    if (da != null && db != null && Math.abs(da - db) >= 1)
+      out.push(`El giro dura ${num(da, 1)} s. en las mejores y ${num(db, 1)} s. en las peores.`);
+    const pa = m(partir.mejores, 'pasada_grados'), pb = m(partir.peores, 'pasada_grados');
+    if (pa != null && pb != null && Math.abs(pa - pb) >= 4)
+      out.push(`Tras el giro sigues ${num(pa, 0)}° más allá del rumbo final en las mejores y ${num(pb, 0)}° en las peores.`);
+    const ga = m(partir.mejores, 'giro_max_grados_s'), gb = m(partir.peores, 'giro_max_grados_s');
+    if (ga != null && gb != null && Math.abs(ga - gb) >= 4)
+      out.push(`Velocidad de giro máxima: ${num(ga, 0)}°/s. en las mejores y ${num(gb, 0)}°/s. en las peores.`);
+    return out.length ? out : [`Tus ${tipo}s con más y menos pérdida tienen una forma de giro parecida: la diferencia no está en cómo giras.`];
+  });
+
   // Gráficos
   let W1 = $state(560), W2 = $state(360), W3 = $state(360);
   const H1 = 220, H2 = 260, H3 = 220, M = { l: 40, r: 10, t: 12, b: 26 };
@@ -162,10 +199,28 @@
       </tbody>
     </table>
   </div>
+  {#if fMias.length}
+    <h4>Forma del giro <span class="est">estimada</span></h4>
+    <p class="sub">Tu giro típico: <b>{tipoGiro(med(fMias, 'giro_primera_mitad_pct'))}</b> ({num(med(fMias, 'giro_primera_mitad_pct'), 0)} % del ángulo en la primera mitad, {fMias.length} {tipo}s con registro del Atlas).</p>
+    {#if lecturaForma}<ul class="lectura">{#each lecturaForma as l}<li>{l}</li>{/each}</ul>{/if}
+    <div class="rodillo">
+      <table class="mini">
+        <thead><tr><th></th><th class="n">{vc(ref)}</th>{#if partir}<th class="n">Con menos pérdida ({partir.mejores.length})</th><th class="n">Con más pérdida ({partir.peores.length})</th>{/if}{#if fOtras.length}<th class="n">{nombreRival}</th>{/if}</tr></thead>
+        <tbody>
+          {#each FORMA as [et, k, d, u]}
+            <tr><td>{et}</td><td class="n num">{n(med(fMias, k), d, u)}</td>
+              {#if partir}<td class="n num">{n(med(partir.mejores, k), d, u)}</td><td class="n num">{n(med(partir.peores, k), d, u)}</td>{/if}
+              {#if fOtras.length}<td class="n num">{n(med(fOtras, k), d, u)}</td>{/if}</tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    <p class="pie">Solo con el registro del Atlas (2 muestras por segundo): la telemetría de RaceSense no tiene muestras suficientes dentro de un giro de 4 a 8 s. Ángulo en la 1.ª mitad: por debajo del 45 % el giro empieza lento y acaba rápido; por encima del 55 %, al revés. «Más allá del rumbo final»: cuánto sigues girando tras el giro antes de asentarte en la nueva amura (en ceñida, arribar para acelerar o pasarte; en popa, orzar). SOG mínima: segundos tras el final del giro en que la velocidad toca fondo (negativo = durante el giro). Con menos y más pérdida: tus maniobras partidas por la mitad según la pérdida{partir ? '' : ' (hacen falta al menos 6)'}.</p>
+  {/if}
   <h4>Cada maniobra</h4>
   <div class="rodillo">
     <table class="mini">
-      <thead><tr><th>Barco</th><th>Tramo</th><th class="n">Desde la señal</th><th class="n">Entrada</th><th class="n">Mínima</th><th class="n">Estable</th><th class="n">Giro</th><th class="n">Acelera</th><th class="n">Pérdida</th></tr></thead>
+      <thead><tr><th>Barco</th><th>Tramo</th><th class="n">Desde la señal</th><th class="n">Entrada</th><th class="n">Mínima</th><th class="n">Estable</th><th class="n">Giro</th>{#if fMias.length}<th class="n">1.ª mitad</th><th class="n">Giro máx.</th>{/if}<th class="n">Acelera</th><th class="n">Pérdida</th></tr></thead>
       <tbody>
         {#each [...mias, ...(rival === 'top5' ? [] : otras)].sort((a, b) => a.t - b.t) as m}
           {@const d = m.detalle}
@@ -174,6 +229,7 @@
             <td class="n num">{fmtT((m.t - an.senal) / 1000)}</td>
             <td class="n num">{n(d.sog_entrada_kn, 2, ' kn.')}</td><td class="n num">{n(d.sog_minima_kn, 2, ' kn.')}</td><td class="n num">{n(d.sog_salida_estable_kn, 2, ' kn.')}</td>
             <td class="n num">{n(d.duracion_giro_s, 0, ' s.')}</td>
+            {#if fMias.length}<td class="n num">{n(d.giro_primera_mitad_pct, 0, ' %')}</td><td class="n num">{n(d.giro_max_grados_s, 0, '°/s.')}</td>{/if}
             <td class="n num">{d.tiempo_aceleracion_s == null ? 'no llega' : n(d.tiempo_aceleracion_s, 0, ' s.')}</td>
             <td class="n num">{n(d.perdida_m, 1, ' m.')}{d.encadenada ? ' · encadenada' : ''}</td>
           </tr>
@@ -197,6 +253,7 @@
   .modos { display: flex; gap: 4px; }
   .modos button { font: 600 13px var(--display); padding: 4px 10px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel); color: var(--tinta-2); cursor: pointer; }
   .modos button.activo { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
+  .lectura { margin: 2px 0 8px; padding-left: 18px; font-size: 13px; color: var(--tinta); }
   .fichas { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 6px 0; }
   .fichas div { display: grid; gap: 1px; }
   .fichas i { font: 600 12px var(--display); color: var(--tinta-3); text-transform: uppercase; letter-spacing: .04em; font-style: normal; }

@@ -87,3 +87,24 @@ def test_reglajes_con_semaforo():
     r = {x["valor"]: x["semaforo"] for x in comparar_reglajes(filas)}
     assert r["3"] == {"bien": 1, "normal": 1, "mal": 0}
     assert r["5"] == {"bien": 0, "normal": 0, "mal": 1}
+
+
+def test_forma_giro_registro_denso_y_disperso():
+    """Giro sintético de 90° en 6 s: lento al principio (25 % en la 1.ª mitad), con 8° de pasada."""
+    import numpy as np
+    from fasttack.motor.tramos import forma_giro
+    t = np.arange(-10, 20, 0.5)
+    f = np.clip(t / 6, 0, 1)
+    ang = 90 * f ** 2                                   # lento al principio, rápido al final
+    ang = np.where((t > 6) & (t <= 10), 90 + 8 * np.sin((t - 6) / 4 * np.pi), ang)
+    rumbo = (100 + ang) % 360
+    sog = 5 - 2 * np.exp(-((t - 7) ** 2) / 4)
+    k0, k1 = int(np.searchsorted(t, 0.5)), int(np.searchsorted(t, 6))
+    d = forma_giro(t, rumbo, 100.0, 90.0, k0, k1, sog, len(t) - 1)
+    assert 15 <= d["giro_primera_mitad_pct"] <= 35
+    assert 6 <= d["pasada_grados"] <= 9
+    assert 0 < d["sog_minima_tras_giro_s"] <= 2
+    # telemetría dispersa (1,3 s): no se da forma
+    t2 = np.arange(-10, 20, 1.3)
+    r2 = (100 + 90 * np.clip(t2 / 6, 0, 1)) % 360
+    assert forma_giro(t2, r2, 100.0, 90.0, int(np.searchsorted(t2, 0.5)), int(np.searchsorted(t2, 6)), np.full(len(t2), 5.0), len(t2) - 1) == {}

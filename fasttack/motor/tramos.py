@@ -226,6 +226,7 @@ def analizar_maniobra(tr: Traza, tm: int, viento: VientoTramo, siguiente: int | 
     twa_sal = float(np.nanmedian(np.abs(dif(tr.cog[i][sal] - twd[sal])))) if sal.sum() >= 3 else None
     frente = round(twa_sal - objetivo_twa, 1) if twa_sal is not None and objetivo_twa is not None else None
     sog_min = float(np.min(sog[k0:k2 + 1]))
+    forma = forma_giro(t, rumbo, r_ent, total, k0, k1, sog, k2)
     return {
         "perdida_m": round(float(perdida_m), 1),
         "perdida_s": round(float(perdida_m / (ref * KN)), 1),                     # segundos a la VMG de referencia
@@ -240,6 +241,41 @@ def analizar_maniobra(tr: Traza, tm: int, viento: VientoTramo, siguiente: int | 
         "twa_objetivo_grados": None if objetivo_twa is None else round(objetivo_twa, 1),
         "salida_frente_al_objetivo_grados": frente,   # + = más abierta en ceñida / más baja en popa
         "encadenada": bool(encadenada), "acelerado": bool(completa),
+        **forma,
+    }
+
+
+FORMA_MAX_PASO_S = 0.8     # la forma del giro solo con registro denso (.vkx del Atlas, 2 muestras/s)
+FORMA_MIN_MUESTRAS = 5
+
+
+def forma_giro(t, rumbo, r_ent, total, k0, k1, sog, k2) -> dict:
+    """Forma del giro, solo con registro denso (la telemetría de RaceSense, ~1 muestra cada 1,3 s,
+    no da muestras suficientes dentro de un giro de 4–8 s):
+    - giro_max_grados_s: velocidad de giro máxima (rumbo de proa).
+    - giro_primera_mitad_pct: % del ángulo girado en la primera mitad del tiempo de giro
+      (> 55 % = rápido al principio y lento al final; < 45 % = al revés).
+    - pasada_grados: cuánto se pasa del rumbo estable de la nueva amura en los 8 s siguientes
+      (+ = más allá: en ceñida, más arribado; en popa, más orzado), y hay que corregir.
+    - sog_minima_tras_giro_s: cuándo toca fondo la SOG respecto al final del giro (− = durante)."""
+    n = k1 - k0 + 1
+    if n < FORMA_MIN_MUESTRAS or np.median(np.diff(t[k0:k1 + 1])) > FORMA_MAX_PASO_S or np.any(np.isnan(rumbo[k0:k1 + 1])):
+        return {}
+    sg = np.sign(total)
+    av = np.degrees(np.unwrap(np.radians(rumbo - r_ent))) * sg       # ángulo girado, creciente
+    tt = t[k0:k1 + 1]
+    tasa = np.abs(np.diff(av[k0:k1 + 1]) / np.diff(tt))
+    mitad = (tt[0] + tt[-1]) / 2
+    girado = float(np.interp(mitad, tt, av[k0:k1 + 1]) - av[k0])
+    tot = float(av[k1] - av[k0]) or abs(total)
+    post = (t > t[k1]) & (t <= t[k1] + 8)
+    pasada = float(np.max(av[post]) - abs(total)) if post.sum() >= 3 else None
+    kmin = k0 + int(np.argmin(sog[k0:k2 + 1]))
+    return {
+        "giro_max_grados_s": round(float(tasa.max()), 1),
+        "giro_primera_mitad_pct": round(100 * girado / tot) if tot > 0 else None,
+        "pasada_grados": None if pasada is None else round(max(0.0, pasada), 1),
+        "sog_minima_tras_giro_s": round(float(t[kmin] - t[k1]), 1),
     }
 
 

@@ -690,6 +690,38 @@ def _pagina_maniobras(pdf, ctx: _Ctx, tipo: str, banda: str):
               xfmt=lambda t: "cruce" if t == 0 else f"{t:+d} s.", titulo="SOG durante la maniobra, en kn. (finas: cada una · gruesas: la media)",
               marcas_x=[0])
     g.leyenda(pdf, MARGEN + 206, yp + 6, [(NARANJA, ctx.vela(ref), False), (AZUL, "top 5", False)])
+    # forma del giro (solo con registro del Atlas, como en la web)
+    fm = [m["detalle"] for m, _, _ in mias if m["detalle"].get("giro_max_grados_s") is not None and m["detalle"].get("perdida_s") is not None]
+    if fm:
+        xf, wf = MARGEN + 206, pdf.w - MARGEN - (MARGEN + 206)
+        pdf.set_xy(xf, yp + 13)
+        pdf.set_font("Barlow", "", 8)
+        pdf.set_text_color(*TINTA2)
+        pdf.cell(wf, 4, "FORMA DEL GIRO (EST.)")
+        p1 = _med([d.get("giro_primera_mitad_pct") for d in fm])
+        tipo_g = "—" if p1 is None else "lento al principio, rápido al final" if p1 < 45 else "rápido al principio, lento al final" if p1 > 55 else "uniforme"
+        pdf.set_xy(xf, yp + 17.5)
+        pdf.set_font("Texto", "", 7)
+        pdf.multi_cell(wf, 3.4, f"Tu giro típico: {tipo_g} ({len(fm)} con registro del Atlas).")
+        o = sorted(fm, key=lambda d: d["perdida_s"])
+        h = len(o) // 2 if len(o) >= 6 else 0
+        filas_f = []
+        for et, k, dd, u in (("Giro máx.", "giro_max_grados_s", 0, "°/s."), ("1.ª mitad", "giro_primera_mitad_pct", 0, " %"),
+                             ("Más allá", "pasada_grados", 0, "°"), ("Duración", "duracion_giro_s", 1, " s."), ("Pérdida", "perdida_s", 1, " s.")):
+            f = lambda ds: (lambda x: num(x, dd) + u if x is not None else "—")(_med([d.get(k) for d in ds]))
+            filas_f.append([et, f(fm)] + ([f(o[:h]), f(o[-h:])] if h else []))
+        pdf.set_xy(xf, pdf.get_y() + 1)
+        pdf.set_left_margin(xf)
+        if h:
+            pdf.tabla(["", "Tú", "Mejores", "Peores"], filas_f, [15, 14, 15, 15], ["L", "R", "R", "R"], tam=6.5)
+        else:
+            pdf.tabla(["", "Tú"], filas_f, [20, 20], ["L", "R"], tam=6.5)
+        pdf.set_left_margin(MARGEN)
+        pdf.set_font("Texto", "I", 6)
+        pdf.set_text_color(*TINTA3)
+        pdf.set_x(xf)
+        pdf.multi_cell(wf, 2.8, "1.ª mitad: % del ángulo girado en la primera mitad del giro. Más allá: lo que sigues girando tras el giro. "
+                       "Mejores/peores: tus maniobras con menos y más pérdida.")
 
 
 # ---------------------------------------------------------------- documento

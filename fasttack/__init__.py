@@ -1,1 +1,1 @@
-__version__ = "0.46.0"  # cuenta atrás en el mapa de la salida
+__version__ = "0.47.0"  # forma del giro en las maniobras
