@@ -1,8 +1,9 @@
 <script>
   import Nota from '../Nota.svelte';
-  // Evolución del viento en un tramo: TWD y presión frente al % del tramo (dos gráficos, un eje cada
-  // uno). El cursor sigue al reproductor. Todo estimado a partir de la flota.
+  // Evolución del viento en un tramo: la TWD en una rosa (RosaViento) y la presión frente al % del
+  // tramo. El cursor sigue al reproductor. Todo estimado a partir de la flota.
   import { num } from './datos.js';
+  import RosaViento from './RosaViento.svelte';
 
   let { tramo, T, senalMs } = $props();
   const H = 130, M = { l: 58, r: 14, t: 14, b: 22 };
@@ -25,12 +26,8 @@
     cortes.forEach((c, k) => { const v = vals[k]; if (v == null) { abierto = false; return; } d += (abierto ? 'L' : 'M') + X(c.pct).toFixed(1) + ' ' + Y(v).toFixed(1); abierto = true; });
     return { d, Y };
   }
-  // TWD desenrollada alrededor de la media para que 359→1 no salte
-  const twd = $derived(cortes.map((c) => tramo.viento.twd_media + (((c.twd - tramo.viento.twd_media + 540) % 360) - 180)));
   const pres = $derived(cortes.map((c) => (calibrada ? c.tws : c.sog_mediana)));
-  const eTwd = $derived(escala(twd, 6));
   const ePres = $derived(escala(pres, calibrada ? 2 : 0.6));
-  const sTwd = $derived(serie(twd, ...eTwd));
   const sPres = $derived(serie(pres, ...ePres));
 
   function mover(e) {
@@ -43,8 +40,10 @@
 
 <section class="tarjeta bloque">
   <h3>Evolución del viento <span class="est">estimado</span></h3>
-  <div bind:clientWidth={W}>
-  {#each [['TWD (°)', sTwd, eTwd, twd, (v) => num(((v % 360) + 360) % 360, 0) + '°'], [calibrada ? 'TWS (kn)' : 'Presión: SOG mediano de la flota (kn)', sPres, ePres, pres, (v) => num(v, calibrada ? 1 : 2) + ' kn.']] as [titulo, s, e, vals, fmt]}
+  <div class="rejilla">
+  <RosaViento {tramo} {T} {senalMs} />
+  <div class="pres" bind:clientWidth={W}>
+  {#each [[calibrada ? 'TWS (kn)' : 'Presión: SOG mediano de la flota (kn)', sPres, ePres, pres, (v) => num(v, calibrada ? 1 : 2) + ' kn.']] as [titulo, s, e, vals, fmt]}
     <div class="g">
       <div class="tit">{titulo}</div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={titulo} onpointermove={mover} onpointerleave={() => (hover = null)}>
@@ -66,7 +65,8 @@
     </div>
   {/each}
   </div>
-  <Nota>Eje horizontal: % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
+  </div>
+  <Nota>Rosa: el ángulo es la TWD real (girada para que la media quede arriba, mirando a barlovento) y la distancia al centro, el % del tramo (centro = inicio, borde = final); los puntos se oscurecen con el tiempo y el sombreado marca la horquilla. Presión: eje horizontal en % del tiempo del líder en el tramo. Puntos huecos: cortes sin datos suficientes (se arrastra el valor anterior). La línea vertical sigue al reproductor.</Nota>
 </section>
 
 <style>
@@ -74,6 +74,9 @@
   h3 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); margin-bottom: 4px; }
   .est { color: var(--estimado); font-size: 11px; }
   .g { margin-top: 4px; }
+  .rejilla { display: grid; grid-template-columns: minmax(260px, 420px) 1fr; gap: 16px; align-items: center; }
+  .pres { min-width: 0; }
+  @media (max-width: 720px) { .rejilla { grid-template-columns: 1fr; } }
   .tit { font: 600 12px var(--display); color: var(--tinta-2); }
   svg { width: 100%; height: 130px; display: block; touch-action: pan-y; }
   .rej { stroke: var(--rejilla); stroke-width: 1; }
