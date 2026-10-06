@@ -252,8 +252,21 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
         return
     sb = sal["barcos"]
     sg = sal.get("sesgo") or {}
-    _cabecera(pdf, banda, "Salida", f"Aproximación, posición en la línea, aceleración y primer minuto · sesgo {num(sg.get('grados'), 1)}° "
-              f"al {'pin' if sg.get('extremo') == 'PIN' else 'comité'} · línea de {num(sg.get('largo_linea_m'), 0)} m.")
+    _cabecera(pdf, banda, "Salida", "Aproximación, posición en la línea, aceleración y primer minuto")
+    # los datos de la línea, como en la web
+    sn = list(reversed((an.get("controles") or [{}])[0].get("sn") or []))
+    corr = an.get("corriente")
+    pdf.fichas([
+        ("Comité · pin", " · ".join(str(x) if x is not None else "—" for x in sn) or "—", "números de serie de las balizas", None),
+        ("Sesgo de la línea (est.)", f"{num(sg.get('grados'), 1)}° {'pin' if sg.get('extremo') == 'PIN' else 'comité'}" if sg.get("grados") is not None else "—",
+         f"{num(sg.get('metros'), 0)} m. de ventaja en ese extremo" if sg.get("metros") is not None else None, None),
+        ("Viento en el disparo (est.)", f"{num(sal.get('twd_disparo'), 0)}°" if sal.get("twd_disparo") is not None else "—",
+         f"{num(sal['tws_disparo'], 1)} kn." if sal.get("tws_disparo") else "intensidad sin calibrar", None),
+        ("Línea", f"{num(sg.get('largo_linea_m'), 0)} m." if sg.get("largo_linea_m") is not None else "—", "de comité a pin", None),
+        ("Corriente (est.)", f"{num(corr['velocidad_kn'], 2)} kn." if corr else "sin estimar",
+         f"hacia {num(corr['hacia_grados'], 0)}° · confianza {corr.get('confianza', '—')}" if corr else None, None),
+    ])
+    pdf.ln(3)
     y0 = pdf.get_y()
     # mapa: de −60 a +90 s.
     trazas = []
@@ -265,7 +278,7 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
     com, pin = sal["comite"]["xy"], sal["pin"]["xy"]
     en_disparo = [(float(ctx.trazas[v].en(np.array([0.0]), "x")[0]), float(ctx.trazas[v].en(np.array([0.0]), "y")[0]), ctx.color[v])
                   for v in ctx.velas if v in ctx.trazas]
-    g.mapa(pdf, MARGEN, y0, 105, 78, trazas, [(pin[0], pin[1], "pin"), (com[0], com[1], "comité")],
+    g.mapa(pdf, MARGEN, y0, 105, 70, trazas, [(pin[0], pin[1], "pin"), (com[0], com[1], "comité")],
            marcas=[m for m in en_disparo if np.isfinite(m[0])],
            lineas=[((pin[0], pin[1]), (com[0], com[1]), TINTA2, True)], twd=sal.get("twd_disparo"), titulo="De −60 a +90 s. del disparo · puntos: en el disparo")
     # qué decidió la salida
@@ -301,8 +314,23 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
             pdf.ln(0.6)
 
     _en_columna(pdf, x1, w1, decidio)
+    yd = pdf.get_y() + 3
+    # aceleración: a la derecha, bajo «qué decidió», si cabe; si no, al final de la página
+    T = np.arange(-60, 60.5, 1.0)
+    series_ac = [(T, ctx.trazas[v].en(T, "sog"), ctx.color[v], 0.7 if v == ref else 0.35, False)
+                 for v in reversed(ctx.velas) if v in ctx.trazas]
+    acel_arriba = bool(series_ac) and y0 + 70 - yd >= 32
+
+    def aceleracion(x, y, w, h, x_ley):
+        g.grafico(pdf, x, y, w, h, series_ac, (-60, 60), xticks=(-60, -30, 0, 30, 60),
+                  xfmt=lambda t: "disparo" if t == 0 else f"{t:+d} s.", titulo="Aceleración: SOG de −60 a +60 s. (kn.)", marcas_x=[0])
+        for k, v in enumerate(ctx.velas):
+            g.leyenda(pdf, x_ley, y + 6 + 4 * k, [(ctx.color[v], ctx.vela(v), False)])
+
+    if acel_arriba:
+        aceleracion(x1, yd, w1 - 30, y0 + 70 - yd, x1 + w1 - 27)
     # comparativa
-    pdf.set_y(y0 + 82)
+    pdf.set_y(max(y0 + 73, pdf.get_y() + 2))
     y = _etiqueta(pdf, MARGEN, pdf.get_y(), "Comparativa de salida")
     pdf.set_y(y)
     filas, cols = [], []
@@ -320,14 +348,8 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
               filas, [26, 20, 20, 20, 19, 21, 13, 18, 13, 18, 22, 32], ["L"] + ["R"] * 11, cols, resaltar={0}, tam=7.8)
     # aceleración
     ya = pdf.get_y() + 2
-    if ya < pdf.h - 45:
-        T = np.arange(-60, 60.5, 1.0)
-        series = [(T, ctx.trazas[v].en(T, "sog"), ctx.color[v], 0.7 if v == ref else 0.35, False)
-                  for v in reversed(ctx.velas) if v in ctx.trazas]
-        g.grafico(pdf, MARGEN, ya, 180, pdf.h - ya - 18, series, (-60, 60), xticks=(-60, -30, 0, 30, 60),
-                  xfmt=lambda t: "disparo" if t == 0 else f"{t:+d} s.", titulo="Aceleración: SOG de −60 a +60 s. (kn.)", marcas_x=[0])
-        g.leyenda(pdf, MARGEN + 186, ya + 6, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[:3]])
-        g.leyenda(pdf, MARGEN + 186, ya + 11, [(ctx.color[v], ctx.vela(v), False) for v in ctx.velas[3:]])
+    if not acel_arriba and series_ac and ya < pdf.h - 45:
+        aceleracion(MARGEN, ya, 180, pdf.h - ya - 18, MARGEN + 186)
 
 
 # ---------------------------------------------------------------- tramos
