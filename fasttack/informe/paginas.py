@@ -337,8 +337,10 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
     for v in ctx.velas:
         b = sb.get(v) or {}
         m = b.get("margen_m")
-        filas.append([ctx.vela(v), f"{num(b.get('posicion_linea_pct'), 0)} %" if b.get("posicion_linea_pct") is not None else "—",
-                      (con_signo(m, 1) + " m.") if m is not None else "—", num(b.get("sog_disparo"), 2),
+        ap = "≈" if b.get("hueco_disparo_s") else ""     # interpolado sobre un hueco de 5 a 15 s.
+        filas.append([ctx.vela(v), f"{ap}{num(b.get('posicion_linea_pct'), 0)} %" if b.get("posicion_linea_pct") is not None else "—",
+                      (ap + con_signo(m, 1) + " m.") if m is not None else "—",
+                      ap + num(b.get("sog_disparo"), 2) if b.get("sog_disparo") is not None else "—",
                       (con_signo(b.get("cruce_s"), 0) + " s.") if b.get("cruce_s") is not None else "—", num(b.get("vmg_0_90"), 2),
                       str(b.get("pos_60") or "—"), f"{num(b.get('dist_60'), 0)} m." if b.get("dist_60") is not None else "—",
                       str(b.get("pos_180") or "—"), f"{num(b.get('dist_180'), 0)} m." if b.get("dist_180") is not None else "—",
@@ -346,6 +348,11 @@ def _pagina_salida(pdf, ctx: _Ctx, banda: str):
         cols.append([None, None, (ROJO if m > 0 else VERDE) if m is not None else None] + [None] * 9)
     pdf.tabla(["Barco", "Línea C-P", "Margen", "SOG disparo", "Cruce GPS", "VMG 0–90 s.", "+60", "Δ60", "+180", "Δ180", "1.ª virada", "Baliza 1"],
               filas, [26, 20, 20, 20, 19, 21, 13, 18, 13, 18, 22, 32], ["L"] + ["R"] * 11, cols, resaltar={0}, tam=7.8)
+    if any((sb.get(v) or {}).get("hueco_disparo_s") for v in ctx.velas):
+        pdf.set_font("Texto", "I", 7)
+        pdf.set_text_color(*TINTA3)
+        pdf.cell(0, 3.6, "≈: sin muestra de RaceSense en el disparo; interpolado entre la de antes y la de después (de 5 a 15 s. de hueco).",
+                 new_x="LMARGIN", new_y="NEXT")
     # aceleración
     ya = pdf.get_y() + 2
     if not acel_arriba and series_ac and ya < pdf.h - 45:

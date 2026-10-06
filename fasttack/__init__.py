@@ -1,1 +1,1 @@
-__version__ = "0.47.1"  # recuadro al pasar el ratón en la consistencia
+__version__ = "0.47.2"  # salida: datos del disparo con huecos de hasta 15 s

@@ -147,6 +147,8 @@
   const fM = (v) => (v == null ? '—' : num(v, 0) + ' m.');
   const fKn = (v) => num(v, 2);
   const fS = (v) => tiempo(v);
+  // dato del disparo interpolado entre muestras separadas de 5 a 15 s. (huecos de RaceSense en la salida)
+  const aprox = (f) => (f.hueco_disparo_s ? '≈' : '');
 </script>
 
 {#if error}
@@ -267,13 +269,13 @@
         </section>
       {/if}
       <Tabla titulo="Comparativa de salida" centrado {ref} {colores} filas={filasSalida} ordenInicial="pos_60"
-        nota="Margen: metros a la línea en el disparo; en verde por detrás, en rojo (+) pasado. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
+        nota="Margen: metros a la línea en el disparo; en verde por detrás, en rojo (+) pasado. ≈: RaceSense no tiene muestra en el disparo y se interpola entre la de antes y la de después (de 5 a 15 s. de hueco); con más hueco, sin datos. +60/+180: puesto y distancia al primero avanzando hacia la baliza 1. * estimado con el viento reconstruido."
         columnas={[
           { k: 'vela', titulo: 'Barco', fmt: fBarco },
-          { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v) => (v == null ? '—' : num(v, 0) + ' %') },
-          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + ' m.'),
+          { k: 'posicion_linea_pct', titulo: 'Línea C→P', num: true, fmt: (v, f) => (v == null ? '—' : aprox(f) + num(v, 0) + ' %') },
+          { k: 'margen_m', titulo: 'Margen', num: true, fmt: (v, f) => (v == null ? '—' : aprox(f) + (v > 0 ? '+' : '') + num(v, 1) + ' m.'),
             color: (v) => (v == null ? null : v > 0 ? 'var(--error, #c62828)' : '#1b7f3b') },
-          { k: 'sog_disparo', titulo: 'SOG disparo', num: true, fmt: fKn },
+          { k: 'sog_disparo', titulo: 'SOG disparo', num: true, fmt: (v, f) => (v == null ? '—' : aprox(f) + fKn(v)) },
           { k: 'cruce_s', titulo: 'Cruce GPS', num: true, ayuda: 'Segundos desde la señal hasta que el GPS cruza la línea (− antes de la señal)', fmt: (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 0) + ' s.') },
           { k: 'vmg_0_90', titulo: 'VMG 0–90 s.', num: true, est: true, ayuda: 'VMG media (velocidad hacia el viento) en los primeros 90 s. tras la señal', fmt: fKn },
           { k: 'pos_60', titulo: '+60', num: true, est: true, ayuda: 'Puesto a los 60 s. de la señal, por avance hacia la baliza 1' },

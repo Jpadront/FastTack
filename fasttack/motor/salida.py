@@ -33,6 +33,7 @@ SUCIO_ESLORAS = 6            # la sombra de viento de un barco llega hasta ~6 es
 SUCIO_GRADOS = 15            # y abarca ±15° alrededor del viento aparente
 AWA_GIRO = 15                # el viento aparente en ceñida viene ~15° más a proa que el real
 HUECO_LIBRE_ESLORAS = 6
+HUECO_DISPARO_MS = 15_000   # como el visor (HUECO_S de la web): más hueco que esto, sin datos en el disparo
 PRIMERA_FILA_ESLORAS = 2
 PASO_S = 2
 SEGURO_LADO_ESLORAS, SEGURO_DELANTE_ESLORAS = 1.5, 2.0
@@ -216,7 +217,12 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
 
     barcos = {}
     for v, tr in trazas.items():
-        xy = tr.en(senal)
+        # RaceSense pierde muchas muestras en la salida (flota apiñada): se interpola entre las
+        # muestras de antes y de después del disparo si están a menos de HUECO_DISPARO_MS; con más
+        # de 5 s de hueco el dato se marca (hueco_disparo_s) como interpolado
+        xy = tr.en(senal, hueco_ms=HUECO_DISPARO_MS)
+        j = int(np.searchsorted(tr.ts, senal))
+        hueco = float(tr.ts[j] - tr.ts[j - 1]) / 1000 if 0 < j < len(tr.ts) else None
         fila = {"posicion_linea_pct": None, "margen_m": None, "sog_disparo": None, "cruce_s": None,
                 "vmg_0_90": None, "pos_60": None, "dist_60": None, "pos_180": None, "dist_180": None,
                 "primera_virada_s": None, "pos_b1": None, "gap_b1_s": None,
@@ -225,7 +231,9 @@ def analizar(trazas: dict[str, Traza], pin: Pista, comite: Pista, senal: int, ej
             b = np.array(xy) - np.array(com_xy)
             fila["posicion_linea_pct"] = round(float(b @ cp) / largo2 * 100, 1)
             fila["margen_m"] = round(float(firmada(*xy)), 1)
-            fila["sog_disparo"] = round(tr.en(senal, "sog"), 2)
+            fila["sog_disparo"] = round(tr.en(senal, "sog", hueco_ms=HUECO_DISPARO_MS), 2)
+            if hueco is not None and hueco > 5:
+                fila["hueco_disparo_s"] = round(hueco)
         # Cruce de la línea: primer paso del lado de salida al del recorrido desde 30 s antes
         i = tr.tramo(senal - 30_000, senal + 180_000)
         if len(i) > 1:
