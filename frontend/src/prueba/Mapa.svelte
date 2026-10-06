@@ -161,6 +161,27 @@
     ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
   }
 
+  // Cuenta atrás hasta el disparo, justo por encima de la línea (lado del recorrido, donde aún no hay
+  // barcos); en el disparo desaparece para no taparlos al cruzar
+  function cuentaAtras() {
+    const c = an.controles.find((x) => x.id === 'salida');
+    const pts = c ? puntosControl(c, pistas, T) : [];
+    if (pts.length < 2) return;
+    const [a, b] = pts;
+    const cx = b.x - a.x, cy = b.y - a.y, l = Math.hypot(cx, cy) || 1;
+    let nx = cy / l, ny = -cx / l;
+    const e = (an.eje * Math.PI) / 180;
+    if (nx * Math.sin(e) + ny * Math.cos(e) < 0) { nx = -nx; ny = -ny; }
+    const M = px((a.x + b.x) / 2, (a.y + b.y) / 2), N = px((a.x + b.x) / 2 + nx * 10, (a.y + b.y) / 2 + ny * 10);
+    const dx = N[0] - M[0], dy = N[1] - M[1], n = Math.hypot(dx, dy) || 1;
+    const X = M[0] + (dx / n) * 30, Y = M[1] + (dy / n) * 30;
+    const s = Math.ceil(-T), txt = `−${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    ctx.font = '700 26px "IBM Plex Mono", ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(txt, X, Y);
+    ctx.fillStyle = 'rgba(16,34,43,0.7)'; ctx.fillText(txt, X, Y);
+    ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+  }
+
   function dibujar() {
     if (!ctx) return;
     const w = lienzo.clientWidth, h = lienzo.clientHeight;
@@ -256,6 +277,7 @@
         }
       }
     }
+    if (enSalida && T < 0) cuentaAtras();
     dibujarLider();
     dibujarFantasma();
     // Rango de SOG de la ventana (p5–p95 de los seleccionados) para la rampa de la capa SOG
