@@ -72,7 +72,7 @@
 <header class="intro">
   <div class="autor">Software de análisis de datos para vela · desarrollado por <b>Javier Padrón</b></div>
   <h1>Análisis post-regata de vela</h1>
-  <p>Descubre dónde ganas y dónde pierdes en cada tramo, frente a la flota y al top 5. Para cualquier clase que navegue con el Atlas 2 de Vakaros (RaceSense).</p>
+  <p>Dónde ganas y dónde pierdes, tramo a tramo, frente a la flota y al top 5. Con los datos del Atlas 2 de Vakaros, en cualquier clase.</p>
   <ul class="rasgos">
     <li><b>Recorrido y viento</b> reconstruidos con los GPS de la flota</li>
     <li><b>Tramo a tramo</b>: velocidad, maniobras, táctica y escora</li>

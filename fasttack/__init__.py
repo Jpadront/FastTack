@@ -1,1 +1,1 @@
-__version__ = "0.45.4"  # texto de la portada
+__version__ = "0.45.5"  # texto de la portada, versión corta
