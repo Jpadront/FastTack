@@ -67,12 +67,15 @@ def test_orientativa_con_muy_pocos_datos():
 
 
 def test_semaforo_de_datos():
-    """Percentil de VMG frente a la flota: tercio de arriba bien, de abajo mal; sin flota, nada."""
+    """Percentil de VMG frente a la flota: 20 % de arriba bien, del 20 al 50 % normal, mitad de abajo mal."""
     from fasttack.motor.semaforo import semaforo
     rd = {f"B{k}": {"vmg_ceñida": 4.0 + k * 0.1, "vmg_popa": 6.0 + k * 0.1} for k in range(10)}
     assert semaforo({"rendimiento": rd}, "B9")["nivel"] == "bien"
     assert semaforo({"rendimiento": rd}, "B5")["nivel"] == "normal"
     assert semaforo({"rendimiento": rd}, "B0")["nivel"] == "mal"
+    assert semaforo({"rendimiento": rd}, "B8")["nivel"] == "bien"      # más VMG que el 89 %
+    assert semaforo({"rendimiento": rd}, "B7")["nivel"] == "normal"    # 78 %
+    assert semaforo({"rendimiento": rd}, "B4")["nivel"] == "mal"       # 44 %
     assert semaforo({"rendimiento": {"B0": rd["B0"]}}, "B0") is None
 
 

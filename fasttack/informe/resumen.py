@@ -110,7 +110,7 @@ def generar(alm: Almacen, camp_id: str, ambito: str, barco: str) -> bytes:
     # Prueba a prueba
     pruebas = h.get("pruebas") or []
     if pruebas:
-        pdf.seccion("Prueba a prueba", "Velocidad: semáforo de la VMG frente a toda la flota (bien, normal o mal por tercios). VMG media de las ceñidas y de las popas frente a la mediana del top 5 "
+        pdf.seccion("Prueba a prueba", "Velocidad: semáforo de la VMG frente a toda la flota (bien: en el 20 % de arriba; normal: del 20 al 50 %; mal: en la mitad de abajo). VMG media de las ceñidas y de las popas frente a la mediana del top 5 "
                     "de la prueba, y por qué (velocidad o ángulo)."
                     + (" Tiempo frente al top 5: dónde se perdió cada prueba." if dia else ""))
         from .. import servicio

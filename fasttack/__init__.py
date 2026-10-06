@@ -1,1 +1,1 @@
-__version__ = "0.47.3"  # texto del semáforo más claro
+__version__ = "0.47.4"  # semáforo: bien 20 % de arriba, mal mitad de abajo

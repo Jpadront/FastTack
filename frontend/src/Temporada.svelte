@@ -84,7 +84,7 @@
             <td class="n num">{r.puesto_relativo == null ? '—' : num(r.puesto_relativo * 100, 0) + ' %'}</td>
             <td class="sens">{#each SEM as [k, c]}{#if r.semaforo?.[k]}<span title={`${r.semaforo[k]} prueba(s) ${k}`}><i style:background={c}></i>{r.semaforo[k]}</span>{/if}{/each}{#if !SEM.some(([k]) => r.semaforo?.[k])}<span class="tenue">—</span>{/if}</td></tr>{/each}</tbody>
         </table></div>
-        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian. Velocidad: cuántas pruebas fueron bien, normal y mal con ese valor según la VMG frente a toda la flota (tercio de arriba, del medio y de abajo).</p></Nota>
+        <Nota><p>Media de las pruebas con cada valor del ajuste, separadas por el viento de referencia de la prueba. Con pocas pruebas por casilla es orientativo: el viento, la flota y el día también cambian. Velocidad: cuántas pruebas fueron bien, normal y mal con ese valor según la VMG frente a toda la flota (bien: en el 20 % de arriba; normal: del 20 al 50 %; mal: en la mitad de abajo).</p></Nota>
       {:else}
         <p class="tenue">Apunta el reglaje de cada prueba en la página del campeonato (botón «Reglaje») y el viento de referencia: aquí verás qué valor de cada ajuste fue mejor en cada franja de viento cuando haya al menos dos valores distintos.</p>
       {/if}

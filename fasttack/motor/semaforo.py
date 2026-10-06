@@ -2,13 +2,14 @@
 
 Sale de la VMG navegando (rendimiento del motor) frente a toda la flota de la prueba: el percentil
 de la flota que el barco superó en ceñida y en popa, y su media. Frente a la flota y no frente al
-top 5, para que un barco de media flota no salga siempre en rojo. Tercio de arriba = bien, tercio
-del medio = normal, tercio de abajo = mal. Con menos de MIN_BARCOS barcos con datos no se da.
+top 5, para que un barco de media flota no salga siempre en rojo. En el 20 % de arriba de la flota
+(más VMG que el 80 %) = bien; del 20 al 50 % de arriba = normal; en la mitad de abajo = mal.
+Con menos de MIN_BARCOS barcos con datos no se da.
 """
 from __future__ import annotations
 
 MIN_BARCOS = 5
-CORTES = (100 / 3, 200 / 3)   # percentil: < 33,3 mal · < 66,7 normal · resto bien
+CORTES = (50, 80)   # percentil (% de la flota superado): < 50 mal · < 80 normal · resto bien
 
 
 def percentil(valor: float, otros: list[float]) -> float:

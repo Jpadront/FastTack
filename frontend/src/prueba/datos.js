@@ -453,7 +453,7 @@ export function corrienteEn(an, T) {
 }
 
 // Semáforo de datos (como motor/semaforo.py): % de la flota que el barco superó en VMG en ceñida y en
-// popa, y su media; tercio de arriba = bien, del medio = normal, de abajo = mal.
+// popa, y su media; en el 20 % de arriba (más que el 80 %) = bien, del 20 al 50 % = normal, mitad de abajo = mal.
 export const SEMAFORO = { bien: '#1a7f4b', normal: '#d39b00', mal: '#c0392b' };
 export function semaforo(an, v) {
   const rd = an.rendimiento || {}, mio = rd[v];
@@ -470,5 +470,5 @@ export function semaforo(an, v) {
   const vals = Object.values(pct);
   if (!vals.length) return null;
   const p = vals.reduce((a, b) => a + b, 0) / vals.length;
-  return { nivel: p < 100 / 3 ? 'mal' : p < 200 / 3 ? 'normal' : 'bien', percentil: Math.round(p), ...pct };
+  return { nivel: p < 50 ? 'mal' : p < 80 ? 'normal' : 'bien', percentil: Math.round(p), ...pct };
 }
