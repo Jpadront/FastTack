@@ -33,8 +33,8 @@
   {#if sem}
     <div class="dato">
       <span class="et">Velocidad frente a la flota</span>
-      <b class="txt"><i class="sem" style:background={SEMAFORO[sem.nivel]}></i>{sem.nivel}</b>
-      <span class="det">Más VMG que el {sem.percentil} % de la flota{sem['ceñida'] != null && sem.popa != null ? ` (en ceñida, que el ${sem['ceñida']} %; en popa, que el ${sem.popa} %)` : ''}</span>
+      <b class="num"><i class="sem" style:background={SEMAFORO[sem.nivel]}></i>{sem.percentil}<small> %</small> <span class="nivel" style:color={SEMAFORO[sem.nivel]}>{sem.nivel}</span></b>
+      <span class="det">{#if sem['ceñida'] != null}Más VMG en ceñida que: <b>{sem['ceñida']} %</b>{/if}{#if sem['ceñida'] != null && sem.popa != null}<br />{/if}{#if sem.popa != null}Popa: <b>{sem.popa} %</b>{/if}</span>
     </div>
   {/if}
   {#if d}
@@ -63,5 +63,7 @@
 
 <style>
   .sem { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 0 3px rgba(255, 255, 255, .12); }
+  .det b { white-space: nowrap; }
+  .nivel { font-size: 15px; font-weight: 600; letter-spacing: .02em; }
   .flecha { color: #8fb0bd; font-weight: 400; }
 </style>

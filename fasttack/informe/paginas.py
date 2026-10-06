@@ -178,8 +178,10 @@ def _portada(pdf, ctx: _Ctx, h: dict, banda: str, titulo: str, sub: str):
         ("Viento en el disparo", f"{num(sal.get('twd_disparo'), 0)}°" if sal.get("twd_disparo") is not None else "—",
          f"{num(sal['tws_disparo'], 1)} kn. (estimado)" if sal.get("tws_disparo") else "intensidad sin calibrar", None),
         ("Corriente", f"{num(corr['velocidad_kn'], 1)} kn." if corr else "—", f"hacia {num(corr['hacia_grados'], 0)}° (estimada)" if corr else None, None),
-        ("Velocidad frente a la flota", sem["nivel"].capitalize() if sem else "—",
-         f"más VMG que el {sem['percentil']} % de la flota" if sem else "faltan barcos con datos (mín. 5)",
+        ("Velocidad frente a la flota", f"{sem['percentil']} % · {sem['nivel']}" if sem else "—",
+         " · ".join(x for x in ((f"en ceñida: {sem['percentil_ceñida']} %" if sem.get("percentil_ceñida") is not None else ""),
+                               (f"popa: {sem['percentil_popa']} %" if sem.get("percentil_popa") is not None else "")) if x)
+         if sem else "faltan barcos con datos (mín. 5)",
          SEMAFORO[sem["nivel"]] if sem else None),
     ])
     pdf.set_font("Texto", "", 8.5)
